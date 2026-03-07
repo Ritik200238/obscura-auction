@@ -14,6 +14,8 @@ import {
   Loader2,
   AlertCircle,
   Shield,
+  Sparkles,
+  TrendingUp,
 } from 'lucide-react'
 import TransactionLink from '@/components/shared/TransactionLink'
 
@@ -229,6 +231,36 @@ export default function CreateAuction() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Quick Templates */}
+        <div className="card">
+          <h3 className="text-white font-semibold mb-3 text-sm flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-accent-400" />
+            Quick Templates
+          </h3>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: 'Digital Art', cat: 1, dur: '24h', mode: AUCTION_MODE.VICKREY, reserve: '1' },
+              { label: 'Collectible', cat: 2, dur: '3d', mode: AUCTION_MODE.FIRST_PRICE, reserve: '0.5' },
+              { label: 'Service', cat: 3, dur: '12h', mode: AUCTION_MODE.FIRST_PRICE, reserve: '0.1' },
+            ].map((t) => (
+              <button
+                key={t.label}
+                type="button"
+                onClick={() => {
+                  setCategory(t.cat)
+                  setDuration(t.dur)
+                  setAuctionMode(t.mode)
+                  setReservePrice(t.reserve)
+                }}
+                className="p-2.5 rounded-lg border border-surface-700 bg-surface-800 hover:border-accent-500/50 hover:bg-accent-500/5 text-left transition-all"
+              >
+                <p className="text-xs font-medium text-gray-300">{t.label}</p>
+                <p className="text-[10px] text-gray-600 mt-0.5">{t.dur} · {t.mode === AUCTION_MODE.VICKREY ? 'Vickrey' : 'First-Price'}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Item Details */}
         <div className="card">
           <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
@@ -306,7 +338,9 @@ export default function CreateAuction() {
                 </span>
               </div>
               <p className="text-xs text-gray-600 mt-1">
-                Minimum bid to win. Hashed on-chain -- only you know the exact amount until settlement.
+                Stored as <span className="font-mono text-gray-500">BHP256(reserve_price)</span> on-chain.
+                You re-enter it at settlement to prove you know it — disclosed only after all bids are revealed.
+                This is a deliberate privacy trade-off: seller protection during bidding, transparency at resolution.
               </p>
             </div>
 
@@ -340,28 +374,54 @@ export default function CreateAuction() {
                     First-Price
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Highest bidder wins, pays their bid
+                    Highest bidder wins and pays their exact bid
                   </p>
                 </button>
                 <button
                   type="button"
                   onClick={() => setAuctionMode(AUCTION_MODE.VICKREY)}
-                  className={`p-3 rounded-lg border text-left transition-all ${
+                  className={`p-3 rounded-lg border text-left transition-all relative ${
                     auctionMode === AUCTION_MODE.VICKREY
                       ? 'border-accent-500 bg-accent-500/10'
                       : 'border-surface-700 bg-surface-800 hover:border-surface-600'
                   }`}
                 >
-                  <p className={`text-sm font-medium ${
-                    auctionMode === AUCTION_MODE.VICKREY ? 'text-accent-400' : 'text-gray-300'
-                  }`}>
-                    Vickrey
-                  </p>
+                  <span className="absolute top-1.5 right-1.5 text-[9px] font-bold text-accent-400 bg-accent-500/20 px-1.5 py-0.5 rounded-full tracking-wide">
+                    FIRST ON ALEO
+                  </span>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <Sparkles className={`w-3.5 h-3.5 ${auctionMode === AUCTION_MODE.VICKREY ? 'text-accent-400' : 'text-gray-500'}`} />
+                    <p className={`text-sm font-medium ${
+                      auctionMode === AUCTION_MODE.VICKREY ? 'text-accent-400' : 'text-gray-300'
+                    }`}>
+                      Vickrey (2nd-Price)
+                    </p>
+                  </div>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Requires 2+ bids, tracks 2nd-highest on-chain
+                    Winner pays 2nd-highest bid. Encourages honest bidding.
                   </p>
                 </button>
               </div>
+
+              {/* Vickrey explainer — shown when selected */}
+              {auctionMode === AUCTION_MODE.VICKREY && (
+                <div className="mt-3 p-3 rounded-lg bg-accent-500/5 border border-accent-500/20">
+                  <div className="flex items-start gap-2">
+                    <TrendingUp className="w-4 h-4 text-accent-400 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs text-accent-300 font-medium mb-1">Why Vickrey?</p>
+                      <p className="text-xs text-gray-400 leading-relaxed">
+                        In a Vickrey auction the winner pays the <span className="text-white">second-highest bid</span>, not their own.
+                        This is game-theoretically optimal — bidders are incentivized to bid their true valuation
+                        since overbidding never helps and underbidding risks losing.
+                        The second-highest bid is tracked on-chain via Aleo's
+                        <span className="font-mono text-accent-400"> second_highest_bids</span> mapping.
+                        Requires ≥2 revealed bids to settle.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Duration */}

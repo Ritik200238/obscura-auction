@@ -158,6 +158,17 @@ export default function AuctionDetail() {
                 value="ZK Sealed"
               />
             </div>
+
+            {/* Anti-snipe notice — visible if deadline is past original estimate */}
+            {isActive && auction.bid_count > 0 && (
+              <div className="mt-3 flex items-center gap-2 px-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse shrink-0" />
+                <p className="text-xs text-gray-500">
+                  Anti-sniping active — bids in the last ~10 min extend the deadline by ~10 min.
+                  <span className="text-gray-600 ml-1">Block #{auction.deadline.toLocaleString()}</span>
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Bid summary (post-reveal only) */}
