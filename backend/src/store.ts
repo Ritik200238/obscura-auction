@@ -33,18 +33,24 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
+// On Vercel, use /tmp (only writable dir). Locally use ./data
+const isVercel = !!(process.env.VERCEL === '1' || process.env.VERCEL_ENV);
+const DATA_DIR = isVercel ? '/tmp/obscura-data' : path.join(__dirname, '..', 'data');
 const AUCTIONS_FILE = path.join(DATA_DIR, 'auctions.json');
 const BIDS_FILE = path.join(DATA_DIR, 'bids.json');
 
 function ensureDataDir(): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+  } catch {
+    // Silently fail — Redis should be primary on Vercel
   }
 }
 
 function readJsonFileSync<T>(filePath: string): T[] {
-  ensureDataDir();
+  try { ensureDataDir(); } catch { return []; }
   if (!fs.existsSync(filePath)) {
     fs.writeFileSync(filePath, '[]', 'utf8');
     return [];
