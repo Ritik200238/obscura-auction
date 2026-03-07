@@ -13,6 +13,7 @@ import {
   XCircle,
   Trophy,
   Shield,
+  Zap,
 } from 'lucide-react'
 import { useAuction } from '@/hooks/useAuction'
 import { useRecords } from '@/hooks/useRecords'
@@ -303,8 +304,25 @@ export default function AuctionDetail() {
               {auction.reveal_deadline > 0 && (
                 <InfoRow label="Reveal Deadline" value={`#${auction.reveal_deadline.toLocaleString()}`} />
               )}
+              <InfoRow label="Mode" value={auction.auction_mode === 2 ? 'Vickrey (2nd-Price)' : 'First-Price'} />
             </div>
           </div>
+
+          {/* Anti-snipe info card */}
+          {isActive && (
+            <div className="card border-orange-500/10 bg-orange-500/5">
+              <div className="flex items-start gap-2">
+                <Zap className="w-4 h-4 text-orange-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs text-orange-300 font-medium mb-1">Anti-Sniping Active</p>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    Any bid placed within the last 40 blocks (~10 min) extends the deadline by 40 blocks.
+                    Last-second manipulation is impossible.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Status timeline */}
           <div className="card">
