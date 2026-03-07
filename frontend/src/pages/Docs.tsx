@@ -164,6 +164,18 @@ export default function Docs() {
             a="If no bids are revealed before the reveal deadline, the seller can call finalize_auction which sets the status to FAILED. All bidders can then claim unrevealed refunds using their SealedBid and EscrowReceipt records."
           />
           <FAQ
+            q="How does anti-sniping work?"
+            a="If a bid is placed within the last ~10 minutes (40 blocks) of the deadline, the deadline automatically extends by another ~10 minutes. This prevents last-second 'sniping' where a bidder places a winning bid with no time for competitors to respond. The extension is enforced on-chain in the finalize block."
+          />
+          <FAQ
+            q="Can the winner steal their escrow back after winning?"
+            a="No. The claim_refund transition computes a BidCommitment hash from the EscrowReceipt and checks that it does NOT match the auction_winners entry. If you are the winner, the refund is cryptographically blocked. This was a critical bug (double-spend) that was identified and fixed."
+          />
+          <FAQ
+            q="Is this the first Vickrey auction on Aleo?"
+            a="Yes. Obscura is the first implementation of a Vickrey (second-price tracking) sealed-bid auction on the Aleo blockchain. The second_highest_bids mapping tracks the runner-up bid on-chain, which is a novel use of Aleo's public mapping system alongside private records."
+          />
+          <FAQ
             q="Which wallet should I use?"
             a="Shield Wallet (by Provable/Aleo) is the required wallet adapter. It supports delegated proving for faster transaction processing and auto-decryption of records."
           />
