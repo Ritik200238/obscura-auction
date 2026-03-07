@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -29,6 +29,8 @@ import {
   blockHeightToTime,
   truncateId,
   formatAleoAmount,
+  fetchSettlementProof,
+  fetchPaymentProof,
 } from '@/lib/aleo'
 
 import StatusBadge from '@/components/shared/StatusBadge'
@@ -48,12 +50,22 @@ export default function AuctionDetail() {
     useAuction(id)
   const { refresh: refreshRecords } = useRecords()
   const { connected } = useWallet()
+  const [settlementProof, setSettlementProof] = useState<string | null>(null)
+  const [paymentProof, setPaymentProof] = useState<string | null>(null)
 
   useEffect(() => {
     if (connected) {
       refreshRecords()
     }
   }, [connected, refreshRecords])
+
+  // Fetch on-chain proofs when auction is settled
+  useEffect(() => {
+    if (!auction || !id) return
+    if (auction.status !== 4) return // STATUS_SETTLED only
+    fetchSettlementProof(id).then(setSettlementProof)
+    fetchPaymentProof(id).then(setPaymentProof)
+  }, [auction, id])
 
   if (loading && !auction) {
     return (
@@ -200,6 +212,41 @@ export default function AuctionDetail() {
                   <p className="text-sm text-accent-400 font-mono">{truncateId(winner, 16)}</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Proof of Fair Auction — shown after settlement */}
+          {isSettled && (settlementProof || paymentProof) && (
+            <div className="card border-green-500/20 bg-green-500/5">
+              <div className="flex items-start gap-3 mb-3">
+                <Shield className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
+                <div>
+                  <h3 className="text-sm font-semibold text-green-300">Proof of Fair Auction</h3>
+                  <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
+                    These on-chain hashes cryptographically bind the auction outcome.
+                    Any third party can recompute them to verify settlement integrity —
+                    no party can retroactively alter the reported bids or winner.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {settlementProof && (
+                  <div className="bg-surface-800 rounded-lg p-3">
+                    <p className="text-[10px] text-gray-500 mb-1">
+                      Settlement Proof · BHP256(auction_id, highest_bid, 2nd_bid, winner_hash, block)
+                    </p>
+                    <p className="text-xs text-green-400 font-mono break-all">{settlementProof}field</p>
+                  </div>
+                )}
+                {paymentProof && (
+                  <div className="bg-surface-800 rounded-lg p-3">
+                    <p className="text-[10px] text-gray-500 mb-1">
+                      Payment Commitment · commit.bhp256(amount, nonce_scalar) — hiding + binding
+                    </p>
+                    <p className="text-xs text-accent-400 font-mono break-all">{paymentProof}field</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

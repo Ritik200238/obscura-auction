@@ -373,6 +373,28 @@ export async function extractAuctionIdFromTx(txId: string): Promise<string | nul
 }
 
 /**
+ * Fetch settlement proof for a settled auction.
+ * Returns the on-chain BHP256 hash of the SettlementProof struct.
+ * Any third party can verify auction integrity by recomputing:
+ * BHP256(auction_id, highest_bid, second_highest, winner_bid_hash, settled_at)
+ */
+export async function fetchSettlementProof(auctionId: string): Promise<string | null> {
+  const key = auctionId.endsWith('field') ? auctionId : `${auctionId}field`
+  return fetchMapping('settlement_proofs', key)
+}
+
+/**
+ * Fetch payment proof for a settled auction.
+ * Returns the on-chain BHP256::commit_to_field(amount, nonce_scalar) value.
+ * The winner can verify their payment by reproducing:
+ * commit(bid_amount as field, BHP256::hash_to_scalar(bid_nonce))
+ */
+export async function fetchPaymentProof(auctionId: string): Promise<string | null> {
+  const key = auctionId.endsWith('field') ? auctionId : `${auctionId}field`
+  return fetchMapping('payment_proofs', key)
+}
+
+/**
  * Poll for a confirmed transaction and extract the auction_id from outputs.
  * Retries up to maxAttempts times with intervalMs delay.
  */
