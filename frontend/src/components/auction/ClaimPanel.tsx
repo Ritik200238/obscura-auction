@@ -56,6 +56,10 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
     // Use raw records (with type suffixes) for the wallet prover
     const rawBid = records.rawBids[0]
     const rawReceipt = records.rawReceipts[0]
+    if (!rawBid || !rawReceipt) {
+      setFormError('Raw record data missing — try refreshing your wallet records')
+      return
+    }
     const inputs: string[] = [
       serializeRecordForTx(rawBid),
       serializeRecordForTx(rawReceipt),

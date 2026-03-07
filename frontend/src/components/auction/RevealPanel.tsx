@@ -30,6 +30,10 @@ export default function RevealPanel({ auction }: RevealPanelProps) {
 
     // Pass the raw record (with type suffixes) for the wallet prover
     const rawBid = records.rawBids[index]
+    if (!rawBid) {
+      setRevealingIndex(null)
+      return
+    }
     const result = await execute({
       functionName: 'reveal_bid',
       inputs: [serializeRecordForTx(rawBid)],

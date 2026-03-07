@@ -430,11 +430,12 @@ export async function fetchCreditsRecord(
       } else if (record.data && typeof record.data === 'object') {
         // Try to reconstruct from data fields
         const data = record.data as Record<string, unknown>
-        const nonce = record.nonce || record._nonce || data._nonce
-        if (nonce && data.microcredits && record.owner) {
+        const rawNonce = record.nonce || record._nonce || data._nonce
+        if (rawNonce && data.microcredits && record.owner) {
           const mc = String(data.microcredits).replace(/[^0-9]/g, '')
           const owner = String(record.owner).replace(/\.private$/, '')
-          plaintext = `{ owner: ${owner}.private, microcredits: ${mc}u64.private, _nonce: ${nonce}.public }`
+          const nonce = String(rawNonce).replace(/\.public$/, '').replace(/group$/, '')
+          plaintext = `{ owner: ${owner}.private, microcredits: ${mc}u64.private, _nonce: ${nonce}group.public }`
         }
       }
 

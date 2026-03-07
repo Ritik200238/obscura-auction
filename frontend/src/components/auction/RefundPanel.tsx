@@ -30,11 +30,20 @@ export default function RefundPanel({ auction }: RefundPanelProps) {
     const inputs: string[] = []
     // Use raw records (with type suffixes) for the wallet prover
     const rawReceipt = records.rawReceipts[index]
+    if (!rawReceipt) {
+      setClaimingIndex(null)
+      return
+    }
 
     if (matchingBidIndex !== undefined) {
       // For unrevealed bids, need both SealedBid and EscrowReceipt
       functionName = 'claim_unrevealed_refund'
-      inputs.push(serializeRecordForTx(records.rawBids[matchingBidIndex]))
+      const rawBid = records.rawBids[matchingBidIndex]
+      if (!rawBid) {
+        setClaimingIndex(null)
+        return
+      }
+      inputs.push(serializeRecordForTx(rawBid))
       inputs.push(serializeRecordForTx(rawReceipt))
     } else {
       functionName = 'claim_refund'

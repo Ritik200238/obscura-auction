@@ -39,58 +39,37 @@ export default function Browse() {
       if (res.ok) {
         const data = await res.json()
         if (data.auctions && Array.isArray(data.auctions)) {
-          // Enrich with on-chain data for each auction
-          const enriched: AuctionData[] = []
-          for (const a of data.auctions) {
-            const key = a.auction_id?.endsWith('field') ? a.auction_id : `${a.auction_id}field`
-            try {
+          // Enrich with on-chain data in parallel
+          const results = await Promise.allSettled(
+            data.auctions.map(async (a: any) => {
+              const key = a.auction_id?.endsWith('field') ? a.auction_id : `${a.auction_id}field`
               const raw = await fetchMapping('auctions', key)
               if (raw) {
                 const onChain = parseAuctionData(raw, a.auction_id)
-                enriched.push({
-                  ...onChain,
-                  title: a.title,
-                  description: a.description,
-                })
-              } else {
-                enriched.push({
-                  auction_id: a.auction_id,
-                  item_hash: '',
-                  seller_hash: '',
-                  category: 4,
-                  token_type: a.token_type || 1,
-                  auction_mode: 1,
-                  status: 1,
-                  deadline: a.deadline || 0,
-                  reveal_deadline: 0,
-                  bid_count: a.bid_count || 0,
-                  reserve_price_hash: '',
-                  created_at: 0,
-                  dispute_deadline: 0,
-                  title: a.title,
-                  description: a.description,
-                })
+                return { ...onChain, title: a.title, description: a.description }
               }
-            } catch {
-              enriched.push({
+              return {
                 auction_id: a.auction_id,
-                item_hash: '',
-                seller_hash: '',
-                category: 4,
-                token_type: a.token_type || 1,
-                auction_mode: 1,
-                status: 1,
-                deadline: a.deadline || 0,
-                reveal_deadline: 0,
-                bid_count: a.bid_count || 0,
-                reserve_price_hash: '',
-                created_at: 0,
-                dispute_deadline: 0,
-                title: a.title,
-                description: a.description,
-              })
+                item_hash: '', seller_hash: '', category: 4,
+                token_type: a.token_type || 1, auction_mode: 1, status: 1,
+                deadline: a.deadline || 0, reveal_deadline: 0,
+                bid_count: a.bid_count || 0, reserve_price_hash: '',
+                created_at: 0, dispute_deadline: 0,
+                title: a.title, description: a.description,
+              }
+            })
+          )
+          const enriched: AuctionData[] = results.map((r, i) =>
+            r.status === 'fulfilled' ? r.value : {
+              auction_id: data.auctions[i].auction_id,
+              item_hash: '', seller_hash: '', category: 4,
+              token_type: data.auctions[i].token_type || 1, auction_mode: 1, status: 1,
+              deadline: data.auctions[i].deadline || 0, reveal_deadline: 0,
+              bid_count: data.auctions[i].bid_count || 0, reserve_price_hash: '',
+              created_at: 0, dispute_deadline: 0,
+              title: data.auctions[i].title, description: data.auctions[i].description,
             }
-          }
+          )
           setAuctions(enriched)
         }
       }

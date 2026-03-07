@@ -121,7 +121,13 @@ export function useTransaction() {
           feePrivate: options.privateFee !== false,
         }
 
-        const response = await executeTransaction(aleoTransaction as any)
+        const TX_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
+        const response = await Promise.race([
+          executeTransaction(aleoTransaction as any),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Transaction timed out — wallet did not respond within 5 minutes')), TX_TIMEOUT_MS)
+          ),
+        ])
 
         // Extract transaction ID from response
         let transactionId: string | null = null
