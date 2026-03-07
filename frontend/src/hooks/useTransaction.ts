@@ -55,7 +55,7 @@ export function useTransaction() {
         try {
           // Try wallet adapter's transactionStatus first
           if (transactionStatus) {
-            const walletStatus = await transactionStatus(txId)
+            const walletStatus: unknown = await transactionStatus(txId)
             if (walletStatus && typeof walletStatus === 'string') {
               const s = walletStatus.toLowerCase()
               if (s === 'finalized' || s === 'confirmed' || s === 'accepted') {

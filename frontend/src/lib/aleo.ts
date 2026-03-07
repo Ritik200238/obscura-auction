@@ -421,8 +421,8 @@ export async function fetchCreditsRecord(
       // Try to get plaintext
       let plaintext: string | null = null
 
-      if (typeof record === 'string' && record.includes('microcredits')) {
-        plaintext = record
+      if (typeof raw === 'string' && (raw as string).includes('microcredits')) {
+        plaintext = raw as string
       } else if (typeof record.plaintext === 'string' && record.plaintext.includes('microcredits')) {
         plaintext = record.plaintext
       } else if (typeof record.data === 'string' && record.data.includes('microcredits')) {
