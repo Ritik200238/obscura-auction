@@ -8,13 +8,16 @@ import {
   createBid,
   AuctionRecord,
 } from '../store';
+import { syncAllAuctions } from '../sync';
 
 const router = Router();
 
 // GET /api/auctions — list all auctions
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    const auctions = getAllAuctions();
+    // On-demand sync before returning data (throttled to 30s)
+    await syncAllAuctions();
+    const auctions = await getAllAuctions();
 
     // Return public-safe view (strip encrypted fields)
     const safeAuctions = auctions.map((a) => ({
@@ -43,7 +46,7 @@ router.get('/', async (_req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
-    const auction = getAuctionById(id);
+    const auction = await getAuctionById(id);
 
     if (!auction) {
       res.status(404).json({ error: 'Auction not found' });
@@ -166,7 +169,7 @@ router.post('/:id/bids', async (req: Request, res: Response) => {
     }
 
     // Verify auction exists
-    const auction = getAuctionById(id);
+    const auction = await getAuctionById(id);
     if (!auction) {
       res.status(404).json({ error: 'Auction not found' });
       return;
@@ -197,7 +200,7 @@ router.get('/:id/bids', async (req: Request, res: Response) => {
     const id = req.params.id as string;
 
     // Get locally tracked bids
-    const bids = getBidsByAuction(id);
+    const bids = await getBidsByAuction(id);
 
     // Return public-safe view (no encrypted addresses)
     const safeBids = bids

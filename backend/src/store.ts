@@ -1,20 +1,77 @@
+import { encrypt, decrypt } from './encryption';
+
+// --- Storage backend detection ---
+// Use Redis (Upstash) on Vercel, filesystem for local dev
+const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+const useRedis = !!(REDIS_URL && REDIS_TOKEN);
+
+// --- Redis client (lazy-initialized) ---
+import { Redis } from '@upstash/redis';
+let redis: Redis | null = null;
+function getRedis(): Redis {
+  if (!redis) {
+    redis = new Redis({ url: REDIS_URL!, token: REDIS_TOKEN! });
+  }
+  return redis;
+}
+
+// --- Filesystem fallback (local dev) ---
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { encrypt, decrypt } from './encryption';
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const AUCTIONS_FILE = path.join(DATA_DIR, 'auctions.json');
 const BIDS_FILE = path.join(DATA_DIR, 'bids.json');
 
-// Simple write lock to prevent concurrent file corruption
-const writeLocks = new Map<string, Promise<void>>();
-async function withLock<T>(file: string, fn: () => T): Promise<T> {
-  const prev = writeLocks.get(file) || Promise.resolve();
-  const next = prev.then(() => fn());
-  writeLocks.set(file, next.then(() => {}, () => {}));
-  return next;
+function ensureDataDir(): void {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
 }
+
+function readJsonFileSync<T>(filePath: string): T[] {
+  ensureDataDir();
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, '[]', 'utf8');
+    return [];
+  }
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T[];
+  } catch {
+    return [];
+  }
+}
+
+function writeJsonFileSync<T>(filePath: string, data: T[]): void {
+  ensureDataDir();
+  const tmpFile = path.join(os.tmpdir(), `obscura_${path.basename(filePath)}.tmp`);
+  fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), 'utf8');
+  fs.renameSync(tmpFile, filePath);
+}
+
+// --- Generic storage layer ---
+const AUCTIONS_KEY = 'obscura:auctions';
+const BIDS_KEY = 'obscura:bids';
+
+async function readStore<T>(redisKey: string, filePath: string): Promise<T[]> {
+  if (useRedis) {
+    const data = await getRedis().get<T[]>(redisKey);
+    return data || [];
+  }
+  return readJsonFileSync<T>(filePath);
+}
+
+async function writeStore<T>(redisKey: string, filePath: string, data: T[]): Promise<void> {
+  if (useRedis) {
+    await getRedis().set(redisKey, data);
+    return;
+  }
+  writeJsonFileSync(filePath, data);
+}
+
+// --- Interfaces ---
 
 export interface AuctionRecord {
   auction_id: string;
@@ -23,7 +80,6 @@ export interface AuctionRecord {
   seller_address_encrypted: string;
   tx_id: string;
   created_at: string;
-  // On-chain synced fields
   status?: string;
   bid_count?: number;
   deadline?: number;
@@ -45,51 +101,22 @@ export interface BidRecord {
   revealed_amount?: number;
 }
 
-function ensureDataDir(): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-}
-
-function readJsonFile<T>(filePath: string): T[] {
-  ensureDataDir();
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, '[]', 'utf8');
-    return [];
-  }
-  try {
-    const raw = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(raw) as T[];
-  } catch {
-    return [];
-  }
-}
-
-function writeJsonFile<T>(filePath: string, data: T[]): void {
-  ensureDataDir();
-  // Atomic write: write to temp file then rename (prevents corruption on crash)
-  const tmpFile = path.join(os.tmpdir(), `obscura_${path.basename(filePath)}.tmp`);
-  fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), 'utf8');
-  fs.renameSync(tmpFile, filePath);
-}
-
 // --- Auctions ---
 
-export function getAllAuctions(): AuctionRecord[] {
-  return readJsonFile<AuctionRecord>(AUCTIONS_FILE);
+export async function getAllAuctions(): Promise<AuctionRecord[]> {
+  return readStore<AuctionRecord>(AUCTIONS_KEY, AUCTIONS_FILE);
 }
 
-export function getAuctionById(auctionId: string): AuctionRecord | undefined {
-  const auctions = getAllAuctions();
+export async function getAuctionById(auctionId: string): Promise<AuctionRecord | undefined> {
+  const auctions = await getAllAuctions();
   return auctions.find((a) => a.auction_id === auctionId);
 }
 
-export function getAuctionsBySeller(sellerAddress: string): AuctionRecord[] {
-  const auctions = getAllAuctions();
+export async function getAuctionsBySeller(sellerAddress: string): Promise<AuctionRecord[]> {
+  const auctions = await getAllAuctions();
   return auctions.filter((a) => {
     try {
-      const decrypted = decrypt(a.seller_address_encrypted, 'auctions', 'seller_address');
-      return decrypted === sellerAddress;
+      return decrypt(a.seller_address_encrypted, 'auctions', 'seller_address') === sellerAddress;
     } catch {
       return false;
     }
@@ -105,62 +132,56 @@ export async function createAuction(params: {
   token_type?: number;
   deadline?: number;
 }): Promise<AuctionRecord> {
-  return withLock(AUCTIONS_FILE, () => {
-    const auctions = getAllAuctions();
+  const auctions = await getAllAuctions();
 
-    // Check for duplicate
-    if (auctions.find((a) => a.auction_id === params.auction_id)) {
-      throw new Error(`Auction ${params.auction_id} already exists`);
-    }
+  if (auctions.find((a) => a.auction_id === params.auction_id)) {
+    throw new Error(`Auction ${params.auction_id} already exists`);
+  }
 
-    const record: AuctionRecord = {
-      auction_id: params.auction_id,
-      title: params.title,
-      description: params.description,
-      seller_address_encrypted: encrypt(params.seller_address, 'auctions', 'seller_address'),
-      tx_id: params.tx_id,
-      created_at: new Date().toISOString(),
-      status: 'active',
-      token_type: params.token_type === 2 ? 'USDCx' : 'ALEO',
-      deadline: params.deadline,
-      bid_count: 0,
-    };
+  const record: AuctionRecord = {
+    auction_id: params.auction_id,
+    title: params.title,
+    description: params.description,
+    seller_address_encrypted: encrypt(params.seller_address, 'auctions', 'seller_address'),
+    tx_id: params.tx_id,
+    created_at: new Date().toISOString(),
+    status: 'active',
+    token_type: params.token_type === 2 ? 'USDCx' : 'ALEO',
+    deadline: params.deadline,
+    bid_count: 0,
+  };
 
-    auctions.push(record);
-    writeJsonFile(AUCTIONS_FILE, auctions);
-    return record;
-  });
+  auctions.push(record);
+  await writeStore(AUCTIONS_KEY, AUCTIONS_FILE, auctions);
+  return record;
 }
 
 export async function updateAuction(auctionId: string, updates: Partial<AuctionRecord>): Promise<AuctionRecord | null> {
-  return withLock(AUCTIONS_FILE, () => {
-    const auctions = getAllAuctions();
-    const idx = auctions.findIndex((a) => a.auction_id === auctionId);
-    if (idx === -1) return null;
+  const auctions = await getAllAuctions();
+  const idx = auctions.findIndex((a) => a.auction_id === auctionId);
+  if (idx === -1) return null;
 
-    auctions[idx] = { ...auctions[idx], ...updates };
-    writeJsonFile(AUCTIONS_FILE, auctions);
-    return auctions[idx];
-  });
+  auctions[idx] = { ...auctions[idx], ...updates };
+  await writeStore(AUCTIONS_KEY, AUCTIONS_FILE, auctions);
+  return auctions[idx];
 }
 
 // --- Bids ---
 
-export function getAllBids(): BidRecord[] {
-  return readJsonFile<BidRecord>(BIDS_FILE);
+export async function getAllBids(): Promise<BidRecord[]> {
+  return readStore<BidRecord>(BIDS_KEY, BIDS_FILE);
 }
 
-export function getBidsByAuction(auctionId: string): BidRecord[] {
-  const bids = getAllBids();
+export async function getBidsByAuction(auctionId: string): Promise<BidRecord[]> {
+  const bids = await getAllBids();
   return bids.filter((b) => b.auction_id === auctionId);
 }
 
-export function getBidsByBidder(bidderAddress: string): BidRecord[] {
-  const bids = getAllBids();
+export async function getBidsByBidder(bidderAddress: string): Promise<BidRecord[]> {
+  const bids = await getAllBids();
   return bids.filter((b) => {
     try {
-      const decrypted = decrypt(b.bidder_address_encrypted, 'bids', 'bidder_address');
-      return decrypted === bidderAddress;
+      return decrypt(b.bidder_address_encrypted, 'bids', 'bidder_address') === bidderAddress;
     } catch {
       return false;
     }
@@ -173,32 +194,28 @@ export async function createBid(params: {
   bid_hash: string;
   tx_id: string;
 }): Promise<BidRecord> {
-  return withLock(BIDS_FILE, () => {
-    const bids = getAllBids();
+  const bids = await getAllBids();
 
-    const record: BidRecord = {
-      auction_id: params.auction_id,
-      bidder_address_encrypted: encrypt(params.bidder_address, 'bids', 'bidder_address'),
-      bid_hash: params.bid_hash,
-      tx_id: params.tx_id,
-      created_at: new Date().toISOString(),
-      revealed: false,
-    };
+  const record: BidRecord = {
+    auction_id: params.auction_id,
+    bidder_address_encrypted: encrypt(params.bidder_address, 'bids', 'bidder_address'),
+    bid_hash: params.bid_hash,
+    tx_id: params.tx_id,
+    created_at: new Date().toISOString(),
+    revealed: false,
+  };
 
-    bids.push(record);
-    writeJsonFile(BIDS_FILE, bids);
-    return record;
-  });
+  bids.push(record);
+  await writeStore(BIDS_KEY, BIDS_FILE, bids);
+  return record;
 }
 
 export async function updateBid(auctionId: string, bidHash: string, updates: Partial<BidRecord>): Promise<BidRecord | null> {
-  return withLock(BIDS_FILE, () => {
-    const bids = getAllBids();
-    const idx = bids.findIndex((b) => b.auction_id === auctionId && b.bid_hash === bidHash);
-    if (idx === -1) return null;
+  const bids = await getAllBids();
+  const idx = bids.findIndex((b) => b.auction_id === auctionId && b.bid_hash === bidHash);
+  if (idx === -1) return null;
 
-    bids[idx] = { ...bids[idx], ...updates };
-    writeJsonFile(BIDS_FILE, bids);
-    return bids[idx];
-  });
+  bids[idx] = { ...bids[idx], ...updates };
+  await writeStore(BIDS_KEY, BIDS_FILE, bids);
+  return bids[idx];
 }

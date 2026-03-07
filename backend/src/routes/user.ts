@@ -19,7 +19,7 @@ router.get('/auctions', async (req: Request, res: Response) => {
       return;
     }
 
-    const auctions = getAuctionsBySeller(address);
+    const auctions = await getAuctionsBySeller(address);
 
     // Return with decrypted seller address (since requester is the seller)
     const result = auctions.map((a) => ({
@@ -60,7 +60,7 @@ router.get('/bids', async (req: Request, res: Response) => {
       return;
     }
 
-    const bids = getBidsByBidder(address);
+    const bids = await getBidsByBidder(address);
 
     // Return bid info (requester is the bidder, so they can see their own data)
     const result = bids.map((b) => ({

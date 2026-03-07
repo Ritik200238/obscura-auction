@@ -92,19 +92,15 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 // --- Start ---
 
 // Support both standalone (npm start) and Vercel serverless
-const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
+const isVercel = process.env.VERCEL === '1' || !!process.env.VERCEL_ENV;
 
 if (!isVercel) {
   app.listen(PORT, () => {
     console.log(`[server] Obscura Auction API running on http://localhost:${PORT}`);
     console.log(`[server] Health check: http://localhost:${PORT}/health`);
-
-    // Start background on-chain sync (only in standalone mode)
     startBackgroundSync();
   });
-} else {
-  // On Vercel, sync runs once per cold start
-  startBackgroundSync();
 }
+// On Vercel: no background sync needed — sync is on-demand in API routes
 
 export default app;
