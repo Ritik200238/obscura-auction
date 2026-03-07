@@ -1,6 +1,6 @@
 # Obscura — Privacy-First Sealed-Bid Auction Protocol on Aleo
 
-## Status: BUILD-READY | All bugs fixed | Zero known flaws
+## Technical Architecture Reference
 
 ---
 
@@ -344,95 +344,20 @@ second_highest_bids, auction_winners) → update local store → detect status c
 
 ---
 
-## Build Order
-
-### Phase 1: Contract (Days 1-2)
-```
-1A. Apply all 7 bug fixes
-1B. Add Vickrey mode + second_highest_bids mapping
-1C. Add anti-sniping in finalize_place_bid
-1D. Merge token-agnostic transitions
-1E. Compile with Leo CLI
-1F. Deploy to testnet → get TX ID
-```
-
-### Phase 2: Tier 1 Frontend (Days 3-5)
-```
-2A. Scaffold React + Vite + Tailwind + Shield Wallet
-2B. /create page → create_auction
-2C. /auction/:id → BidPanel, RevealPanel, SettlementPanel, RefundPanel
-2D. /browse → auction cards
-2E. /my-activity → user records
-2F. END-TO-END TEST with Shield Wallet
-```
-
-### Phase 3: Tier 2 (Days 5-6)
-```
-3A. USDCx variants in frontend
-3B. Vickrey mode in UI
-3C. /demo page
-3D. /docs page
-```
-
-### Phase 4: Tier 3 (Day 7)
-```
-4A. Encrypted backend + on-chain sync
-4B. README
-4C. UI polish
-4D. Vercel deploy
-4E. SUBMISSION.md
-```
-
----
-
-## File Structure
+## Deployment
 
 ```
-obscura/
-├── contracts/obscura_auction/
-│   ├── src/main.leo
-│   ├── program.json
-│   ├── .env
-│   └── imports/
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── layout/
-│   │   │   ├── auction/
-│   │   │   ├── wallet/
-│   │   │   ├── shared/
-│   │   │   └── docs/
-│   │   ├── hooks/
-│   │   ├── stores/
-│   │   ├── lib/
-│   │   ├── pages/
-│   │   ├── types/
-│   │   └── App.tsx
-│   ├── vite.config.ts
-│   ├── tailwind.config.ts
-│   └── vercel.json
-├── backend/
-│   ├── src/
-│   │   ├── index.ts
-│   │   ├── encryption.ts
-│   │   ├── sync.ts
-│   │   ├── auth.ts
-│   │   └── routes/
-│   └── .env
-├── README.md
-├── SUBMISSION.md
-└── ARCHITECTURE.md
+Frontend:   Vercel (auto-deploys from GitHub main branch)
+            VITE_BACKEND_URL → backend Vercel URL
+            SPA routing via vercel.json rewrites
+
+Backend:    Vercel Serverless (Express as serverless function)
+            Upstash Redis for persistent storage
+            Environment: ENCRYPTION_KEY, KV_REST_API_URL, KV_REST_API_TOKEN
+
+Contract:   Aleo Testnet (obscura_auction.aleo)
+            Deployed via leo deploy --no-build
+            Explorer API for read-only state queries
 ```
 
----
-
-## Projected Score: 43-44 / 50
-
-| Criteria | Weight | NullPay | Veiled | **Obscura** |
-|---|---|---|---|---|
-| Privacy | 40% | 7/10 | 7/10 | **9/10** |
-| Tech | 20% | 6/10 | 8/10 | **9/10** |
-| UX | 20% | 8/10 | 7/10 | **8/10** |
-| Practical | 10% | 8/10 | 7/10 | **8/10** |
-| Novelty | 10% | 6/10 | 8/10 | **9/10** |
-| **TOTAL** | | **~35** | **~37** | **~43** |
+For detailed privacy analysis, see [PRIVACY.md](./PRIVACY.md).
