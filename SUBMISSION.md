@@ -16,9 +16,11 @@
 | Smart Contract | [`obscura_auction.aleo`](https://explorer.provable.com/transaction/at1j58ds0rvhpwtspyvmr9wjxkrd2jq3xg2v25p8se4ezsv40a8xupswz58g4) on Aleo Testnet |
 | Deploy TX | `at1j58ds0rvhpwtspyvmr9wjxkrd2jq3xg2v25p8se4ezsv40a8xupswz58g4` |
 | Initialize TX | `at127myrsahfjvysa0ul3vxg0vt7jzut5hardpgtc8ncpeasdy5wgys4f6lla` |
-| Frontend | _pending Vercel deployment_ |
-| Backend API | _pending deployment_ |
-| Repository | This repo |
+| Frontend | [obscura-auction-95hm.vercel.app](https://obscura-auction-95hm.vercel.app) |
+| Backend API | [obscura-auction-igia.vercel.app](https://obscura-auction-igia.vercel.app/health) |
+| Repository | [github.com/Ritik200238/obscura-auction](https://github.com/Ritik200238/obscura-auction) |
+| Architecture | [ARCHITECTURE.md](./ARCHITECTURE.md) |
+| Privacy Model | [PRIVACY.md](./PRIVACY.md) |
 
 ## What It Does
 

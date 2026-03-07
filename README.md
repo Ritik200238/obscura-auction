@@ -4,6 +4,13 @@
 
 **Obscura** is a sealed-bid auction protocol on Aleo where bid amounts are truly private. Bidders commit encrypted bids as Aleo private records. Only after bidding closes do participants reveal. The winner self-identifies by proving ownership of the winning record. Sellers receive payment as private ALEO credits — zero public trace.
 
+| | |
+|---|---|
+| **Live Frontend** | [obscura-auction-95hm.vercel.app](https://obscura-auction-95hm.vercel.app) |
+| **Backend API** | [obscura-auction-igia.vercel.app](https://obscura-auction-igia.vercel.app/health) |
+| **Contract** | [`obscura_auction.aleo`](https://explorer.provable.com/transaction/at1j58ds0rvhpwtspyvmr9wjxkrd2jq3xg2v25p8se4ezsv40a8xupswz58g4) on Aleo Testnet |
+| **Deep Dives** | [ARCHITECTURE.md](./ARCHITECTURE.md) &#124; [PRIVACY.md](./PRIVACY.md) |
+
 ---
 
 ## Privacy Wall
