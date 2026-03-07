@@ -1,0 +1,205 @@
+import { useState } from 'react'
+import { Lock, Loader2, AlertCircle, CheckCircle, Info } from 'lucide-react'
+import { useTransaction } from '@/hooks/useTransaction'
+import { useWalletStore } from '@/stores/walletStore'
+import { useCountdown } from '@/hooks/useCountdown'
+import { useRecordStore } from '@/stores/recordStore'
+import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
+import type { AuctionData } from '@/types'
+import { generateNonce, toMicrocredits, formatTokenAmount, fetchCreditsRecord } from '@/lib/aleo'
+import { config } from '@/lib/config'
+import TransactionLink from '@/components/shared/TransactionLink'
+
+interface BidPanelProps {
+  auction: AuctionData
+}
+
+export default function BidPanel({ auction }: BidPanelProps) {
+  const { execute, loading, error: txError, txId, status: txStatus, reset } = useTransaction()
+  const { connected } = useWalletStore()
+  const { requestRecords } = useWallet()
+  const { timeRemaining, isExpired } = useCountdown(auction.deadline)
+  const { getForAuction } = useRecordStore()
+
+  const [bidAmount, setBidAmount] = useState('')
+  const [formError, setFormError] = useState<string | null>(null)
+
+  const existingRecords = getForAuction(auction.auction_id)
+  const existingBid = existingRecords.bids.length > 0 ? existingRecords.bids[0] : null
+  const tokenSymbol = 'ALEO'
+
+  const handleBid = async () => {
+    setFormError(null)
+    reset()
+
+    if (!connected) {
+      setFormError('Connect your wallet first')
+      return
+    }
+
+    const amount = parseFloat(bidAmount)
+    if (isNaN(amount) || amount <= 0) {
+      setFormError('Enter a valid bid amount')
+      return
+    }
+
+    const micros = Math.floor(amount * 1_000_000)
+    if (micros < Number(config.minBidAmount)) {
+      setFormError(`Minimum bid is ${Number(config.minBidAmount) / 1_000_000} ${tokenSymbol}`)
+      return
+    }
+
+    const nonce = generateNonce()
+    const microsStr = toMicrocredits(amount)
+
+    // Fetch a credits record with enough balance (bid amount + fee buffer)
+    const totalNeeded = micros + Math.floor(config.defaultFee * 1_000_000)
+    const creditsRecord = await fetchCreditsRecord(requestRecords, totalNeeded)
+    if (!creditsRecord) {
+      setFormError(
+        `No credits record found with at least ${(totalNeeded / 1_000_000).toFixed(3)} ALEO. ` +
+        `Make sure your wallet has private ALEO credits (not just public balance).`
+      )
+      return
+    }
+
+    await execute({
+      functionName: 'place_bid',
+      inputs: [
+        auction.auction_id.endsWith('field') ? auction.auction_id : `${auction.auction_id}field`,
+        `${microsStr}u128`,
+        nonce,
+        creditsRecord,
+      ],
+    })
+  }
+
+  if (txId) {
+    return (
+      <div className="card">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center shrink-0">
+            <CheckCircle className="w-5 h-5 text-green-400" />
+          </div>
+          <div>
+            <h3 className="text-white font-semibold mb-1">Bid Submitted</h3>
+            <p className="text-gray-400 text-sm mb-3">
+              {txStatus === 'confirmed'
+                ? 'Your sealed bid has been confirmed on-chain.'
+                : txStatus === 'failed'
+                ? 'Transaction was rejected. Your funds were not moved.'
+                : 'Your sealed bid has been submitted. Waiting for on-chain confirmation...'}
+            </p>
+            {txStatus === 'pending' && (
+              <div className="flex items-center gap-2 text-xs text-accent-400 mb-3">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>Confirming on-chain...</span>
+              </div>
+            )}
+            <div className="bg-surface-800 rounded-lg p-3">
+              <p className="text-xs text-gray-500 mb-0.5">Transaction</p>
+              <TransactionLink txId={txId} className="text-xs break-all" />
+            </div>
+            <p className="text-xs text-gray-500 mt-3">
+              Save your bid record -- you will need it during the reveal phase.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="card">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-white font-semibold flex items-center gap-2">
+          <Lock className="w-4 h-4 text-accent-400" />
+          Place Sealed Bid
+        </h3>
+        {!isExpired && (
+          <span className="text-xs text-gray-400 bg-surface-800 px-2 py-1 rounded">
+            {timeRemaining} left
+          </span>
+        )}
+      </div>
+
+      {isExpired ? (
+        <p className="text-gray-400 text-sm">Bidding period has ended.</p>
+      ) : (
+        <>
+          {/* Existing bid notice */}
+          {existingBid && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-accent-500/10 border border-accent-500/20 mb-4">
+              <Info className="w-4 h-4 text-accent-400 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm text-accent-300 font-medium">You have an existing bid</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Amount: {formatTokenAmount(existingBid.bid_amount, auction.token_type)}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Bid input */}
+          <div className="mb-4">
+            <label className="block text-sm text-gray-400 mb-1.5">
+              {existingBid ? 'New Bid Amount' : 'Bid Amount'}
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                value={bidAmount}
+                onChange={(e) => setBidAmount(e.target.value)}
+                placeholder="0.00"
+                min="0.001"
+                step="0.001"
+                className="input-field pr-16"
+                disabled={loading}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                {tokenSymbol}
+              </span>
+            </div>
+          </div>
+
+          {/* Privacy notice */}
+          <div className="bg-surface-800 rounded-lg p-3 mb-4">
+            <p className="text-xs text-gray-400">
+              Your bid amount is private until the reveal phase. It is stored as an encrypted
+              Aleo record that only you can decrypt. A random nonce is auto-generated for
+              commitment privacy.
+            </p>
+          </div>
+
+          {/* Errors */}
+          {(formError || txError) && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-4">
+              <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+              <p className="text-sm text-red-400">{formError || txError}</p>
+            </div>
+          )}
+
+          {/* Submit */}
+          <button
+            onClick={handleBid}
+            disabled={loading || !connected}
+            className="btn-primary w-full flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Submitting Bid...
+              </>
+            ) : !connected ? (
+              'Connect Wallet to Bid'
+            ) : existingBid ? (
+              'Place New Bid'
+            ) : (
+              'Place Sealed Bid'
+            )}
+          </button>
+        </>
+      )}
+    </div>
+  )
+}

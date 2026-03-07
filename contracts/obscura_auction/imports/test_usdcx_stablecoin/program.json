@@ -1,0 +1,6 @@
+{
+    "program": "test_usdcx_stablecoin.aleo",
+    "version": "0.1.0",
+    "description": "Local stub for test_usdcx_stablecoin.aleo",
+    "license": "MIT"
+}

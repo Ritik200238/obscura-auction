@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+.vscode/
+backend/data/
+
+# Exclude frontend build output
+frontend/build/
+
+# Keep compiled contract (contracts/obscura_auction/build/) for review
+# Exclude Leo prover/verifier keys (large binaries)
+contracts/*/outputs/
+*.prover
+*.verifier

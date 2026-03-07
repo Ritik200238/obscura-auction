@@ -1,0 +1,6 @@
+{
+    "program": "shadow_auction_v2.aleo",
+    "version": "0.1.0",
+    "description": "Privacy-first sealed-bid auction protocol on Aleo",
+    "license": "MIT"
+}

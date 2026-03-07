@@ -1,0 +1,1890 @@
+// ============================================================================
+// OBSCURA AUCTION — Privacy-First Sealed-Bid Auction Protocol
+// ============================================================================
+// Commit-reveal sealed-bid auctions with Vickrey (second-price) support,
+// anti-sniping, full escrow, private refunds, and dispute resolution.
+//
+// 23 transitions | 6 records | 12 mappings | 8 structs | 8-state machine
+//
+// Token support: credits.aleo (ALEO) + test_usdcx_stablecoin.aleo (USDCx)
+// ALEO escrow: transfer_private_to_public (deposit), transfer_public_to_private (payout)
+// USDCx escrow: transfer_public_as_signer (deposit), transfer_public (payout)
+// ============================================================================
+
+import credits.aleo;
+import test_usdcx_stablecoin.aleo;
+
+program obscura_auction.aleo {
+
+    // ========================================================================
+    // CONSTANTS
+    // ========================================================================
+
+    // Auction Status (8-state machine)
+    const STATUS_ACTIVE: u8 = 1u8;
+    const STATUS_CLOSED: u8 = 2u8;
+    const STATUS_REVEALING: u8 = 3u8;
+    const STATUS_SETTLED: u8 = 4u8;
+    const STATUS_CANCELLED: u8 = 5u8;
+    const STATUS_FAILED: u8 = 6u8;
+    const STATUS_DISPUTED: u8 = 7u8;
+    const STATUS_EXPIRED: u8 = 8u8;
+
+    // Token Types
+    const TOKEN_ALEO: u8 = 1u8;
+    const TOKEN_USDCX: u8 = 2u8;
+
+    // Auction Modes
+    const MODE_FIRST_PRICE: u8 = 1u8;
+    const MODE_VICKREY: u8 = 2u8;
+
+    // Fees (basis points: 100 = 1%)
+    const PLATFORM_FEE_BPS: u128 = 100u128;
+    const DISPUTE_BOND_BPS: u128 = 500u128;
+    const FEE_DENOMINATOR: u128 = 10000u128;
+
+    // Timing (~15s blocks on Aleo)
+    const REVEAL_WINDOW_BLOCKS: u64 = 2880u64;
+    const MIN_AUCTION_DURATION: u64 = 240u64;
+    const DISPUTE_WINDOW_BLOCKS: u64 = 5760u64;
+    const MIN_BID_AMOUNT: u128 = 1000u128;
+    const SNIPE_WINDOW_BLOCKS: u64 = 40u64;
+    const SNIPE_EXTENSION_BLOCKS: u64 = 40u64;
+
+    // ========================================================================
+    // RECORDS (6 — all private UTXO)
+    // ========================================================================
+
+    record SealedBid {
+        owner: address,
+        auction_id: field,
+        bid_amount: u128,
+        bid_nonce: field,
+        token_type: u8,
+    }
+
+    record EscrowReceipt {
+        owner: address,
+        auction_id: field,
+        escrowed_amount: u128,
+        bid_nonce: field,
+        token_type: u8,
+    }
+
+    record WinnerCertificate {
+        owner: address,
+        auction_id: field,
+        item_hash: field,
+        winning_amount: u128,
+        token_type: u8,
+        certificate_id: field,
+    }
+
+    record SellerReceipt {
+        owner: address,
+        auction_id: field,
+        item_hash: field,
+        sale_amount: u128,
+        fee_paid: u128,
+        token_type: u8,
+    }
+
+    record DisputeBond {
+        owner: address,
+        auction_id: field,
+        bond_amount: u128,
+        dispute_nonce: field,
+        token_type: u8,
+    }
+
+    record DisputeResolution {
+        owner: address,
+        auction_id: field,
+        resolution_amount: u128,
+        resolution_type: u8,
+        token_type: u8,
+    }
+
+    // ========================================================================
+    // STRUCTS (8)
+    // ========================================================================
+
+    struct AuctionData {
+        item_hash: field,
+        seller_hash: field,
+        category: u8,
+        token_type: u8,
+        auction_mode: u8,
+        status: u8,
+        deadline: u64,
+        reveal_deadline: u64,
+        bid_count: u64,
+        reserve_price_hash: field,
+        created_at: u64,
+        dispute_deadline: u64,
+    }
+
+    struct AuctionSeed {
+        creator: address,
+        item_hash: field,
+        deadline: u64,
+        nonce: field,
+    }
+
+    struct BidCommitment {
+        bidder: address,
+        auction_id: field,
+        amount: u128,
+        nonce: field,
+    }
+
+    struct DisputeData {
+        auction_id: field,
+        disputer_hash: field,
+        reason: u8,
+        evidence_hash: field,
+        disputed_at: u64,
+        bond_amount: u128,
+    }
+
+    struct SettlementData {
+        winner_bid_hash: field,
+        final_price: u128,
+        fee_collected: u128,
+        settled_at: u64,
+    }
+
+    struct PlatformConfig {
+        admin_hash: field,
+        fee_bps: u128,
+        dispute_bond_bps: u128,
+        paused: bool,
+    }
+
+    struct DisputeSeed {
+        creator: address,
+        evidence_hash: field,
+        auction_id: field,
+    }
+
+    // ========================================================================
+    // MAPPINGS (12)
+    // ========================================================================
+
+    mapping auctions: field => AuctionData;
+    mapping bid_commitments: field => bool;
+    mapping revealed_bids: field => u128;
+    mapping highest_bids: field => u128;
+    mapping second_highest_bids: field => u128;
+    mapping auction_winners: field => field;
+    mapping program_balance: u8 => u128;
+    mapping auction_escrow: field => u128;
+    mapping platform_treasury: u8 => u128;
+    mapping disputes: field => DisputeData;
+    mapping settlements: field => SettlementData;
+    mapping platform_config: u8 => PlatformConfig;
+
+    // ########################################################################
+    //                         CONSTRUCTOR
+    // ########################################################################
+
+    async transition initialize_platform(
+        private admin_address: address,
+        private fee_bps: u128,
+        private bond_bps: u128
+    ) -> Future {
+        let admin_field: field = admin_address as field;
+        let admin_hash: field = BHP256::hash_to_field(admin_field);
+        return finalize_init(admin_hash, fee_bps, bond_bps);
+    }
+
+    async function finalize_init(
+        admin_hash: field,
+        fee_bps: u128,
+        bond_bps: u128
+    ) {
+        let already_init: bool = platform_config.contains(0u8);
+        assert(!already_init);
+
+        platform_config.set(0u8, PlatformConfig {
+            admin_hash: admin_hash,
+            fee_bps: fee_bps,
+            dispute_bond_bps: bond_bps,
+            paused: false,
+        });
+    }
+
+    // ########################################################################
+    //              T1: CREATE AUCTION (unified — both ALEO and USDCx)
+    // ########################################################################
+
+    async transition create_auction(
+        private item_hash: field,
+        private category: u8,
+        private reserve_price: u128,
+        private auction_mode: u8,
+        private token_type: u8,
+        private auction_nonce: field,
+        public deadline: u64
+    ) -> (field, Future) {
+        let seed: AuctionSeed = AuctionSeed {
+            creator: self.caller,
+            item_hash: item_hash,
+            deadline: deadline,
+            nonce: auction_nonce,
+        };
+        let auction_id: field = BHP256::hash_to_field(seed);
+
+        let reserve_field: field = reserve_price as field;
+        let reserve_hash: field = BHP256::hash_to_field(reserve_field);
+
+        let seller_field: field = self.caller as field;
+        let seller_hash: field = BHP256::hash_to_field(seller_field);
+
+        assert(auction_mode == MODE_FIRST_PRICE || auction_mode == MODE_VICKREY);
+        assert(token_type == TOKEN_ALEO || token_type == TOKEN_USDCX);
+
+        return (auction_id, finalize_create_auction(
+            auction_id, item_hash, seller_hash, category,
+            token_type, auction_mode, deadline, reserve_hash
+        ));
+    }
+
+    async function finalize_create_auction(
+        auction_id: field,
+        item_hash: field,
+        seller_hash: field,
+        category: u8,
+        token_type: u8,
+        auction_mode: u8,
+        deadline: u64,
+        reserve_hash: field
+    ) {
+        let exists: bool = auctions.contains(auction_id);
+        assert(!exists);
+
+        let current_height: u64 = block.height as u64;
+        assert(deadline > current_height + MIN_AUCTION_DURATION);
+
+        let cfg: PlatformConfig = platform_config.get(0u8);
+        assert(!cfg.paused);
+
+        auctions.set(auction_id, AuctionData {
+            item_hash: item_hash,
+            seller_hash: seller_hash,
+            category: category,
+            token_type: token_type,
+            auction_mode: auction_mode,
+            status: STATUS_ACTIVE,
+            deadline: deadline,
+            reveal_deadline: 0u64,
+            bid_count: 0u64,
+            reserve_price_hash: reserve_hash,
+            created_at: current_height,
+            dispute_deadline: 0u64,
+        });
+    }
+
+    // ########################################################################
+    //              T2: CANCEL AUCTION
+    // ########################################################################
+
+    async transition cancel_auction(
+        private auction_id: field
+    ) -> Future {
+        let caller_field: field = self.caller as field;
+        let caller_hash: field = BHP256::hash_to_field(caller_field);
+        return finalize_cancel_auction(auction_id, caller_hash);
+    }
+
+    async function finalize_cancel_auction(
+        auction_id: field,
+        caller_hash: field
+    ) {
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.seller_hash, caller_hash);
+        assert_eq(auction.status, STATUS_ACTIVE);
+        assert_eq(auction.bid_count, 0u64);
+
+        auctions.set(auction_id, AuctionData {
+            item_hash: auction.item_hash,
+            seller_hash: auction.seller_hash,
+            category: auction.category,
+            token_type: auction.token_type,
+            auction_mode: auction.auction_mode,
+            status: STATUS_CANCELLED,
+            deadline: auction.deadline,
+            reveal_deadline: auction.reveal_deadline,
+            bid_count: auction.bid_count,
+            reserve_price_hash: auction.reserve_price_hash,
+            created_at: auction.created_at,
+            dispute_deadline: auction.dispute_deadline,
+        });
+    }
+
+    // ########################################################################
+    //              T3: CLOSE BIDDING
+    // ########################################################################
+
+    async transition close_bidding(
+        private auction_id: field
+    ) -> Future {
+        return finalize_close_bidding(auction_id);
+    }
+
+    async function finalize_close_bidding(
+        auction_id: field
+    ) {
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_ACTIVE);
+
+        let current_height: u64 = block.height as u64;
+        assert(current_height >= auction.deadline);
+
+        if (auction.bid_count == 0u64) {
+            auctions.set(auction_id, AuctionData {
+                item_hash: auction.item_hash,
+                seller_hash: auction.seller_hash,
+                category: auction.category,
+                token_type: auction.token_type,
+                auction_mode: auction.auction_mode,
+                status: STATUS_EXPIRED,
+                deadline: auction.deadline,
+                reveal_deadline: auction.reveal_deadline,
+                bid_count: auction.bid_count,
+                reserve_price_hash: auction.reserve_price_hash,
+                created_at: auction.created_at,
+                dispute_deadline: auction.dispute_deadline,
+            });
+        } else {
+            auctions.set(auction_id, AuctionData {
+                item_hash: auction.item_hash,
+                seller_hash: auction.seller_hash,
+                category: auction.category,
+                token_type: auction.token_type,
+                auction_mode: auction.auction_mode,
+                status: STATUS_REVEALING,
+                deadline: auction.deadline,
+                reveal_deadline: current_height + REVEAL_WINDOW_BLOCKS,
+                bid_count: auction.bid_count,
+                reserve_price_hash: auction.reserve_price_hash,
+                created_at: auction.created_at,
+                dispute_deadline: auction.dispute_deadline,
+            });
+        }
+    }
+
+    // ########################################################################
+    //              T4: PLACE BID (ALEO)
+    // ########################################################################
+
+    async transition place_bid(
+        private auction_id: field,
+        private bid_amount: u128,
+        private bid_nonce: field,
+        private credits_in: credits.aleo/credits
+    ) -> (SealedBid, EscrowReceipt, credits.aleo/credits, Future) {
+        assert(bid_amount >= MIN_BID_AMOUNT);
+
+        let sealed: SealedBid = SealedBid {
+            owner: self.caller,
+            auction_id: auction_id,
+            bid_amount: bid_amount,
+            bid_nonce: bid_nonce,
+            token_type: TOKEN_ALEO,
+        };
+
+        let receipt: EscrowReceipt = EscrowReceipt {
+            owner: self.caller,
+            auction_id: auction_id,
+            escrowed_amount: bid_amount,
+            bid_nonce: bid_nonce,
+            token_type: TOKEN_ALEO,
+        };
+
+        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: self.caller,
+            auction_id: auction_id,
+            amount: bid_amount,
+            nonce: bid_nonce,
+        });
+
+        let amount_u64: u64 = bid_amount as u64;
+        let (change, transfer_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_private_to_public(
+                credits_in,
+                self.address,
+                amount_u64
+            );
+
+        return (sealed, receipt, change, finalize_place_bid(
+            transfer_future, auction_id, bid_hash, bid_amount
+        ));
+    }
+
+    async function finalize_place_bid(
+        f0: Future,
+        auction_id: field,
+        bid_hash: field,
+        amount: u128
+    ) {
+        f0.await();
+
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_ACTIVE);
+
+        let current_height: u64 = block.height as u64;
+        assert(current_height <= auction.deadline);
+
+        let already_exists: bool = bid_commitments.contains(bid_hash);
+        assert(!already_exists);
+
+        let cfg: PlatformConfig = platform_config.get(0u8);
+        assert(!cfg.paused);
+
+        bid_commitments.set(bid_hash, true);
+
+        // Anti-sniping: extend deadline if bid placed in last SNIPE_WINDOW
+        let snipe_threshold: u64 = auction.deadline > SNIPE_WINDOW_BLOCKS
+            ? auction.deadline - SNIPE_WINDOW_BLOCKS
+            : 0u64;
+        let new_deadline: u64 = current_height > snipe_threshold
+            ? auction.deadline + SNIPE_EXTENSION_BLOCKS
+            : auction.deadline;
+
+        auctions.set(auction_id, AuctionData {
+            item_hash: auction.item_hash,
+            seller_hash: auction.seller_hash,
+            category: auction.category,
+            token_type: auction.token_type,
+            auction_mode: auction.auction_mode,
+            status: auction.status,
+            deadline: new_deadline,
+            reveal_deadline: auction.reveal_deadline,
+            bid_count: auction.bid_count + 1u64,
+            reserve_price_hash: auction.reserve_price_hash,
+            created_at: auction.created_at,
+            dispute_deadline: auction.dispute_deadline,
+        });
+
+        let current_escrow: u128 = auction_escrow.get_or_use(auction_id, 0u128);
+        auction_escrow.set(auction_id, current_escrow + amount);
+
+        let current_bal: u128 = program_balance.get_or_use(0u8, 0u128);
+        program_balance.set(0u8, current_bal + amount);
+    }
+
+    // ########################################################################
+    //              T5: PLACE BID (USDCx)
+    // ########################################################################
+
+    async transition place_bid_usdcx(
+        private auction_id: field,
+        private bid_amount: u128,
+        private bid_nonce: field
+    ) -> (SealedBid, EscrowReceipt, Future) {
+        assert(bid_amount >= MIN_BID_AMOUNT);
+
+        let sealed: SealedBid = SealedBid {
+            owner: self.caller,
+            auction_id: auction_id,
+            bid_amount: bid_amount,
+            bid_nonce: bid_nonce,
+            token_type: TOKEN_USDCX,
+        };
+
+        let receipt: EscrowReceipt = EscrowReceipt {
+            owner: self.caller,
+            auction_id: auction_id,
+            escrowed_amount: bid_amount,
+            bid_nonce: bid_nonce,
+            token_type: TOKEN_USDCX,
+        };
+
+        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: self.caller,
+            auction_id: auction_id,
+            amount: bid_amount,
+            nonce: bid_nonce,
+        });
+
+        let transfer_future: Future =
+            test_usdcx_stablecoin.aleo/transfer_public_as_signer(
+                self.address,
+                bid_amount
+            );
+
+        return (sealed, receipt, finalize_place_bid_usdcx(
+            transfer_future, auction_id, bid_hash, bid_amount
+        ));
+    }
+
+    async function finalize_place_bid_usdcx(
+        f0: Future,
+        auction_id: field,
+        bid_hash: field,
+        amount: u128
+    ) {
+        f0.await();
+
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_ACTIVE);
+        assert_eq(auction.token_type, TOKEN_USDCX);
+
+        let current_height: u64 = block.height as u64;
+        assert(current_height <= auction.deadline);
+
+        let already_exists: bool = bid_commitments.contains(bid_hash);
+        assert(!already_exists);
+
+        let cfg: PlatformConfig = platform_config.get(0u8);
+        assert(!cfg.paused);
+
+        bid_commitments.set(bid_hash, true);
+
+        // Anti-sniping
+        let snipe_threshold: u64 = auction.deadline > SNIPE_WINDOW_BLOCKS
+            ? auction.deadline - SNIPE_WINDOW_BLOCKS
+            : 0u64;
+        let new_deadline: u64 = current_height > snipe_threshold
+            ? auction.deadline + SNIPE_EXTENSION_BLOCKS
+            : auction.deadline;
+
+        auctions.set(auction_id, AuctionData {
+            item_hash: auction.item_hash,
+            seller_hash: auction.seller_hash,
+            category: auction.category,
+            token_type: auction.token_type,
+            auction_mode: auction.auction_mode,
+            status: auction.status,
+            deadline: new_deadline,
+            reveal_deadline: auction.reveal_deadline,
+            bid_count: auction.bid_count + 1u64,
+            reserve_price_hash: auction.reserve_price_hash,
+            created_at: auction.created_at,
+            dispute_deadline: auction.dispute_deadline,
+        });
+
+        let current_escrow: u128 = auction_escrow.get_or_use(auction_id, 0u128);
+        auction_escrow.set(auction_id, current_escrow + amount);
+
+        let current_bal: u128 = program_balance.get_or_use(1u8, 0u128);
+        program_balance.set(1u8, current_bal + amount);
+    }
+
+    // ########################################################################
+    //              T6: INCREASE BID (ALEO) — BUG #6 FIX
+    // ########################################################################
+
+    async transition increase_bid(
+        private old_bid: SealedBid,
+        private old_receipt: EscrowReceipt,
+        private additional_amount: u128,
+        private new_nonce: field,
+        private credits_in: credits.aleo/credits
+    ) -> (SealedBid, EscrowReceipt, credits.aleo/credits, Future) {
+        assert_eq(old_bid.auction_id, old_receipt.auction_id);
+        assert_eq(old_bid.bid_nonce, old_receipt.bid_nonce);
+        assert_eq(old_bid.token_type, TOKEN_ALEO);
+        assert(additional_amount > 0u128);
+
+        let new_total: u128 = old_bid.bid_amount + additional_amount;
+        let total_escrowed: u128 = old_receipt.escrowed_amount + additional_amount;
+
+        let sealed: SealedBid = SealedBid {
+            owner: self.caller,
+            auction_id: old_bid.auction_id,
+            bid_amount: new_total,
+            bid_nonce: new_nonce,
+            token_type: TOKEN_ALEO,
+        };
+
+        let receipt: EscrowReceipt = EscrowReceipt {
+            owner: self.caller,
+            auction_id: old_bid.auction_id,
+            escrowed_amount: total_escrowed,
+            bid_nonce: new_nonce,
+            token_type: TOKEN_ALEO,
+        };
+
+        let new_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: self.caller,
+            auction_id: old_bid.auction_id,
+            amount: new_total,
+            nonce: new_nonce,
+        });
+
+        let amount_u64: u64 = additional_amount as u64;
+        let (change, transfer_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_private_to_public(
+                credits_in,
+                self.address,
+                amount_u64
+            );
+
+        return (sealed, receipt, change, finalize_increase_bid(
+            transfer_future, old_bid.auction_id, new_hash, additional_amount
+        ));
+    }
+
+    async function finalize_increase_bid(
+        f0: Future,
+        auction_id: field,
+        new_hash: field,
+        additional: u128
+    ) {
+        f0.await();
+
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_ACTIVE);
+
+        let current_height: u64 = block.height as u64;
+        assert(current_height <= auction.deadline);
+
+        let hash_exists: bool = bid_commitments.contains(new_hash);
+        assert(!hash_exists);
+        bid_commitments.set(new_hash, true);
+
+        // Anti-sniping
+        let snipe_threshold: u64 = auction.deadline > SNIPE_WINDOW_BLOCKS
+            ? auction.deadline - SNIPE_WINDOW_BLOCKS
+            : 0u64;
+        let new_deadline: u64 = current_height > snipe_threshold
+            ? auction.deadline + SNIPE_EXTENSION_BLOCKS
+            : auction.deadline;
+
+        auctions.set(auction_id, AuctionData {
+            item_hash: auction.item_hash,
+            seller_hash: auction.seller_hash,
+            category: auction.category,
+            token_type: auction.token_type,
+            auction_mode: auction.auction_mode,
+            status: auction.status,
+            deadline: new_deadline,
+            reveal_deadline: auction.reveal_deadline,
+            bid_count: auction.bid_count,
+            reserve_price_hash: auction.reserve_price_hash,
+            created_at: auction.created_at,
+            dispute_deadline: auction.dispute_deadline,
+        });
+
+        let current_escrow: u128 = auction_escrow.get_or_use(auction_id, 0u128);
+        auction_escrow.set(auction_id, current_escrow + additional);
+
+        let current_bal: u128 = program_balance.get_or_use(0u8, 0u128);
+        program_balance.set(0u8, current_bal + additional);
+    }
+
+    // ########################################################################
+    //              T7: INCREASE BID (USDCx) — BUG #6 FIX
+    // ########################################################################
+
+    async transition increase_bid_usdcx(
+        private old_bid: SealedBid,
+        private old_receipt: EscrowReceipt,
+        private additional_amount: u128,
+        private new_nonce: field
+    ) -> (SealedBid, EscrowReceipt, Future) {
+        assert_eq(old_bid.auction_id, old_receipt.auction_id);
+        assert_eq(old_bid.bid_nonce, old_receipt.bid_nonce);
+        assert_eq(old_bid.token_type, TOKEN_USDCX);
+        assert(additional_amount > 0u128);
+
+        let new_total: u128 = old_bid.bid_amount + additional_amount;
+        let total_escrowed: u128 = old_receipt.escrowed_amount + additional_amount;
+
+        let sealed: SealedBid = SealedBid {
+            owner: self.caller,
+            auction_id: old_bid.auction_id,
+            bid_amount: new_total,
+            bid_nonce: new_nonce,
+            token_type: TOKEN_USDCX,
+        };
+
+        let receipt: EscrowReceipt = EscrowReceipt {
+            owner: self.caller,
+            auction_id: old_bid.auction_id,
+            escrowed_amount: total_escrowed,
+            bid_nonce: new_nonce,
+            token_type: TOKEN_USDCX,
+        };
+
+        let new_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: self.caller,
+            auction_id: old_bid.auction_id,
+            amount: new_total,
+            nonce: new_nonce,
+        });
+
+        let transfer_future: Future =
+            test_usdcx_stablecoin.aleo/transfer_public_as_signer(
+                self.address,
+                additional_amount
+            );
+
+        return (sealed, receipt, finalize_increase_bid_usdcx(
+            transfer_future, old_bid.auction_id, new_hash, additional_amount
+        ));
+    }
+
+    async function finalize_increase_bid_usdcx(
+        f0: Future,
+        auction_id: field,
+        new_hash: field,
+        additional: u128
+    ) {
+        f0.await();
+
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_ACTIVE);
+        assert_eq(auction.token_type, TOKEN_USDCX);
+
+        let current_height: u64 = block.height as u64;
+        assert(current_height <= auction.deadline);
+
+        let hash_exists: bool = bid_commitments.contains(new_hash);
+        assert(!hash_exists);
+        bid_commitments.set(new_hash, true);
+
+        // Anti-sniping
+        let snipe_threshold: u64 = auction.deadline > SNIPE_WINDOW_BLOCKS
+            ? auction.deadline - SNIPE_WINDOW_BLOCKS
+            : 0u64;
+        let new_deadline: u64 = current_height > snipe_threshold
+            ? auction.deadline + SNIPE_EXTENSION_BLOCKS
+            : auction.deadline;
+
+        auctions.set(auction_id, AuctionData {
+            item_hash: auction.item_hash,
+            seller_hash: auction.seller_hash,
+            category: auction.category,
+            token_type: auction.token_type,
+            auction_mode: auction.auction_mode,
+            status: auction.status,
+            deadline: new_deadline,
+            reveal_deadline: auction.reveal_deadline,
+            bid_count: auction.bid_count,
+            reserve_price_hash: auction.reserve_price_hash,
+            created_at: auction.created_at,
+            dispute_deadline: auction.dispute_deadline,
+        });
+
+        let current_escrow: u128 = auction_escrow.get_or_use(auction_id, 0u128);
+        auction_escrow.set(auction_id, current_escrow + additional);
+
+        let current_bal: u128 = program_balance.get_or_use(1u8, 0u128);
+        program_balance.set(1u8, current_bal + additional);
+    }
+
+    // ########################################################################
+    //              T8: REVEAL BID (unified — no token transfer)
+    // ########################################################################
+
+    async transition reveal_bid(
+        private bid: SealedBid
+    ) -> Future {
+        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: bid.owner,
+            auction_id: bid.auction_id,
+            amount: bid.bid_amount,
+            nonce: bid.bid_nonce,
+        });
+
+        return finalize_reveal_bid(bid.auction_id, bid_hash, bid.bid_amount);
+    }
+
+    async function finalize_reveal_bid(
+        auction_id: field,
+        bid_hash: field,
+        amount: u128
+    ) {
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_REVEALING);
+
+        let current_height: u64 = block.height as u64;
+        assert(current_height <= auction.reveal_deadline);
+
+        let committed: bool = bid_commitments.get(bid_hash);
+        assert(committed);
+
+        let already_revealed: bool = revealed_bids.contains(bid_hash);
+        assert(!already_revealed);
+
+        revealed_bids.set(bid_hash, amount);
+
+        // Vickrey tracking: maintain highest and second-highest
+        let current_high: u128 = highest_bids.get_or_use(auction_id, 0u128);
+        let current_second: u128 = second_highest_bids.get_or_use(auction_id, 0u128);
+
+        if (amount > current_high) {
+            second_highest_bids.set(auction_id, current_high);
+            highest_bids.set(auction_id, amount);
+            auction_winners.set(auction_id, bid_hash);
+        } else {
+            if (amount > current_second) {
+                second_highest_bids.set(auction_id, amount);
+            }
+        }
+    }
+
+    // ########################################################################
+    //              T9: FINALIZE AUCTION (unified — seller calls)
+    // ########################################################################
+
+    async transition finalize_auction(
+        private auction_id: field,
+        private reserve_price: u128
+    ) -> Future {
+        let caller_field: field = self.caller as field;
+        let caller_hash: field = BHP256::hash_to_field(caller_field);
+
+        let reserve_field: field = reserve_price as field;
+        let reserve_hash: field = BHP256::hash_to_field(reserve_field);
+
+        return do_finalize_auction(auction_id, caller_hash, reserve_hash, reserve_price);
+    }
+
+    async function do_finalize_auction(
+        auction_id: field,
+        caller_hash: field,
+        reserve_hash: field,
+        reserve_price: u128
+    ) {
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.seller_hash, caller_hash);
+        assert_eq(auction.status, STATUS_REVEALING);
+
+        let current_height: u64 = block.height as u64;
+        assert(current_height > auction.reveal_deadline);
+
+        assert_eq(reserve_hash, auction.reserve_price_hash);
+
+        let winning_amount: u128 = highest_bids.get_or_use(auction_id, 0u128);
+
+        if (auction.auction_mode == MODE_VICKREY) {
+            let second: u128 = second_highest_bids.get_or_use(auction_id, 0u128);
+            if (second == 0u128) {
+                // Vickrey needs >= 2 revealed bids
+                auctions.set(auction_id, AuctionData {
+                    item_hash: auction.item_hash,
+                    seller_hash: auction.seller_hash,
+                    category: auction.category,
+                    token_type: auction.token_type,
+                    auction_mode: auction.auction_mode,
+                    status: STATUS_FAILED,
+                    deadline: auction.deadline,
+                    reveal_deadline: auction.reveal_deadline,
+                    bid_count: auction.bid_count,
+                    reserve_price_hash: auction.reserve_price_hash,
+                    created_at: auction.created_at,
+                    dispute_deadline: auction.dispute_deadline,
+                });
+            } else {
+                if (winning_amount >= reserve_price) {
+                    auctions.set(auction_id, AuctionData {
+                        item_hash: auction.item_hash,
+                        seller_hash: auction.seller_hash,
+                        category: auction.category,
+                        token_type: auction.token_type,
+                        auction_mode: auction.auction_mode,
+                        status: STATUS_SETTLED,
+                        deadline: auction.deadline,
+                        reveal_deadline: auction.reveal_deadline,
+                        bid_count: auction.bid_count,
+                        reserve_price_hash: auction.reserve_price_hash,
+                        created_at: auction.created_at,
+                        dispute_deadline: current_height + DISPUTE_WINDOW_BLOCKS,
+                    });
+                } else {
+                    auctions.set(auction_id, AuctionData {
+                        item_hash: auction.item_hash,
+                        seller_hash: auction.seller_hash,
+                        category: auction.category,
+                        token_type: auction.token_type,
+                        auction_mode: auction.auction_mode,
+                        status: STATUS_FAILED,
+                        deadline: auction.deadline,
+                        reveal_deadline: auction.reveal_deadline,
+                        bid_count: auction.bid_count,
+                        reserve_price_hash: auction.reserve_price_hash,
+                        created_at: auction.created_at,
+                        dispute_deadline: auction.dispute_deadline,
+                    });
+                }
+            }
+        } else {
+            // First-price mode
+            if (winning_amount >= reserve_price && winning_amount > 0u128) {
+                auctions.set(auction_id, AuctionData {
+                    item_hash: auction.item_hash,
+                    seller_hash: auction.seller_hash,
+                    category: auction.category,
+                    token_type: auction.token_type,
+                    auction_mode: auction.auction_mode,
+                    status: STATUS_SETTLED,
+                    deadline: auction.deadline,
+                    reveal_deadline: auction.reveal_deadline,
+                    bid_count: auction.bid_count,
+                    reserve_price_hash: auction.reserve_price_hash,
+                    created_at: auction.created_at,
+                    dispute_deadline: current_height + DISPUTE_WINDOW_BLOCKS,
+                });
+            } else {
+                auctions.set(auction_id, AuctionData {
+                    item_hash: auction.item_hash,
+                    seller_hash: auction.seller_hash,
+                    category: auction.category,
+                    token_type: auction.token_type,
+                    auction_mode: auction.auction_mode,
+                    status: STATUS_FAILED,
+                    deadline: auction.deadline,
+                    reveal_deadline: auction.reveal_deadline,
+                    bid_count: auction.bid_count,
+                    reserve_price_hash: auction.reserve_price_hash,
+                    created_at: auction.created_at,
+                    dispute_deadline: auction.dispute_deadline,
+                });
+            }
+        }
+    }
+
+    // ########################################################################
+    //              T10: CLAIM WIN (ALEO — first-price + Vickrey ties)
+    // ########################################################################
+
+    async transition claim_win(
+        private bid: SealedBid,
+        private receipt: EscrowReceipt,
+        private seller_address: address,
+        private item_hash: field
+    ) -> (WinnerCertificate, SellerReceipt, credits.aleo/credits, Future) {
+        assert_eq(bid.auction_id, receipt.auction_id);
+        assert_eq(bid.bid_nonce, receipt.bid_nonce);
+        assert_eq(bid.token_type, TOKEN_ALEO);
+
+        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: bid.owner,
+            auction_id: bid.auction_id,
+            amount: bid.bid_amount,
+            nonce: bid.bid_nonce,
+        });
+
+        let fee: u128 = (bid.bid_amount * PLATFORM_FEE_BPS) / FEE_DENOMINATOR;
+        let seller_payout: u128 = bid.bid_amount - fee;
+        let payout_u64: u64 = seller_payout as u64;
+
+        let (seller_credits, pay_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_public_to_private(
+                seller_address,
+                payout_u64
+            );
+
+        let cert: WinnerCertificate = WinnerCertificate {
+            owner: self.caller,
+            auction_id: bid.auction_id,
+            item_hash: item_hash,
+            winning_amount: bid.bid_amount,
+            token_type: TOKEN_ALEO,
+            certificate_id: bid_hash,
+        };
+
+        let seller_receipt: SellerReceipt = SellerReceipt {
+            owner: seller_address,
+            auction_id: bid.auction_id,
+            item_hash: item_hash,
+            sale_amount: seller_payout,
+            fee_paid: fee,
+            token_type: TOKEN_ALEO,
+        };
+
+        return (cert, seller_receipt, seller_credits, finalize_claim_win(
+            pay_future, bid.auction_id, bid_hash, bid.bid_amount, fee, item_hash
+        ));
+    }
+
+    async function finalize_claim_win(
+        f0: Future,
+        auction_id: field,
+        bid_hash: field,
+        bid_amount: u128,
+        fee: u128,
+        item_hash: field
+    ) {
+        f0.await();
+
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_SETTLED);
+
+        // Vickrey tie handling: if Vickrey, this path only for ties
+        if (auction.auction_mode == MODE_VICKREY) {
+            let second: u128 = second_highest_bids.get_or_use(auction_id, 0u128);
+            assert_eq(bid_amount, second);
+        }
+
+        let winner_hash: field = auction_winners.get(auction_id);
+        assert_eq(bid_hash, winner_hash);
+
+        let revealed_amount: u128 = revealed_bids.get(bid_hash);
+        assert_eq(revealed_amount, bid_amount);
+
+        // BUG #3 FIX: verify item_hash matches auction
+        assert_eq(item_hash, auction.item_hash);
+
+        // BUG #7 FIX: prevent double settlement
+        let already_settled: bool = settlements.contains(auction_id);
+        assert(!already_settled);
+        settlements.set(auction_id, SettlementData {
+            winner_bid_hash: bid_hash,
+            final_price: bid_amount,
+            fee_collected: fee,
+            settled_at: block.height as u64,
+        });
+
+        let treasury: u128 = platform_treasury.get_or_use(0u8, 0u128);
+        platform_treasury.set(0u8, treasury + fee);
+
+        let bal: u128 = program_balance.get(0u8);
+        program_balance.set(0u8, bal - bid_amount);
+
+        let escrow: u128 = auction_escrow.get(auction_id);
+        auction_escrow.set(auction_id, escrow - bid_amount);
+    }
+
+    // ########################################################################
+    //              T11: CLAIM WIN (USDCx — first-price + Vickrey ties)
+    // ########################################################################
+
+    async transition claim_win_usdcx(
+        private bid: SealedBid,
+        private receipt: EscrowReceipt,
+        private seller_address: address,
+        private item_hash: field
+    ) -> (WinnerCertificate, SellerReceipt, Future) {
+        assert_eq(bid.auction_id, receipt.auction_id);
+        assert_eq(bid.bid_nonce, receipt.bid_nonce);
+        assert_eq(bid.token_type, TOKEN_USDCX);
+
+        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: bid.owner,
+            auction_id: bid.auction_id,
+            amount: bid.bid_amount,
+            nonce: bid.bid_nonce,
+        });
+
+        let fee: u128 = (bid.bid_amount * PLATFORM_FEE_BPS) / FEE_DENOMINATOR;
+        let seller_payout: u128 = bid.bid_amount - fee;
+
+        let transfer_future: Future =
+            test_usdcx_stablecoin.aleo/transfer_public(
+                seller_address,
+                seller_payout
+            );
+
+        let cert: WinnerCertificate = WinnerCertificate {
+            owner: self.caller,
+            auction_id: bid.auction_id,
+            item_hash: item_hash,
+            winning_amount: bid.bid_amount,
+            token_type: TOKEN_USDCX,
+            certificate_id: bid_hash,
+        };
+
+        let seller_receipt: SellerReceipt = SellerReceipt {
+            owner: seller_address,
+            auction_id: bid.auction_id,
+            item_hash: item_hash,
+            sale_amount: seller_payout,
+            fee_paid: fee,
+            token_type: TOKEN_USDCX,
+        };
+
+        return (cert, seller_receipt, finalize_claim_win_usdcx(
+            transfer_future, bid.auction_id, bid_hash, bid.bid_amount, fee, item_hash
+        ));
+    }
+
+    async function finalize_claim_win_usdcx(
+        f0: Future,
+        auction_id: field,
+        bid_hash: field,
+        bid_amount: u128,
+        fee: u128,
+        item_hash: field
+    ) {
+        f0.await();
+
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_SETTLED);
+
+        if (auction.auction_mode == MODE_VICKREY) {
+            let second: u128 = second_highest_bids.get_or_use(auction_id, 0u128);
+            assert_eq(bid_amount, second);
+        }
+
+        let winner_hash: field = auction_winners.get(auction_id);
+        assert_eq(bid_hash, winner_hash);
+
+        let revealed_amount: u128 = revealed_bids.get(bid_hash);
+        assert_eq(revealed_amount, bid_amount);
+
+        assert_eq(item_hash, auction.item_hash);
+
+        let already_settled: bool = settlements.contains(auction_id);
+        assert(!already_settled);
+        settlements.set(auction_id, SettlementData {
+            winner_bid_hash: bid_hash,
+            final_price: bid_amount,
+            fee_collected: fee,
+            settled_at: block.height as u64,
+        });
+
+        let treasury: u128 = platform_treasury.get_or_use(1u8, 0u128);
+        platform_treasury.set(1u8, treasury + fee);
+
+        let bal: u128 = program_balance.get(1u8);
+        program_balance.set(1u8, bal - bid_amount);
+
+        let escrow: u128 = auction_escrow.get(auction_id);
+        auction_escrow.set(auction_id, escrow - bid_amount);
+    }
+
+    // ########################################################################
+    //              T12: CLAIM WIN VICKREY (ALEO — second-price with refund)
+    // ########################################################################
+
+    async transition claim_win_vickrey(
+        private bid: SealedBid,
+        private receipt: EscrowReceipt,
+        private seller_address: address,
+        private item_hash: field,
+        private second_price: u128
+    ) -> (WinnerCertificate, SellerReceipt, credits.aleo/credits, credits.aleo/credits, Future) {
+        assert_eq(bid.auction_id, receipt.auction_id);
+        assert_eq(bid.bid_nonce, receipt.bid_nonce);
+        assert_eq(bid.token_type, TOKEN_ALEO);
+        assert(second_price <= bid.bid_amount);
+
+        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: bid.owner,
+            auction_id: bid.auction_id,
+            amount: bid.bid_amount,
+            nonce: bid.bid_nonce,
+        });
+
+        let fee: u128 = (second_price * PLATFORM_FEE_BPS) / FEE_DENOMINATOR;
+        let seller_payout: u128 = second_price - fee;
+        let winner_refund: u128 = bid.bid_amount - second_price;
+
+        assert(seller_payout > 0u128);
+
+        let payout_u64: u64 = seller_payout as u64;
+        let refund_u64: u64 = winner_refund as u64;
+
+        let (seller_credits, pay_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_public_to_private(
+                seller_address,
+                payout_u64
+            );
+
+        let (refund_credits, refund_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_public_to_private(
+                self.caller,
+                refund_u64
+            );
+
+        let cert: WinnerCertificate = WinnerCertificate {
+            owner: self.caller,
+            auction_id: bid.auction_id,
+            item_hash: item_hash,
+            winning_amount: second_price,
+            token_type: TOKEN_ALEO,
+            certificate_id: bid_hash,
+        };
+
+        let seller_receipt: SellerReceipt = SellerReceipt {
+            owner: seller_address,
+            auction_id: bid.auction_id,
+            item_hash: item_hash,
+            sale_amount: seller_payout,
+            fee_paid: fee,
+            token_type: TOKEN_ALEO,
+        };
+
+        return (cert, seller_receipt, seller_credits, refund_credits, finalize_claim_win_vickrey(
+            pay_future, refund_future, bid.auction_id, bid_hash,
+            bid.bid_amount, second_price, fee, item_hash
+        ));
+    }
+
+    async function finalize_claim_win_vickrey(
+        f0: Future,
+        f1: Future,
+        auction_id: field,
+        bid_hash: field,
+        bid_amount: u128,
+        second_price: u128,
+        fee: u128,
+        item_hash: field
+    ) {
+        f0.await();
+        f1.await();
+
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_SETTLED);
+        assert_eq(auction.auction_mode, MODE_VICKREY);
+
+        let winner_hash: field = auction_winners.get(auction_id);
+        assert_eq(bid_hash, winner_hash);
+
+        // Verify second_price matches stored second-highest
+        let stored_second: u128 = second_highest_bids.get(auction_id);
+        assert_eq(second_price, stored_second);
+
+        // Ties use T10/T11, not T12 — bid must exceed second price
+        assert(bid_amount > second_price);
+
+        let revealed_amount: u128 = revealed_bids.get(bid_hash);
+        assert_eq(revealed_amount, bid_amount);
+
+        assert_eq(item_hash, auction.item_hash);
+
+        let already_settled: bool = settlements.contains(auction_id);
+        assert(!already_settled);
+        settlements.set(auction_id, SettlementData {
+            winner_bid_hash: bid_hash,
+            final_price: second_price,
+            fee_collected: fee,
+            settled_at: block.height as u64,
+        });
+
+        let treasury: u128 = platform_treasury.get_or_use(0u8, 0u128);
+        platform_treasury.set(0u8, treasury + fee);
+
+        // Full bid_amount leaves program: seller_payout + fee + winner_refund
+        let bal: u128 = program_balance.get(0u8);
+        program_balance.set(0u8, bal - bid_amount);
+
+        let escrow: u128 = auction_escrow.get(auction_id);
+        auction_escrow.set(auction_id, escrow - bid_amount);
+    }
+
+    // ########################################################################
+    //              T13: CLAIM WIN VICKREY (USDCx)
+    // ########################################################################
+
+    async transition claim_win_vickrey_usdcx(
+        private bid: SealedBid,
+        private receipt: EscrowReceipt,
+        private seller_address: address,
+        private item_hash: field,
+        private second_price: u128
+    ) -> (WinnerCertificate, SellerReceipt, Future) {
+        assert_eq(bid.auction_id, receipt.auction_id);
+        assert_eq(bid.bid_nonce, receipt.bid_nonce);
+        assert_eq(bid.token_type, TOKEN_USDCX);
+        assert(second_price <= bid.bid_amount);
+
+        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: bid.owner,
+            auction_id: bid.auction_id,
+            amount: bid.bid_amount,
+            nonce: bid.bid_nonce,
+        });
+
+        let fee: u128 = (second_price * PLATFORM_FEE_BPS) / FEE_DENOMINATOR;
+        let seller_payout: u128 = second_price - fee;
+        let winner_refund: u128 = bid.bid_amount - second_price;
+
+        assert(seller_payout > 0u128);
+
+        let pay_future: Future =
+            test_usdcx_stablecoin.aleo/transfer_public(
+                seller_address,
+                seller_payout
+            );
+
+        let refund_future: Future =
+            test_usdcx_stablecoin.aleo/transfer_public(
+                self.caller,
+                winner_refund
+            );
+
+        let cert: WinnerCertificate = WinnerCertificate {
+            owner: self.caller,
+            auction_id: bid.auction_id,
+            item_hash: item_hash,
+            winning_amount: second_price,
+            token_type: TOKEN_USDCX,
+            certificate_id: bid_hash,
+        };
+
+        let seller_receipt: SellerReceipt = SellerReceipt {
+            owner: seller_address,
+            auction_id: bid.auction_id,
+            item_hash: item_hash,
+            sale_amount: seller_payout,
+            fee_paid: fee,
+            token_type: TOKEN_USDCX,
+        };
+
+        return (cert, seller_receipt, finalize_claim_win_vickrey_usdcx(
+            pay_future, refund_future, bid.auction_id, bid_hash,
+            bid.bid_amount, second_price, fee, item_hash
+        ));
+    }
+
+    async function finalize_claim_win_vickrey_usdcx(
+        f0: Future,
+        f1: Future,
+        auction_id: field,
+        bid_hash: field,
+        bid_amount: u128,
+        second_price: u128,
+        fee: u128,
+        item_hash: field
+    ) {
+        f0.await();
+        f1.await();
+
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_SETTLED);
+        assert_eq(auction.auction_mode, MODE_VICKREY);
+
+        let winner_hash: field = auction_winners.get(auction_id);
+        assert_eq(bid_hash, winner_hash);
+
+        let stored_second: u128 = second_highest_bids.get(auction_id);
+        assert_eq(second_price, stored_second);
+
+        assert(bid_amount > second_price);
+
+        let revealed_amount: u128 = revealed_bids.get(bid_hash);
+        assert_eq(revealed_amount, bid_amount);
+
+        assert_eq(item_hash, auction.item_hash);
+
+        let already_settled: bool = settlements.contains(auction_id);
+        assert(!already_settled);
+        settlements.set(auction_id, SettlementData {
+            winner_bid_hash: bid_hash,
+            final_price: second_price,
+            fee_collected: fee,
+            settled_at: block.height as u64,
+        });
+
+        let treasury: u128 = platform_treasury.get_or_use(1u8, 0u128);
+        platform_treasury.set(1u8, treasury + fee);
+
+        let bal: u128 = program_balance.get(1u8);
+        program_balance.set(1u8, bal - bid_amount);
+
+        let escrow: u128 = auction_escrow.get(auction_id);
+        auction_escrow.set(auction_id, escrow - bid_amount);
+    }
+
+    // ########################################################################
+    //              T14: CLAIM REFUND (ALEO) — BUG #1 FIX
+    // ########################################################################
+
+    async transition claim_refund(
+        private receipt: EscrowReceipt
+    ) -> (credits.aleo/credits, Future) {
+        assert_eq(receipt.token_type, TOKEN_ALEO);
+
+        let refund_u64: u64 = receipt.escrowed_amount as u64;
+
+        let (refund_credits, transfer_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_public_to_private(
+                self.caller,
+                refund_u64
+            );
+
+        // BUG #1 FIX: use BidCommitment hash (same as reveal), NOT BidClaimKey
+        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: self.caller,
+            auction_id: receipt.auction_id,
+            amount: receipt.escrowed_amount,
+            nonce: receipt.bid_nonce,
+        });
+
+        return (refund_credits, finalize_claim_refund(
+            transfer_future, receipt.auction_id, bid_hash,
+            receipt.escrowed_amount, TOKEN_ALEO
+        ));
+    }
+
+    async function finalize_claim_refund(
+        f0: Future,
+        auction_id: field,
+        bid_hash: field,
+        amount: u128,
+        token_type: u8
+    ) {
+        f0.await();
+
+        let auction: AuctionData = auctions.get(auction_id);
+        assert(
+            auction.status == STATUS_SETTLED
+            || auction.status == STATUS_FAILED
+            || auction.status == STATUS_CANCELLED
+            || auction.status == STATUS_EXPIRED
+        );
+
+        // BUG #1 FIX: compare BidCommitment hash against auction_winners
+        let winner: field = auction_winners.get_or_use(auction_id, 0field);
+        assert_neq(bid_hash, winner);
+
+        let escrow: u128 = auction_escrow.get(auction_id);
+        auction_escrow.set(auction_id, escrow - amount);
+
+        let credit_key: u8 = token_type == TOKEN_ALEO ? 0u8 : 1u8;
+        let bal: u128 = program_balance.get(credit_key);
+        program_balance.set(credit_key, bal - amount);
+    }
+
+    // ########################################################################
+    //              T15: CLAIM REFUND (USDCx) — BUG #1 FIX
+    // ########################################################################
+
+    async transition claim_refund_usdcx(
+        private receipt: EscrowReceipt
+    ) -> Future {
+        assert_eq(receipt.token_type, TOKEN_USDCX);
+
+        // BUG #1 FIX: use BidCommitment hash
+        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: self.caller,
+            auction_id: receipt.auction_id,
+            amount: receipt.escrowed_amount,
+            nonce: receipt.bid_nonce,
+        });
+
+        let transfer_future: Future =
+            test_usdcx_stablecoin.aleo/transfer_public(
+                self.caller,
+                receipt.escrowed_amount
+            );
+
+        return finalize_claim_refund(
+            transfer_future, receipt.auction_id, bid_hash,
+            receipt.escrowed_amount, TOKEN_USDCX
+        );
+    }
+
+    // ########################################################################
+    //              T16: CLAIM UNREVEALED REFUND (ALEO)
+    // ########################################################################
+
+    async transition claim_unrevealed_refund(
+        private bid: SealedBid,
+        private receipt: EscrowReceipt
+    ) -> (credits.aleo/credits, Future) {
+        assert_eq(bid.auction_id, receipt.auction_id);
+        assert_eq(bid.bid_nonce, receipt.bid_nonce);
+        assert_eq(bid.token_type, TOKEN_ALEO);
+
+        let refund_u64: u64 = receipt.escrowed_amount as u64;
+        let (refund_credits, transfer_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_public_to_private(
+                self.caller,
+                refund_u64
+            );
+
+        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: self.caller,
+            auction_id: receipt.auction_id,
+            amount: receipt.escrowed_amount,
+            nonce: receipt.bid_nonce,
+        });
+
+        return (refund_credits, finalize_unrevealed_refund(
+            transfer_future, bid.auction_id, bid_hash,
+            receipt.escrowed_amount, TOKEN_ALEO
+        ));
+    }
+
+    async function finalize_unrevealed_refund(
+        f0: Future,
+        auction_id: field,
+        bid_hash: field,
+        amount: u128,
+        token_type: u8
+    ) {
+        f0.await();
+
+        let auction: AuctionData = auctions.get(auction_id);
+        assert(
+            auction.status == STATUS_SETTLED
+            || auction.status == STATUS_FAILED
+        );
+
+        // Defense-in-depth: verify bid was NOT revealed
+        let was_revealed: bool = revealed_bids.contains(bid_hash);
+        assert(!was_revealed);
+
+        let escrow: u128 = auction_escrow.get(auction_id);
+        auction_escrow.set(auction_id, escrow - amount);
+
+        let credit_key: u8 = token_type == TOKEN_ALEO ? 0u8 : 1u8;
+        let bal: u128 = program_balance.get(credit_key);
+        program_balance.set(credit_key, bal - amount);
+    }
+
+    // ########################################################################
+    //              T17: CLAIM UNREVEALED REFUND (USDCx)
+    // ########################################################################
+
+    async transition claim_unrevealed_refund_usdcx(
+        private bid: SealedBid,
+        private receipt: EscrowReceipt
+    ) -> Future {
+        assert_eq(bid.auction_id, receipt.auction_id);
+        assert_eq(bid.bid_nonce, receipt.bid_nonce);
+        assert_eq(bid.token_type, TOKEN_USDCX);
+
+        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: self.caller,
+            auction_id: receipt.auction_id,
+            amount: receipt.escrowed_amount,
+            nonce: receipt.bid_nonce,
+        });
+
+        let transfer_future: Future =
+            test_usdcx_stablecoin.aleo/transfer_public(
+                self.caller,
+                receipt.escrowed_amount
+            );
+
+        return finalize_unrevealed_refund(
+            transfer_future, bid.auction_id, bid_hash,
+            receipt.escrowed_amount, TOKEN_USDCX
+        );
+    }
+
+    // ########################################################################
+    //              T18: FILE DISPUTE (ALEO bond only)
+    // ########################################################################
+
+    async transition file_dispute(
+        private auction_id: field,
+        private reason: u8,
+        private evidence_hash: field,
+        private bond_amount: u128,
+        private bond_credits: credits.aleo/credits
+    ) -> (DisputeBond, credits.aleo/credits, Future) {
+        let dispute_nonce: field = BHP256::hash_to_field(DisputeSeed {
+            creator: self.caller,
+            evidence_hash: evidence_hash,
+            auction_id: auction_id,
+        });
+
+        let bond: DisputeBond = DisputeBond {
+            owner: self.caller,
+            auction_id: auction_id,
+            bond_amount: bond_amount,
+            dispute_nonce: dispute_nonce,
+            token_type: TOKEN_ALEO,
+        };
+
+        let bond_u64: u64 = bond_amount as u64;
+        let (change, transfer_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_private_to_public(
+                bond_credits,
+                self.address,
+                bond_u64
+            );
+
+        let disputer_field: field = self.caller as field;
+        let disputer_hash: field = BHP256::hash_to_field(disputer_field);
+
+        return (bond, change, finalize_file_dispute(
+            transfer_future, auction_id, disputer_hash,
+            reason, evidence_hash, bond_amount
+        ));
+    }
+
+    async function finalize_file_dispute(
+        f0: Future,
+        auction_id: field,
+        disputer_hash: field,
+        reason: u8,
+        evidence_hash: field,
+        bond_amount: u128
+    ) {
+        f0.await();
+
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_SETTLED);
+
+        let current_height: u64 = block.height as u64;
+        assert(current_height <= auction.dispute_deadline);
+
+        let winning_amount: u128 = highest_bids.get(auction_id);
+        let required_bond: u128 = (winning_amount * DISPUTE_BOND_BPS) / FEE_DENOMINATOR;
+        assert(bond_amount >= required_bond);
+
+        let already_disputed: bool = disputes.contains(auction_id);
+        assert(!already_disputed);
+
+        // Prevent disputes after claim_win has already paid the seller
+        let already_settled: bool = settlements.contains(auction_id);
+        assert(!already_settled);
+
+        disputes.set(auction_id, DisputeData {
+            auction_id: auction_id,
+            disputer_hash: disputer_hash,
+            reason: reason,
+            evidence_hash: evidence_hash,
+            disputed_at: current_height,
+            bond_amount: bond_amount,
+        });
+
+        auctions.set(auction_id, AuctionData {
+            item_hash: auction.item_hash,
+            seller_hash: auction.seller_hash,
+            category: auction.category,
+            token_type: auction.token_type,
+            auction_mode: auction.auction_mode,
+            status: STATUS_DISPUTED,
+            deadline: auction.deadline,
+            reveal_deadline: auction.reveal_deadline,
+            bid_count: auction.bid_count,
+            reserve_price_hash: auction.reserve_price_hash,
+            created_at: auction.created_at,
+            dispute_deadline: auction.dispute_deadline,
+        });
+
+        let bal: u128 = program_balance.get_or_use(0u8, 0u128);
+        program_balance.set(0u8, bal + bond_amount);
+    }
+
+    // ########################################################################
+    //              T19: RESOLVE DISPUTE — SELLER WINS
+    // ########################################################################
+
+    async transition resolve_dispute_seller_wins(
+        private auction_id: field
+    ) -> Future {
+        let caller_field: field = self.caller as field;
+        let caller_hash: field = BHP256::hash_to_field(caller_field);
+
+        return finalize_resolve_seller_wins(auction_id, caller_hash);
+    }
+
+    async function finalize_resolve_seller_wins(
+        auction_id: field,
+        caller_hash: field
+    ) {
+        let cfg: PlatformConfig = platform_config.get(0u8);
+        assert_eq(cfg.admin_hash, caller_hash);
+
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_DISPUTED);
+
+        let dispute: DisputeData = disputes.get(auction_id);
+
+        let treasury: u128 = platform_treasury.get_or_use(0u8, 0u128);
+        platform_treasury.set(0u8, treasury + dispute.bond_amount);
+
+        let bal: u128 = program_balance.get(0u8);
+        program_balance.set(0u8, bal - dispute.bond_amount);
+
+        auctions.set(auction_id, AuctionData {
+            item_hash: auction.item_hash,
+            seller_hash: auction.seller_hash,
+            category: auction.category,
+            token_type: auction.token_type,
+            auction_mode: auction.auction_mode,
+            status: STATUS_SETTLED,
+            deadline: auction.deadline,
+            reveal_deadline: auction.reveal_deadline,
+            bid_count: auction.bid_count,
+            reserve_price_hash: auction.reserve_price_hash,
+            created_at: auction.created_at,
+            dispute_deadline: auction.dispute_deadline,
+        });
+    }
+
+    // ########################################################################
+    //              T20: RESOLVE DISPUTE — BUYER WINS
+    // ########################################################################
+
+    async transition resolve_dispute_buyer_wins(
+        private auction_id: field,
+        private disputer_address: address,
+        private bond_amount: u128
+    ) -> (DisputeResolution, credits.aleo/credits, Future) {
+        let caller_field: field = self.caller as field;
+        let caller_hash: field = BHP256::hash_to_field(caller_field);
+
+        let disputer_field: field = disputer_address as field;
+        let disputer_hash: field = BHP256::hash_to_field(disputer_field);
+
+        let bond_u64: u64 = bond_amount as u64;
+        let (bond_return, transfer_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_public_to_private(
+                disputer_address,
+                bond_u64
+            );
+
+        let resolution: DisputeResolution = DisputeResolution {
+            owner: disputer_address,
+            auction_id: auction_id,
+            resolution_amount: bond_amount,
+            resolution_type: 2u8,
+            token_type: TOKEN_ALEO,
+        };
+
+        return (resolution, bond_return, finalize_resolve_buyer_wins(
+            transfer_future, auction_id, caller_hash, disputer_hash, bond_amount
+        ));
+    }
+
+    async function finalize_resolve_buyer_wins(
+        f0: Future,
+        auction_id: field,
+        caller_hash: field,
+        disputer_hash: field,
+        bond_amount: u128
+    ) {
+        f0.await();
+
+        let cfg: PlatformConfig = platform_config.get(0u8);
+        assert_eq(cfg.admin_hash, caller_hash);
+
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_DISPUTED);
+
+        let dispute: DisputeData = disputes.get(auction_id);
+        assert_eq(dispute.disputer_hash, disputer_hash);
+        assert_eq(dispute.bond_amount, bond_amount);
+
+        let bal: u128 = program_balance.get(0u8);
+        program_balance.set(0u8, bal - bond_amount);
+
+        auctions.set(auction_id, AuctionData {
+            item_hash: auction.item_hash,
+            seller_hash: auction.seller_hash,
+            category: auction.category,
+            token_type: auction.token_type,
+            auction_mode: auction.auction_mode,
+            status: STATUS_FAILED,
+            deadline: auction.deadline,
+            reveal_deadline: auction.reveal_deadline,
+            bid_count: auction.bid_count,
+            reserve_price_hash: auction.reserve_price_hash,
+            created_at: auction.created_at,
+            dispute_deadline: auction.dispute_deadline,
+        });
+    }
+
+    // ########################################################################
+    //              T21: FORCE CANCEL
+    // ########################################################################
+
+    async transition force_cancel(
+        private auction_id: field
+    ) -> Future {
+        return finalize_force_cancel(auction_id);
+    }
+
+    async function finalize_force_cancel(
+        auction_id: field
+    ) {
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_REVEALING);
+
+        let current_height: u64 = block.height as u64;
+        assert(current_height > auction.reveal_deadline);
+
+        let high: u128 = highest_bids.get_or_use(auction_id, 0u128);
+        assert_eq(high, 0u128);
+
+        auctions.set(auction_id, AuctionData {
+            item_hash: auction.item_hash,
+            seller_hash: auction.seller_hash,
+            category: auction.category,
+            token_type: auction.token_type,
+            auction_mode: auction.auction_mode,
+            status: STATUS_FAILED,
+            deadline: auction.deadline,
+            reveal_deadline: auction.reveal_deadline,
+            bid_count: auction.bid_count,
+            reserve_price_hash: auction.reserve_price_hash,
+            created_at: auction.created_at,
+            dispute_deadline: auction.dispute_deadline,
+        });
+    }
+
+    // ########################################################################
+    //              T22: WITHDRAW PLATFORM FEES (ALEO only)
+    // ########################################################################
+
+    async transition withdraw_platform_fees(
+        private withdraw_amount: u128
+    ) -> (credits.aleo/credits, Future) {
+        let caller_field: field = self.caller as field;
+        let caller_hash: field = BHP256::hash_to_field(caller_field);
+
+        let amount_u64: u64 = withdraw_amount as u64;
+        let (admin_credits, transfer_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_public_to_private(
+                self.caller,
+                amount_u64
+            );
+
+        return (admin_credits, finalize_withdraw_fees(
+            transfer_future, caller_hash, withdraw_amount
+        ));
+    }
+
+    async function finalize_withdraw_fees(
+        f0: Future,
+        caller_hash: field,
+        amount: u128
+    ) {
+        f0.await();
+
+        let cfg: PlatformConfig = platform_config.get(0u8);
+        assert_eq(cfg.admin_hash, caller_hash);
+
+        let treasury: u128 = platform_treasury.get(0u8);
+        assert(treasury >= amount);
+        platform_treasury.set(0u8, treasury - amount);
+
+        let bal: u128 = program_balance.get(0u8);
+        program_balance.set(0u8, bal - amount);
+    }
+
+    // ########################################################################
+    //              T23: EMERGENCY PAUSE
+    // ########################################################################
+
+    async transition emergency_pause(
+        private activate: bool
+    ) -> Future {
+        let caller_field: field = self.caller as field;
+        let caller_hash: field = BHP256::hash_to_field(caller_field);
+        return finalize_emergency_pause(caller_hash, activate);
+    }
+
+    async function finalize_emergency_pause(
+        caller_hash: field,
+        activate: bool
+    ) {
+        let cfg: PlatformConfig = platform_config.get(0u8);
+        assert_eq(cfg.admin_hash, caller_hash);
+
+        platform_config.set(0u8, PlatformConfig {
+            admin_hash: cfg.admin_hash,
+            fee_bps: cfg.fee_bps,
+            dispute_bond_bps: cfg.dispute_bond_bps,
+            paused: activate,
+        });
+    }
+}
+// ============================================================================
+// END — obscura_auction.aleo
+// 23 transitions | 6 records | 12 mappings | 8 structs | 8-state machine
+// Vickrey (second-price) | Anti-sniping | Commit-reveal | Dual token
+// ============================================================================
