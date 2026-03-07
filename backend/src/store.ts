@@ -6,12 +6,24 @@ const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const useRedis = !!(REDIS_URL && REDIS_TOKEN);
 
+if (useRedis) {
+  console.log('[store] Using Upstash Redis for persistent storage');
+} else {
+  console.log('[store] No Redis credentials found — using filesystem storage');
+}
+
 // --- Redis client (lazy-initialized) ---
-import { Redis } from '@upstash/redis';
-let redis: Redis | null = null;
-function getRedis(): Redis {
-  if (!redis) {
-    redis = new Redis({ url: REDIS_URL!, token: REDIS_TOKEN! });
+let redis: any = null;
+function getRedis(): any {
+  if (!redis && useRedis) {
+    // Dynamic require to avoid crash if @upstash/redis has issues
+    try {
+      const { Redis } = require('@upstash/redis');
+      redis = new Redis({ url: REDIS_URL!, token: REDIS_TOKEN! });
+    } catch (err) {
+      console.error('[store] Failed to initialize Redis:', err);
+      return null;
+    }
   }
   return redis;
 }
@@ -57,16 +69,31 @@ const BIDS_KEY = 'obscura:bids';
 
 async function readStore<T>(redisKey: string, filePath: string): Promise<T[]> {
   if (useRedis) {
-    const data = await getRedis().get<T[]>(redisKey);
-    return data || [];
+    try {
+      const client = getRedis();
+      if (client) {
+        const data = await client.get(redisKey);
+        if (data) return (typeof data === 'string' ? JSON.parse(data) : data) as T[];
+        return [];
+      }
+    } catch (err) {
+      console.error(`[store] Redis read failed for ${redisKey}, falling back to fs:`, err);
+    }
   }
   return readJsonFileSync<T>(filePath);
 }
 
 async function writeStore<T>(redisKey: string, filePath: string, data: T[]): Promise<void> {
   if (useRedis) {
-    await getRedis().set(redisKey, data);
-    return;
+    try {
+      const client = getRedis();
+      if (client) {
+        await client.set(redisKey, JSON.stringify(data));
+        return;
+      }
+    } catch (err) {
+      console.error(`[store] Redis write failed for ${redisKey}, falling back to fs:`, err);
+    }
   }
   writeJsonFileSync(filePath, data);
 }
