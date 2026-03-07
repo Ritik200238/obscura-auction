@@ -14,8 +14,7 @@ import credits.aleo;
 
 program obscura_auction.aleo {
 
-    @noupgrade
-    async constructor() {}
+    // @noupgrade async constructor() {} — Leo 3.x syntax, omitted for 2.x compilation.
 
     // ========================================================================
     // CONSTANTS
@@ -128,6 +127,31 @@ program obscura_auction.aleo {
         settled_at: u64,
     }
 
+    // SettlementProof: tamper-evident record of a settled auction result.
+    // Anyone with the auction_id can read settlement_proofs[auction_id] from
+    // the public mapping and verify the integrity of the settlement by recomputing:
+    // BHP256::hash_to_field(SettlementProof { auction_id, highest_bid, ... })
+    // This provides "Proof of Fair Auction" — no party can retroactively alter
+    // the reported highest bid, second-highest, or winner without invalidating the hash.
+    struct SettlementProof {
+        auction_id: field,
+        highest_bid: u128,
+        second_highest: u128,
+        winner_bid_hash: field,
+        settled_at: u64,
+    }
+
+    // PaymentCommitData: input to the payment commitment stored on-chain.
+    // Commitment = BHP256::commit_to_field(bid_amount_field, nonce_scalar)
+    // This uses the HIDING property of commit_to_field: without the scalar nonce,
+    // an observer cannot determine which amount was committed even if they
+    // enumerate common values. The nonce is derived from bid_nonce via hash_to_scalar.
+    struct PaymentCommitData {
+        auction_id: field,
+        bid_amount: u128,
+        winner_bid_hash: field,
+    }
+
     struct PlatformConfig {
         admin_hash: field,
         fee_bps: u128,
@@ -150,6 +174,16 @@ program obscura_auction.aleo {
     mapping platform_treasury: u8 => u128;
     mapping settlements: field => SettlementData;
     mapping platform_config: u8 => PlatformConfig;
+    // settlement_proofs: publicly verifiable proof of fair auction outcome.
+    // Key: auction_id. Value: BHP256::hash_to_field(SettlementProof{...}).
+    // Any third party can verify settlement integrity by recomputing the hash.
+    mapping settlement_proofs: field => field;
+    // payment_proofs: publicly verifiable payment commitment for the winner.
+    // Key: auction_id. Value: BHP256::commit_to_field(amount_field, nonce_scalar).
+    // Uses the commit primitive (hiding+binding) rather than plain hash.
+    // Proves winner paid a specific amount without revealing which amount to observers
+    // who don't know the nonce. The nonce is the bidder's private bid_nonce field.
+    mapping payment_proofs: field => field;
 
     // ########################################################################
     //                         CONSTRUCTOR
@@ -526,10 +560,13 @@ program obscura_auction.aleo {
 
         let winning_amount: u128 = highest_bids.get_or_use(auction_id, 0u128);
 
+        // Pre-fetch data needed for settlement proof (read once, use in both branches)
+        let winner_bid_hash: field = auction_winners.get_or_use(auction_id, 0field);
+        let second_price: u128 = second_highest_bids.get_or_use(auction_id, 0u128);
+
         if (auction.auction_mode == MODE_VICKREY) {
-            let second: u128 = second_highest_bids.get_or_use(auction_id, 0u128);
-            if (second == 0u128) {
-                // Vickrey needs >= 2 revealed bids
+            if (second_price == 0u128) {
+                // Vickrey needs >= 2 revealed bids; only 1 revealed → FAILED
                 auctions.set(auction_id, AuctionData {
                     item_hash: auction.item_hash,
                     seller_hash: auction.seller_hash,
@@ -560,6 +597,19 @@ program obscura_auction.aleo {
                         created_at: auction.created_at,
                         dispute_deadline: 0u64,
                     });
+                    // Settlement proof: tamper-evident hash of auction outcome.
+                    // Stored publicly so any third party can verify the settlement
+                    // was computed honestly from on-chain data. The proof binds
+                    // auction_id, both bid prices, the winning bid hash, and the
+                    // block height — retroactive manipulation of any field invalidates it.
+                    let settlement_proof: field = BHP256::hash_to_field(SettlementProof {
+                        auction_id: auction_id,
+                        highest_bid: winning_amount,
+                        second_highest: second_price,
+                        winner_bid_hash: winner_bid_hash,
+                        settled_at: current_height,
+                    });
+                    settlement_proofs.set(auction_id, settlement_proof);
                 } else {
                     auctions.set(auction_id, AuctionData {
                         item_hash: auction.item_hash,
@@ -594,6 +644,16 @@ program obscura_auction.aleo {
                     created_at: auction.created_at,
                     dispute_deadline: 0u64,
                 });
+                // Settlement proof for first-price auctions (same mechanism).
+                // second_highest = 0 for first-price (no 2nd-price tracking needed).
+                let settlement_proof: field = BHP256::hash_to_field(SettlementProof {
+                    auction_id: auction_id,
+                    highest_bid: winning_amount,
+                    second_highest: second_price,
+                    winner_bid_hash: winner_bid_hash,
+                    settled_at: current_height,
+                });
+                settlement_proofs.set(auction_id, settlement_proof);
             } else {
                 auctions.set(auction_id, AuctionData {
                     item_hash: auction.item_hash,
@@ -644,6 +704,18 @@ program obscura_auction.aleo {
                 payout_u64
             );
 
+        // Payment commitment: uses BHP256::commit_to_field (hiding + binding).
+        // Unlike a plain hash, commit_to_field takes scalar randomness so that
+        // even if an adversary guesses the bid amount, they cannot verify the
+        // commitment without also knowing the nonce scalar. The scalar is derived
+        // from the bidder's private bid_nonce using hash_to_scalar, ensuring
+        // only the bidder can reproduce this commitment.
+        // This will be stored on-chain in payment_proofs[auction_id] as a
+        // publicly verifiable but privacy-preserving proof of payment.
+        let nonce_scalar: scalar = BHP256::hash_to_scalar(bid.bid_nonce);
+        let amount_field: field = bid.bid_amount as field;
+        let payment_commitment: field = BHP256::commit_to_field(amount_field, nonce_scalar);
+
         let cert: WinnerCertificate = WinnerCertificate {
             owner: self.caller,
             auction_id: bid.auction_id,
@@ -663,7 +735,7 @@ program obscura_auction.aleo {
         };
 
         return (cert, seller_receipt, seller_credits, finalize_claim_win(
-            pay_future, bid.auction_id, bid_hash, bid.bid_amount, fee, item_hash
+            pay_future, bid.auction_id, bid_hash, bid.bid_amount, fee, item_hash, payment_commitment
         ));
     }
 
@@ -673,7 +745,8 @@ program obscura_auction.aleo {
         bid_hash: field,
         bid_amount: u128,
         fee: u128,
-        item_hash: field
+        item_hash: field,
+        payment_commitment: field
     ) {
         f0.await();
 
@@ -698,6 +771,15 @@ program obscura_auction.aleo {
             fee_collected: fee,
             settled_at: block.height as u64,
         });
+
+        // Store payment commitment on-chain: payment_proofs[auction_id] = commit(amount, nonce).
+        // Any third party can verify the winner paid a specific amount by:
+        // 1. Getting the winner's nonce from their WinnerCertificate record (shared privately)
+        // 2. Recomputing BHP256::commit_to_field(amount, hash_to_scalar(nonce))
+        // 3. Comparing against payment_proofs[auction_id]
+        // This is "selective disclosure" — the winner can prove their payment
+        // without revealing the nonce to the general public.
+        payment_proofs.set(auction_id, payment_commitment);
 
         let treasury: u128 = platform_treasury.get_or_use(0u8, 0u128);
         platform_treasury.set(0u8, treasury + fee);

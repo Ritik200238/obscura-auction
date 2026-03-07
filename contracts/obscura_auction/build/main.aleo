@@ -1,6 +1,7 @@
 import credits.aleo;
 program obscura_auction.aleo;
 
+
 record SealedBid:
     owner as address.private;
     auction_id as field.private;
@@ -63,55 +64,84 @@ struct SettlementData:
     fee_collected as u128;
     settled_at as u64;
 
+struct SettlementProof:
+    auction_id as field;
+    highest_bid as u128;
+    second_highest as u128;
+    winner_bid_hash as field;
+    settled_at as u64;
+
 struct PlatformConfig:
     admin_hash as field;
     fee_bps as u128;
     dispute_bond_bps as u128;
     paused as boolean;
 
+
 mapping auctions:
-    key as field.public;
-    value as AuctionData.public;
+	key as field.public;
+	value as AuctionData.public;
+
 
 mapping bid_commitments:
-    key as field.public;
-    value as boolean.public;
+	key as field.public;
+	value as boolean.public;
+
 
 mapping revealed_bids:
-    key as field.public;
-    value as u128.public;
+	key as field.public;
+	value as u128.public;
+
 
 mapping highest_bids:
-    key as field.public;
-    value as u128.public;
+	key as field.public;
+	value as u128.public;
+
 
 mapping second_highest_bids:
-    key as field.public;
-    value as u128.public;
+	key as field.public;
+	value as u128.public;
+
 
 mapping auction_winners:
-    key as field.public;
-    value as field.public;
+	key as field.public;
+	value as field.public;
+
 
 mapping program_balance:
-    key as u8.public;
-    value as u128.public;
+	key as u8.public;
+	value as u128.public;
+
 
 mapping auction_escrow:
-    key as field.public;
-    value as u128.public;
+	key as field.public;
+	value as u128.public;
+
 
 mapping platform_treasury:
-    key as u8.public;
-    value as u128.public;
+	key as u8.public;
+	value as u128.public;
+
 
 mapping settlements:
-    key as field.public;
-    value as SettlementData.public;
+	key as field.public;
+	value as SettlementData.public;
+
 
 mapping platform_config:
-    key as u8.public;
-    value as PlatformConfig.public;
+	key as u8.public;
+	value as PlatformConfig.public;
+
+
+mapping settlement_proofs:
+	key as field.public;
+	value as field.public;
+
+
+mapping payment_proofs:
+	key as field.public;
+	value as field.public;
+
 
 function initialize_platform:
     input r0 as address.private;
@@ -131,6 +161,9 @@ finalize initialize_platform:
     assert.eq r4 true;
     cast r0 r1 r2 false into r5 as PlatformConfig;
     set r5 into platform_config[0u8];
+
+
+
 
 function create_auction:
     input r0 as field.private;
@@ -177,6 +210,9 @@ finalize create_auction:
     cast r1 r2 r3 r4 r5 1u8 r6 0u64 0u64 r7 r10 0u64 into r15 as AuctionData;
     set r15 into auctions[r0];
 
+
+
+
 function cancel_auction:
     input r0 as field.private;
     cast self.caller into r1 as field;
@@ -193,6 +229,9 @@ finalize cancel_auction:
     assert.eq r2.bid_count 0u64;
     cast r2.item_hash r2.seller_hash r2.category r2.token_type r2.auction_mode 5u8 r2.deadline r2.reveal_deadline r2.bid_count r2.reserve_price_hash r2.created_at r2.dispute_deadline into r3 as AuctionData;
     set r3 into auctions[r0];
+
+
+
 
 function close_bidding:
     input r0 as field.private;
@@ -216,6 +255,9 @@ finalize close_bidding:
     cast r1.item_hash r1.seller_hash r1.category r1.token_type r1.auction_mode 3u8 r1.deadline r6 r1.bid_count r1.reserve_price_hash r1.created_at r1.dispute_deadline into r7 as AuctionData;
     set r7 into auctions[r0];
     position end_otherwise_0_1;
+
+
+
 
 function place_bid:
     input r0 as field.private;
@@ -270,6 +312,9 @@ finalize place_bid:
     add r21 r3 into r22;
     set r22 into program_balance[0u8];
 
+
+
+
 function reveal_bid:
     input r0 as SealedBid.record;
     cast r0.owner r0.auction_id r0.bid_amount r0.bid_nonce into r1 as BidCommitment;
@@ -309,6 +354,9 @@ finalize reveal_bid:
     position end_otherwise_1_5;
     position end_otherwise_0_3;
 
+
+
+
 function finalize_auction:
     input r0 as field.private;
     input r1 as u128.private;
@@ -332,39 +380,49 @@ finalize finalize_auction:
     assert.eq r6 true;
     assert.eq r2 r4.reserve_price_hash;
     get.or_use highest_bids[r0] 0u128 into r7;
-    is.eq r4.auction_mode 2u8 into r8;
-    branch.eq r8 false to end_then_0_6;
+    get.or_use auction_winners[r0] 0field into r8;
     get.or_use second_highest_bids[r0] 0u128 into r9;
-    is.eq r9 0u128 into r10;
-    branch.eq r10 false to end_then_1_8;
-    cast r4.item_hash r4.seller_hash r4.category r4.token_type r4.auction_mode 6u8 r4.deadline r4.reveal_deadline r4.bid_count r4.reserve_price_hash r4.created_at r4.dispute_deadline into r11 as AuctionData;
-    set r11 into auctions[r0];
+    is.eq r4.auction_mode 2u8 into r10;
+    branch.eq r10 false to end_then_0_6;
+    is.eq r9 0u128 into r11;
+    branch.eq r11 false to end_then_1_8;
+    cast r4.item_hash r4.seller_hash r4.category r4.token_type r4.auction_mode 6u8 r4.deadline r4.reveal_deadline r4.bid_count r4.reserve_price_hash r4.created_at r4.dispute_deadline into r12 as AuctionData;
+    set r12 into auctions[r0];
     branch.eq true true to end_otherwise_1_9;
     position end_then_1_8;
-    gte r7 r3 into r12;
-    branch.eq r12 false to end_then_2_10;
-    cast r4.item_hash r4.seller_hash r4.category r4.token_type r4.auction_mode 4u8 r4.deadline r4.reveal_deadline r4.bid_count r4.reserve_price_hash r4.created_at 0u64 into r13 as AuctionData;
-    set r13 into auctions[r0];
+    gte r7 r3 into r13;
+    branch.eq r13 false to end_then_2_10;
+    cast r4.item_hash r4.seller_hash r4.category r4.token_type r4.auction_mode 4u8 r4.deadline r4.reveal_deadline r4.bid_count r4.reserve_price_hash r4.created_at 0u64 into r14 as AuctionData;
+    set r14 into auctions[r0];
+    cast r0 r7 r9 r8 r5 into r15 as SettlementProof;
+    hash.bhp256 r15 into r16 as field;
+    set r16 into settlement_proofs[r0];
     branch.eq true true to end_otherwise_2_11;
     position end_then_2_10;
-    cast r4.item_hash r4.seller_hash r4.category r4.token_type r4.auction_mode 6u8 r4.deadline r4.reveal_deadline r4.bid_count r4.reserve_price_hash r4.created_at 0u64 into r14 as AuctionData;
-    set r14 into auctions[r0];
+    cast r4.item_hash r4.seller_hash r4.category r4.token_type r4.auction_mode 6u8 r4.deadline r4.reveal_deadline r4.bid_count r4.reserve_price_hash r4.created_at 0u64 into r17 as AuctionData;
+    set r17 into auctions[r0];
     position end_otherwise_2_11;
     position end_otherwise_1_9;
     branch.eq true true to end_otherwise_0_7;
     position end_then_0_6;
-    gte r7 r3 into r15;
-    gt r7 0u128 into r16;
-    and r15 r16 into r17;
-    branch.eq r17 false to end_then_1_12;
-    cast r4.item_hash r4.seller_hash r4.category r4.token_type r4.auction_mode 4u8 r4.deadline r4.reveal_deadline r4.bid_count r4.reserve_price_hash r4.created_at 0u64 into r18 as AuctionData;
-    set r18 into auctions[r0];
+    gte r7 r3 into r18;
+    gt r7 0u128 into r19;
+    and r18 r19 into r20;
+    branch.eq r20 false to end_then_1_12;
+    cast r4.item_hash r4.seller_hash r4.category r4.token_type r4.auction_mode 4u8 r4.deadline r4.reveal_deadline r4.bid_count r4.reserve_price_hash r4.created_at 0u64 into r21 as AuctionData;
+    set r21 into auctions[r0];
+    cast r0 r7 r9 r8 r5 into r22 as SettlementProof;
+    hash.bhp256 r22 into r23 as field;
+    set r23 into settlement_proofs[r0];
     branch.eq true true to end_otherwise_1_13;
     position end_then_1_12;
-    cast r4.item_hash r4.seller_hash r4.category r4.token_type r4.auction_mode 6u8 r4.deadline r4.reveal_deadline r4.bid_count r4.reserve_price_hash r4.created_at r4.dispute_deadline into r19 as AuctionData;
-    set r19 into auctions[r0];
+    cast r4.item_hash r4.seller_hash r4.category r4.token_type r4.auction_mode 6u8 r4.deadline r4.reveal_deadline r4.bid_count r4.reserve_price_hash r4.created_at r4.dispute_deadline into r24 as AuctionData;
+    set r24 into auctions[r0];
     position end_otherwise_1_13;
     position end_otherwise_0_7;
+
+
+
 
 function claim_win:
     input r0 as SealedBid.record;
@@ -381,13 +439,16 @@ function claim_win:
     sub r0.bid_amount r7 into r8;
     cast r8 into r9 as u64;
     call credits.aleo/transfer_public_to_private r2 r9 into r10 r11;
-    cast self.caller r0.auction_id r3 r0.bid_amount 1u8 r5 into r12 as WinnerCertificate.record;
-    cast r2 r0.auction_id r3 r8 r7 1u8 into r13 as SellerReceipt.record;
-    async claim_win r11 r0.auction_id r5 r0.bid_amount r7 r3 into r14;
-    output r12 as WinnerCertificate.record;
-    output r13 as SellerReceipt.record;
+    hash.bhp256 r0.bid_nonce into r12 as scalar;
+    cast r0.bid_amount into r13 as field;
+    commit.bhp256 r13 r12 into r14 as field;
+    cast self.caller r0.auction_id r3 r0.bid_amount 1u8 r5 into r15 as WinnerCertificate.record;
+    cast r2 r0.auction_id r3 r8 r7 1u8 into r16 as SellerReceipt.record;
+    async claim_win r11 r0.auction_id r5 r0.bid_amount r7 r3 r14 into r17;
+    output r15 as WinnerCertificate.record;
+    output r16 as SellerReceipt.record;
     output r10 as credits.aleo/credits.record;
-    output r14 as obscura_auction.aleo/claim_win.future;
+    output r17 as obscura_auction.aleo/claim_win.future;
 
 finalize claim_win:
     input r0 as credits.aleo/transfer_public_to_private.future;
@@ -396,29 +457,34 @@ finalize claim_win:
     input r3 as u128.public;
     input r4 as u128.public;
     input r5 as field.public;
+    input r6 as field.public;
     await r0;
-    get auctions[r1] into r6;
-    assert.eq r6.status 4u8;
-    get auction_winners[r1] into r7;
-    assert.eq r2 r7;
-    get revealed_bids[r2] into r8;
-    assert.eq r8 r3;
-    assert.eq r5 r6.item_hash;
-    contains settlements[r1] into r9;
-    not r9 into r10;
-    assert.eq r10 true;
-    cast block.height into r11 as u64;
-    cast r2 r3 r4 r11 into r12 as SettlementData;
-    set r12 into settlements[r1];
-    get.or_use platform_treasury[0u8] 0u128 into r13;
-    add r13 r4 into r14;
-    set r14 into platform_treasury[0u8];
-    get program_balance[0u8] into r15;
-    sub r15 r3 into r16;
-    set r16 into program_balance[0u8];
-    get auction_escrow[r1] into r17;
-    sub r17 r3 into r18;
-    set r18 into auction_escrow[r1];
+    get auctions[r1] into r7;
+    assert.eq r7.status 4u8;
+    get auction_winners[r1] into r8;
+    assert.eq r2 r8;
+    get revealed_bids[r2] into r9;
+    assert.eq r9 r3;
+    assert.eq r5 r7.item_hash;
+    contains settlements[r1] into r10;
+    not r10 into r11;
+    assert.eq r11 true;
+    cast block.height into r12 as u64;
+    cast r2 r3 r4 r12 into r13 as SettlementData;
+    set r13 into settlements[r1];
+    set r6 into payment_proofs[r1];
+    get.or_use platform_treasury[0u8] 0u128 into r14;
+    add r14 r4 into r15;
+    set r15 into platform_treasury[0u8];
+    get program_balance[0u8] into r16;
+    sub r16 r3 into r17;
+    set r17 into program_balance[0u8];
+    get auction_escrow[r1] into r18;
+    sub r18 r3 into r19;
+    set r19 into auction_escrow[r1];
+
+
+
 
 function claim_refund:
     input r0 as EscrowReceipt.record;
@@ -458,6 +524,9 @@ finalize claim_refund:
     sub r18 r3 into r19;
     set r19 into program_balance[r17];
 
+
+
+
 function claim_unrevealed_refund:
     input r0 as SealedBid.record;
     input r1 as EscrowReceipt.record;
@@ -496,5 +565,3 @@ finalize claim_unrevealed_refund:
     sub r15 r3 into r16;
     set r16 into program_balance[r14];
 
-constructor:
-    assert.eq edition 0u16;
