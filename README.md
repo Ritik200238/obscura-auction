@@ -1,15 +1,28 @@
-# Obscura -- Privacy-First Sealed-Bid Auction Protocol on Aleo
+# Obscura — First Vickrey Auction Protocol on Aleo
 
 > Bids enter the dark chamber. Only at reveal does the picture become clear.
 
-**Obscura** is a sealed-bid auction protocol on Aleo where bid amounts are truly private. Bidders commit encrypted bids as Aleo private records. Only after bidding closes do participants reveal. The winner self-identifies by proving ownership of the winning record. Sellers receive payment as private ALEO credits — zero public trace.
+**Obscura** is the **first Vickrey (second-price) sealed-bid auction** on the Aleo blockchain.
+Bid amounts are truly private. Bidder identities are never revealed. The winner self-identifies by proving ownership of their winning record. Payment flows through private ALEO credits — zero public trace.
 
 | | |
 |---|---|
-| **Live Frontend** | [obscura-auction-95hm.vercel.app](https://obscura-auction-95hm.vercel.app) |
-| **Backend API** | [obscura-auction-igia.vercel.app](https://obscura-auction-igia.vercel.app/health) |
+| **Live Demo** | [obscura-auction-95hm.vercel.app](https://obscura-auction-95hm.vercel.app) |
+| **Backend API** | [obscura-auction-igia.vercel.app/health](https://obscura-auction-igia.vercel.app/health) |
 | **Contract** | [`obscura_auction.aleo`](https://explorer.provable.com/transaction/at1j58ds0rvhpwtspyvmr9wjxkrd2jq3xg2v25p8se4ezsv40a8xupswz58g4) on Aleo Testnet |
-| **Deep Dives** | [ARCHITECTURE.md](./ARCHITECTURE.md) &#124; [PRIVACY.md](./PRIVACY.md) |
+| **Deep Dives** | [ARCHITECTURE.md](./ARCHITECTURE.md) · [PRIVACY.md](./PRIVACY.md) · [VICKREY_EXPLAINER.md](./VICKREY_EXPLAINER.md) |
+
+---
+
+## Why Auctions Need Zero-Knowledge Proofs
+
+Traditional on-chain auctions expose all bids publicly — enabling front-running, bid manipulation, and sniping. Off-chain solutions require trusting the auctioneer. Neither is acceptable for high-value sealed tenders.
+
+Aleo's programmable privacy solves this. Bid amounts live in private records that only their owner can read. The reveal phase is a voluntary, cryptographically enforced step — not an auctioneer decision.
+
+**Why Vickrey specifically?** Because sealed-bid auctions have a classic problem: rational bidders shade their bids below true valuation to protect surplus. In a first-price sealed auction, the optimal strategy is complex and inefficient. In a Vickrey auction, bidding your **exact true valuation is always optimal** — regardless of what others do. This is the game-theoretic gold standard for price discovery.
+
+Without ZK proofs, Vickrey auctions can't work honestly. The auctioneer can lie about the second price. With Obscura's on-chain `second_highest_bids` mapping, the second price is immutably recorded — no party can alter it. See [VICKREY_EXPLAINER.md](./VICKREY_EXPLAINER.md) for the full analysis.
 
 ---
 
@@ -182,6 +195,59 @@ useCountdown(deadline) → Block-based countdown with urgency states
 | GET | `/api/auctions/:id/bids` | Revealed bids (post-reveal only) |
 | GET | `/api/my/auctions?address=X` | User's created auctions |
 | GET | `/api/my/bids?address=X` | User's placed bids |
+
+---
+
+## System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         USER BROWSER                            │
+│                                                                 │
+│  React 19 + Vite + Tailwind + Zustand                          │
+│  ┌──────────┐ ┌──────────┐ ┌───────────┐ ┌───────────────────┐ │
+│  │ Browse   │ │ Create   │ │ Auction   │ │  My Activity      │ │
+│  │ Auctions │ │ Auction  │ │ Detail    │ │  (bids/wins)      │ │
+│  └──────────┘ └──────────┘ │ BidPanel  │ └───────────────────┘ │
+│                            │ RevealPan.│                        │
+│                            │ ClaimPan. │                        │
+│                            │ RefundPan.│                        │
+│                            └───────────┘                        │
+│              Shield Wallet (delegated proving)                  │
+└──────────────────┬───────────────────────────┬─────────────────┘
+                   │ executeTransaction          │ REST API
+                   ▼                            ▼
+┌──────────────────────────┐    ┌───────────────────────────────┐
+│     ALEO TESTNET         │    │   BACKEND (Express + Redis)   │
+│                          │    │                               │
+│  obscura_auction.aleo    │    │   /api/auctions   (index)     │
+│  ├─ 10 transitions       │◄───│   /api/my/auctions            │
+│  ├─ 4 private records    │    │   /api/my/bids                │
+│  ├─ 11 mappings          │    │                               │
+│  └─ credits.aleo escrow  │    │   AES-256-GCM encryption      │
+│                          │    │   Upstash Redis (persistent)  │
+│  Explorer API (read)─────┼────│   Explorer sync (on-demand)   │
+└──────────────────────────┘    └───────────────────────────────┘
+```
+
+**Why a dedicated backend?** The backend provides human-readable auction metadata (titles, descriptions) that can't go on-chain without privacy leaks. It's an indexed discovery layer — not trusted for correctness (all critical state is on-chain), but necessary for a usable browse experience. Seller addresses are encrypted at rest with AES-256-GCM; the backend cannot be used to deanonymize participants even if compromised.
+
+---
+
+## Testing
+
+```bash
+# Backend tests (6/6 passing) — AES-256-GCM encryption validation
+cd backend && npm test
+
+# Frontend TypeScript — zero errors
+cd frontend && npx tsc --noEmit
+```
+
+**Contract testing note**: Leo CLI v2.3.0 does not include a `leo test` subcommand (it was added in a later version). Contract correctness is validated via:
+1. Full testnet deployment (`at1j58ds0rvhpwtspyvmr9wjxkrd2jq3xg2v25p8se4ezsv40a8xupswz58g4`)
+2. Manual E2E verification of the complete auction lifecycle on testnet
+3. Security analysis documented in [PRIVACY.md](./PRIVACY.md)
 
 ---
 
