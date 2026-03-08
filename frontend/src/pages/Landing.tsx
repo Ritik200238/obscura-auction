@@ -46,7 +46,7 @@ const features = [
 
 const steps = [
   { icon: Gavel, label: 'Create', description: 'Set item, reserve price, and auction mode' },
-  { icon: Lock, label: 'Bid', description: 'Place sealed bids with escrowed ALEO' },
+  { icon: Lock, label: 'Bid', description: 'Place sealed commitment — no tokens locked, amounts fully private' },
   { icon: Eye, label: 'Reveal', description: 'Reveal bids after deadline passes' },
   { icon: CheckCircle, label: 'Settle', description: 'Finalize and determine the winner' },
   { icon: Award, label: 'Claim', description: 'Winner claims item, losers get refunds' },
@@ -60,12 +60,13 @@ const stats = [
 ]
 
 const privacyRows = [
-  { data: 'Bid Amounts', isPrivate: true, detail: 'Encrypted SealedBid records' },
-  { data: 'Bidder Identity', isPrivate: true, detail: 'Never exposed on-chain' },
-  { data: 'Reserve Price', isPrivate: true, detail: 'BHP256 hash only until settlement' },
-  { data: 'Seller Address', isPrivate: true, detail: 'Hashed via BHP256' },
-  { data: 'Auction Status', isPrivate: false, detail: 'State machine transitions' },
-  { data: 'Bid Count', isPrivate: false, detail: 'Counter only, no amounts' },
+  { data: 'Bid Amounts (during bidding)', isPrivate: true, detail: 'No transfer at bid time — zero amount leakage during sealed phase' },
+  { data: 'Bidder Identity', isPrivate: true, detail: 'Never stored on-chain in any mapping' },
+  { data: 'Reserve Price', isPrivate: true, detail: 'BHP256 hash only — plaintext never on-chain until settlement' },
+  { data: 'Seller Address', isPrivate: true, detail: 'Hashed via BHP256 — only hash on-chain' },
+  { data: 'Bid Amounts (after reveal)', isPrivate: false, detail: 'Intentionally public — the reveal phase makes amounts public' },
+  { data: 'Auction Status', isPrivate: false, detail: 'Required for state machine transitions' },
+  { data: 'Bid Count', isPrivate: false, detail: 'Counter only, no individual amounts' },
 ]
 
 export default function Landing() {
@@ -87,14 +88,15 @@ export default function Landing() {
           </div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-white leading-[1.1] tracking-tight mb-6">
-            Private Auctions
+            First Vickrey Auction
             <br />
             <span className="text-gradient">on Aleo</span>
           </h1>
 
           <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-            The first commit-reveal sealed-bid auction protocol with Vickrey pricing.
-            Bid amounts stay encrypted until reveal. Built on zero-knowledge proofs.
+            Sealed-bid auctions where bid amounts are completely private until reveal.
+            Winner pays the second-highest bid — the game-theoretically optimal mechanism.
+            Built on Aleo zero-knowledge proofs.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
