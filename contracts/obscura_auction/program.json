@@ -1,5 +1,5 @@
 {
-  "program": "obscura_auction.aleo",
+  "program": "obscura_v2.aleo",
   "version": "0.1.0",
   "description": "Privacy-first sealed-bid auction protocol with Vickrey support on Aleo",
   "license": "MIT",

@@ -18,7 +18,7 @@
 
 import credits.aleo;
 
-program obscura_auction.aleo {
+program obscura_v2.aleo {
 
     // @noupgrade async constructor() {} — Leo 3.x syntax, omitted for 2.x compilation.
 

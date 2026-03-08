@@ -1,4 +1,4 @@
-# obscura_auction.aleo
+# obscura_v2.aleo
 
 ## Build Guide
 

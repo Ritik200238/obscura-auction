@@ -1,5 +1,5 @@
 export const config = {
-  programId: 'obscura_auction.aleo',
+  programId: 'obscura_v2.aleo',
   creditsProgram: 'credits.aleo',
   explorerApi: 'https://api.explorer.provable.com/v1',
   explorerUrl: 'https://explorer.provable.com',
