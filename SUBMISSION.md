@@ -13,9 +13,10 @@
 
 | Resource | URL |
 |----------|-----|
-| Smart Contract | [`obscura_auction.aleo`](https://explorer.provable.com/transaction/at1j58ds0rvhpwtspyvmr9wjxkrd2jq3xg2v25p8se4ezsv40a8xupswz58g4) on Aleo Testnet |
-| Deploy TX | `at1j58ds0rvhpwtspyvmr9wjxkrd2jq3xg2v25p8se4ezsv40a8xupswz58g4` |
-| Initialize TX | `at127myrsahfjvysa0ul3vxg0vt7jzut5hardpgtc8ncpeasdy5wgys4f6lla` |
+| Smart Contract v2 | [`obscura_v2.aleo`](https://explorer.provable.com/transaction/at1qy5h67s6629k07rf0vp2f6jxrh5xhqpxm6td2c8cmsl0s7233cgsafp7hk) on Aleo Testnet |
+| Deploy TX v2 | `at1qy5h67s6629k07rf0vp2f6jxrh5xhqpxm6td2c8cmsl0s7233cgsafp7hk` |
+| Smart Contract v1 | [`obscura_auction.aleo`](https://explorer.provable.com/transaction/at1j58ds0rvhpwtspyvmr9wjxkrd2jq3xg2v25p8se4ezsv40a8xupswz58g4) (initial, superseded) |
+| Initialize TX v1 | `at127myrsahfjvysa0ul3vxg0vt7jzut5hardpgtc8ncpeasdy5wgys4f6lla` |
 | Frontend | [obscura-auction-95hm.vercel.app](https://obscura-auction-95hm.vercel.app) |
 | Backend API | [obscura-auction-igia.vercel.app](https://obscura-auction-igia.vercel.app/health) |
 | Repository | [github.com/Ritik200238/obscura-auction](https://github.com/Ritik200238/obscura-auction) |

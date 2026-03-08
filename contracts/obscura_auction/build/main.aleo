@@ -528,3 +528,6 @@ function prove_won_auction:
     assert.eq r0.auction_id r1;
     output r0 as WinnerCertificate.record;
     output true as boolean.private;
+
+constructor:
+    assert.eq edition 0u16;
