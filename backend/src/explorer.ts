@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 
 const EXPLORER_API = process.env.EXPLORER_API || 'https://api.explorer.provable.com/v1';
-const PROGRAM_ID = process.env.PROGRAM_ID || 'obscura_v2.aleo';
+const PROGRAM_ID = process.env.PROGRAM_ID || 'obscura_auction.aleo';
 
 export async function fetchMapping(mapping: string, key: string): Promise<string | null> {
   try {

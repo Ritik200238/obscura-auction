@@ -1,5 +1,5 @@
 export const config = {
-  programId: 'obscura_v2.aleo',
+  programId: 'obscura_auction.aleo', // v1 live; obscura_v2.aleo deploy pending (testnet broadcast)
   creditsProgram: 'credits.aleo',
   explorerApi: 'https://api.explorer.provable.com/v1',
   explorerUrl: 'https://explorer.provable.com',

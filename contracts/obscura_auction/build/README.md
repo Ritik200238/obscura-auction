@@ -1,4 +1,4 @@
-# obscura_v2.aleo
+# obscura2.aleo
 
 ## Build Guide
 
