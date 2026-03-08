@@ -99,7 +99,7 @@ export default function Landing() {
             Built on Aleo zero-knowledge proofs.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
             <Link to="/create" className="btn-primary flex items-center gap-2 text-base px-8 py-3.5">
               Create Auction
               <ArrowRight className="w-4 h-4" />
@@ -107,6 +107,18 @@ export default function Landing() {
             <Link to="/browse" className="btn-secondary flex items-center gap-2 text-base px-8 py-3.5">
               Browse Auctions
             </Link>
+          </div>
+
+          {/* Live contract callout */}
+          <div className="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-surface-800/80 border border-surface-700 text-sm">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-green-400 font-medium font-mono">obscura_v2.aleo</span>
+            </span>
+            <span className="text-gray-600">|</span>
+            <span className="text-gray-400">Aleo Testnet</span>
+            <span className="text-gray-600">|</span>
+            <span className="text-gray-400">Platform fee: 1%</span>
           </div>
         </div>
       </section>
@@ -238,8 +250,9 @@ export default function Landing() {
             <div className="space-y-2 text-xs text-gray-400">
               <div className="flex justify-between"><span>Transitions</span><span className="text-white font-mono">10</span></div>
               <div className="flex justify-between"><span>Private Records</span><span className="text-white font-mono">4</span></div>
-              <div className="flex justify-between"><span>Mappings</span><span className="text-white font-mono">11</span></div>
+              <div className="flex justify-between"><span>Mappings</span><span className="text-white font-mono">13</span></div>
               <div className="flex justify-between"><span>State Machine</span><span className="text-white font-mono">8 states</span></div>
+              <div className="flex justify-between"><span>ZK Primitives</span><span className="text-white font-mono">commit.bhp256</span></div>
             </div>
           </div>
 
@@ -290,6 +303,73 @@ export default function Landing() {
               className="btn-secondary text-sm whitespace-nowrap flex items-center gap-2"
             >
               Read Privacy Model
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Test It — concrete E2E guide without fake data */}
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+        <div className="card border-accent-500/20 bg-accent-500/[0.02]">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-accent-500/20 flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-accent-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white">Test the Full E2E Flow</h2>
+              <p className="text-gray-500 text-sm">Real transactions on Aleo Testnet. No mock data.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="text-accent-400 font-medium text-sm mb-3 flex items-center gap-2">
+                <Gavel className="w-3.5 h-3.5" />
+                As Seller
+              </h4>
+              <ol className="space-y-2.5 text-sm text-gray-400">
+                {[
+                  'Connect Shield Wallet (get testnet ALEO from faucet if needed)',
+                  'Go to Create Auction → enter a title, reserve price 0.001, pick Vickrey mode, 1h duration',
+                  'Submit — your auction is created on-chain with a BHP256-hashed reserve',
+                  'After bidding closes, go to your auction → Finalize (re-enter your reserve price)',
+                ].map((step, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-accent-500/20 text-accent-400 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i+1}</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <div>
+              <h4 className="text-accent-400 font-medium text-sm mb-3 flex items-center gap-2">
+                <Lock className="w-3.5 h-3.5" />
+                As Bidder
+              </h4>
+              <ol className="space-y-2.5 text-sm text-gray-400">
+                {[
+                  'Browse to any active auction or look up by on-chain ID',
+                  'Place a sealed bid — commitment stored on-chain, NO token transfer yet',
+                  'When reveal phase opens, reveal your bid — tokens locked here (intentionally public)',
+                  'If you win: Claim Win → get WinnerCertificate. If you lose: Claim Refund',
+                ].map((step, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-accent-500/20 text-accent-400 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i+1}</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+
+          <div className="mt-5 pt-5 border-t border-surface-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-gray-600">
+              Contract: <span className="font-mono text-accent-400/70">obscura_v2.aleo</span> ·
+              Deploy TX: <span className="font-mono text-gray-500">at1qy5h67...p7hk</span>
+            </p>
+            <Link to="/create" className="btn-primary text-sm flex items-center gap-2">
+              Start Testing
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
