@@ -69,11 +69,10 @@ What stays private:
 ### Phase 2: Bidding
 
 ```
-Bidder calls place_bid(auction_id, amount, nonce, credits_record)
+Bidder calls place_bid(auction_id, amount, nonce)
 
 What becomes public:
-  - bid_commitments[hash] = true (prevents replay)
-  - auction_escrow[auction_id] += amount (aggregate only)
+  - bid_commitments[hash] = true (prevents replay, reveals nothing about amount)
   - bid_count += 1
 
 What stays private:
@@ -81,33 +80,37 @@ What stays private:
   - Bidder's address (record owner, not in any mapping)
   - Bid nonce (random, in record)
 
-Token flow:
-  credits.aleo/transfer_private_to_public(record, program_address, amount)
-  - The AMOUNT transferred is visible in the credits.aleo mapping
-  - The SENDER is hidden (private record consumption)
+Token flow: NONE. No tokens transferred at bid placement.
 ```
 
-**Observer learns**: "Someone placed a bid on this auction. The total escrow increased by X." They know individual bid amounts from the credits transfer, but NOT who placed them.
+**Observer learns**: "Someone placed a bid on this auction. bid_count incremented." They learn nothing about the bid amount. No transfer occurs, so the credits.aleo mapping reveals nothing.
 
-**Privacy limitation**: The `transfer_private_to_public` call reveals the bid amount in the credits.aleo program's public mapping. This is inherent to Aleo's credits program — private-to-public transfers must declare the amount. However, the bidder's identity remains hidden.
+**This is correct sealed-bid architecture.** The commitment hash proves the bidder is locked to a specific amount without revealing it. If they try to reveal a different amount, the hash won't match and the reveal transaction fails.
 
-### Phase 3: Revealing
+### Phase 3: Revealing (with Escrow)
 
 ```
-Bidder calls reveal_bid(sealed_bid_record)
+Bidder calls reveal_bid(sealed_bid_record, credits_record)
 
 What becomes public:
-  - revealed_bids[bid_hash] = amount
+  - revealed_bids[bid_hash] = amount (intentionally public — this IS the reveal)
   - highest_bids and second_highest_bids updated
+  - auction_escrow[auction_id] += amount (tokens now locked)
 
 What stays private:
   - Bidder's address (still only in consumed record)
-  - Link between bidder and bid amount
+  - Link between bidder address and bid amount
+
+Token flow:
+  credits.aleo/transfer_private_to_public(record, program_address, amount)
+  - Amount is visible here — BUT at this point, amount is INTENTIONALLY public
+    (the entire purpose of the reveal phase is to make amounts public)
+  - The sender is hidden (private credits record consumption)
 ```
 
-**Observer learns**: "Bid X was revealed with amount Y." They cannot determine which address placed it. The bid amount was already inferrable from the escrow deposit, but now it's explicitly confirmed.
+**Observer learns**: "Bid hash X was revealed with amount Y. Y ALEO was escrowed." This is correct — the reveal SHOULD make amounts public. The critical difference from the old design: amounts were ONLY public at reveal time, not during bidding.
 
-**Design choice**: Reveal is voluntary. Bidders who do not reveal before the deadline can still reclaim their escrow via `claim_unrevealed_refund`. This provides an "exit option" for bidders who change their mind.
+**Bidders who don't reveal**: Hold a worthless SealedBid record. No tokens were locked before reveal, so no refund is needed. The reveal deadline enforces participation — if you committed a bid, you must reveal to honor it.
 
 ### Phase 4: Settlement
 
