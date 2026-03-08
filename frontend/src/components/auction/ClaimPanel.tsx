@@ -24,13 +24,11 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
 
   const records = getForAuction(auction.auction_id)
   const winnerCert = records.winnerCert
-  const bid = records.bids[0]
-  const receipt = records.receipts[0]
+  const receipt = records.receipts[0]  // Only EscrowReceipt needed — SealedBid consumed at reveal
 
   const isVickrey = auction.auction_mode === AUCTION_MODE.VICKREY
   const feeBps = config.platformFeeBps
   const feeAmount = highestBid * BigInt(feeBps) / 10000n
-  // Contract always charges bid.bid_amount (first price) regardless of mode
   const sellerPayout = highestBid - feeAmount
 
   const handleClaim = async () => {
@@ -42,8 +40,8 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
       return
     }
 
-    if (!bid || !receipt) {
-      setFormError('Missing bid or escrow receipt records in your wallet')
+    if (!receipt) {
+      setFormError('No EscrowReceipt found — you must reveal your bid first to create one')
       return
     }
 
@@ -52,24 +50,21 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
       return
     }
 
-    let functionName: string
-    // Use raw records (with type suffixes) for the wallet prover
-    const rawBid = records.rawBids[0]
+    // New architecture: claim_win only needs EscrowReceipt (SealedBid consumed at reveal)
     const rawReceipt = records.rawReceipts[0]
-    if (!rawBid || !rawReceipt) {
-      setFormError('Raw record data missing — try refreshing your wallet records')
+    if (!rawReceipt) {
+      setFormError('Raw receipt data missing — try refreshing your wallet records')
       return
     }
-    const inputs: string[] = [
-      serializeRecordForTx(rawBid),
-      serializeRecordForTx(rawReceipt),
-      sellerAddress,
-      auction.item_hash.endsWith('field') ? auction.item_hash : `${auction.item_hash}field`,
-    ]
 
-    functionName = 'claim_win'
-
-    await execute({ functionName, inputs })
+    await execute({
+      functionName: 'claim_win',
+      inputs: [
+        serializeRecordForTx(rawReceipt),
+        sellerAddress,
+        auction.item_hash.endsWith('field') ? auction.item_hash : `${auction.item_hash}field`,
+      ],
+    })
   }
 
   // Already claimed
@@ -189,7 +184,7 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
 
       <button
         onClick={handleClaim}
-        disabled={loading || !connected || !bid || !receipt}
+        disabled={loading || !connected || !receipt}
         className="btn-primary w-full flex items-center justify-center gap-2"
       >
         {loading ? (
@@ -197,8 +192,8 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
             <Loader2 className="w-4 h-4 animate-spin" />
             Claiming...
           </>
-        ) : !bid || !receipt ? (
-          'Missing Records'
+        ) : !receipt ? (
+          'Reveal Bid First'
         ) : (
           'Claim Winning Item'
         )}

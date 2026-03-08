@@ -4,7 +4,9 @@ import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
 import { useCountdown } from '@/hooks/useCountdown'
 import { useRecordStore } from '@/stores/recordStore'
-import { formatTokenAmount, serializeRecordForTx } from '@/lib/aleo'
+import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
+import { formatTokenAmount, serializeRecordForTx, fetchCreditsRecord } from '@/lib/aleo'
+import { config } from '@/lib/config'
 import type { AuctionData, SealedBidRecord } from '@/types'
 import TransactionLink from '@/components/shared/TransactionLink'
 
@@ -15,18 +17,21 @@ interface RevealPanelProps {
 export default function RevealPanel({ auction }: RevealPanelProps) {
   const { execute, loading, error: txError, txId, status: txStatus, reset } = useTransaction()
   const { connected } = useWalletStore()
+  const { requestRecords } = useWallet()
   const { timeRemaining, isExpired } = useCountdown(auction.reveal_deadline)
   const { getForAuction } = useRecordStore()
 
   const [revealingIndex, setRevealingIndex] = useState<number | null>(null)
   const [revealedIndices, setRevealedIndices] = useState<Set<number>>(new Set())
+  const [revealError, setRevealError] = useState<string | null>(null)
 
   const records = getForAuction(auction.auction_id)
   const bids = records.bids
 
-  const handleReveal = async (_bid: SealedBidRecord, index: number) => {
+  const handleReveal = async (bid: SealedBidRecord, index: number) => {
     reset()
     setRevealingIndex(index)
+    setRevealError(null)
 
     // Pass the raw record (with type suffixes) for the wallet prover
     const rawBid = records.rawBids[index]
@@ -34,9 +39,24 @@ export default function RevealPanel({ auction }: RevealPanelProps) {
       setRevealingIndex(null)
       return
     }
+
+    // In the new architecture, tokens are escrowed at reveal time.
+    // Fetch a credits record with enough balance to cover the bid amount.
+    const bidAmountMicro = parseInt(bid.bid_amount.replace(/[^0-9]/g, ''), 10) || 0
+    const totalNeeded = bidAmountMicro + Math.floor(config.defaultFee * 1_000_000)
+    const creditsRecord = await fetchCreditsRecord(requestRecords, totalNeeded)
+    if (!creditsRecord) {
+      setRevealError(
+        `No credits record with at least ${(totalNeeded / 1_000_000).toFixed(3)} ALEO. ` +
+        `Your bid was ${(bidAmountMicro / 1_000_000).toFixed(3)} ALEO — you need this in private credits to reveal.`
+      )
+      setRevealingIndex(null)
+      return
+    }
+
     const result = await execute({
       functionName: 'reveal_bid',
-      inputs: [serializeRecordForTx(rawBid)],
+      inputs: [serializeRecordForTx(rawBid), creditsRecord],
     })
 
     if (result.transactionId) {
@@ -142,10 +162,10 @@ export default function RevealPanel({ auction }: RevealPanelProps) {
         </div>
       )}
 
-      {txError && (
+      {(txError || revealError) && (
         <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 mt-4">
           <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-          <p className="text-sm text-red-400">{txError}</p>
+          <p className="text-sm text-red-400">{revealError || txError}</p>
         </div>
       )}
     </div>

@@ -4,9 +4,8 @@ import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
 import { useCountdown } from '@/hooks/useCountdown'
 import { useRecordStore } from '@/stores/recordStore'
-import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import type { AuctionData } from '@/types'
-import { generateNonce, toMicrocredits, formatTokenAmount, fetchCreditsRecord } from '@/lib/aleo'
+import { generateNonce, toMicrocredits, formatTokenAmount } from '@/lib/aleo'
 import { config } from '@/lib/config'
 import TransactionLink from '@/components/shared/TransactionLink'
 
@@ -17,7 +16,6 @@ interface BidPanelProps {
 export default function BidPanel({ auction }: BidPanelProps) {
   const { execute, loading, error: txError, txId, status: txStatus, reset } = useTransaction()
   const { connected } = useWalletStore()
-  const { requestRecords } = useWallet()
   const { timeRemaining, isExpired } = useCountdown(auction.deadline)
   const { getForAuction } = useRecordStore()
 
@@ -52,24 +50,15 @@ export default function BidPanel({ auction }: BidPanelProps) {
     const nonce = generateNonce()
     const microsStr = toMicrocredits(amount)
 
-    // Fetch a credits record with enough balance (bid amount + fee buffer)
-    const totalNeeded = micros + Math.floor(config.defaultFee * 1_000_000)
-    const creditsRecord = await fetchCreditsRecord(requestRecords, totalNeeded)
-    if (!creditsRecord) {
-      setFormError(
-        `No credits record found with at least ${(totalNeeded / 1_000_000).toFixed(3)} ALEO. ` +
-        `Make sure your wallet has private ALEO credits (not just public balance).`
-      )
-      return
-    }
-
+    // Privacy design: place_bid only stores the commitment — NO token transfer.
+    // Bid amounts are completely hidden during the sealed phase.
+    // Tokens are escrowed at reveal_bid time (when amounts are intentionally public).
     await execute({
       functionName: 'place_bid',
       inputs: [
         auction.auction_id.endsWith('field') ? auction.auction_id : `${auction.auction_id}field`,
         `${microsStr}u128`,
         nonce,
-        creditsRecord,
       ],
     })
   }
@@ -164,10 +153,12 @@ export default function BidPanel({ auction }: BidPanelProps) {
 
           {/* Privacy notice */}
           <div className="bg-surface-800 rounded-lg p-3 mb-4">
-            <p className="text-xs text-gray-400">
-              Your bid amount is private until the reveal phase. It is stored as an encrypted
-              Aleo record that only you can decrypt. A random nonce is auto-generated for
-              commitment privacy.
+            <p className="text-xs text-gray-400 leading-relaxed">
+              <span className="text-green-400 font-medium">Zero amount leakage during bidding.</span>{' '}
+              No tokens are transferred when placing a bid. Only a cryptographic commitment
+              (BHP256 hash) is stored on-chain. Your ALEO is only locked when you{' '}
+              <span className="text-white">reveal</span> — at which point your bid amount is
+              intentionally public. This is the correct sealed-bid architecture.
             </p>
           </div>
 

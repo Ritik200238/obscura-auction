@@ -263,92 +263,91 @@ function place_bid:
     input r0 as field.private;
     input r1 as u128.private;
     input r2 as field.private;
-    input r3 as credits.aleo/credits.record;
-    gte r1 1000u128 into r4;
-    assert.eq r4 true;
-    cast self.caller r0 r1 r2 1u8 into r5 as SealedBid.record;
-    cast self.caller r0 r1 r2 1u8 into r6 as EscrowReceipt.record;
-    cast self.caller r0 r1 r2 into r7 as BidCommitment;
-    hash.bhp256 r7 into r8 as field;
-    cast r1 into r9 as u64;
-    call credits.aleo/transfer_private_to_public r3 obscura_auction.aleo r9 into r10 r11;
-    async place_bid r11 r0 r8 r1 into r12;
-    output r5 as SealedBid.record;
-    output r6 as EscrowReceipt.record;
-    output r10 as credits.aleo/credits.record;
-    output r12 as obscura_auction.aleo/place_bid.future;
+    gte r1 1000u128 into r3;
+    assert.eq r3 true;
+    cast self.caller r0 r1 r2 1u8 into r4 as SealedBid.record;
+    cast self.caller r0 r1 r2 into r5 as BidCommitment;
+    hash.bhp256 r5 into r6 as field;
+    async place_bid r0 r6 into r7;
+    output r4 as SealedBid.record;
+    output r7 as obscura_auction.aleo/place_bid.future;
 
 finalize place_bid:
-    input r0 as credits.aleo/transfer_private_to_public.future;
+    input r0 as field.public;
     input r1 as field.public;
-    input r2 as field.public;
-    input r3 as u128.public;
-    await r0;
-    get auctions[r1] into r4;
-    assert.eq r4.status 1u8;
-    cast block.height into r5 as u64;
-    lte r5 r4.deadline into r6;
+    get auctions[r0] into r2;
+    assert.eq r2.status 1u8;
+    cast block.height into r3 as u64;
+    lte r3 r2.deadline into r4;
+    assert.eq r4 true;
+    contains bid_commitments[r1] into r5;
+    not r5 into r6;
     assert.eq r6 true;
-    contains bid_commitments[r2] into r7;
-    not r7 into r8;
+    get platform_config[0u8] into r7;
+    not r7.paused into r8;
     assert.eq r8 true;
-    get platform_config[0u8] into r9;
-    not r9.paused into r10;
-    assert.eq r10 true;
-    set true into bid_commitments[r2];
-    gt r4.deadline 40u64 into r11;
-    sub r4.deadline 40u64 into r12;
-    ternary r11 r12 0u64 into r13;
-    gt r5 r13 into r14;
-    add r4.deadline 40u64 into r15;
-    ternary r14 r15 r4.deadline into r16;
-    add r4.bid_count 1u64 into r17;
-    cast r4.item_hash r4.seller_hash r4.category r4.token_type r4.auction_mode r4.status r16 r4.reveal_deadline r17 r4.reserve_price_hash r4.created_at r4.dispute_deadline into r18 as AuctionData;
-    set r18 into auctions[r1];
-    get.or_use auction_escrow[r1] 0u128 into r19;
-    add r19 r3 into r20;
-    set r20 into auction_escrow[r1];
-    get.or_use program_balance[0u8] 0u128 into r21;
-    add r21 r3 into r22;
-    set r22 into program_balance[0u8];
+    set true into bid_commitments[r1];
+    gt r2.deadline 40u64 into r9;
+    sub r2.deadline 40u64 into r10;
+    ternary r9 r10 0u64 into r11;
+    gt r3 r11 into r12;
+    add r2.deadline 40u64 into r13;
+    ternary r12 r13 r2.deadline into r14;
+    add r2.bid_count 1u64 into r15;
+    cast r2.item_hash r2.seller_hash r2.category r2.token_type r2.auction_mode r2.status r14 r2.reveal_deadline r15 r2.reserve_price_hash r2.created_at r2.dispute_deadline into r16 as AuctionData;
+    set r16 into auctions[r0];
 
 
 
 
 function reveal_bid:
     input r0 as SealedBid.record;
-    cast r0.owner r0.auction_id r0.bid_amount r0.bid_nonce into r1 as BidCommitment;
-    hash.bhp256 r1 into r2 as field;
-    async reveal_bid r0.auction_id r2 r0.bid_amount into r3;
-    output r3 as obscura_auction.aleo/reveal_bid.future;
+    input r1 as credits.aleo/credits.record;
+    cast r0.owner r0.auction_id r0.bid_amount r0.bid_nonce into r2 as BidCommitment;
+    hash.bhp256 r2 into r3 as field;
+    cast r0.bid_amount into r4 as u64;
+    call credits.aleo/transfer_private_to_public r1 obscura_auction.aleo r4 into r5 r6;
+    cast r0.owner r0.auction_id r0.bid_amount r0.bid_nonce 1u8 into r7 as EscrowReceipt.record;
+    async reveal_bid r6 r0.auction_id r3 r0.bid_amount into r8;
+    output r7 as EscrowReceipt.record;
+    output r5 as credits.aleo/credits.record;
+    output r8 as obscura_auction.aleo/reveal_bid.future;
 
 finalize reveal_bid:
-    input r0 as field.public;
+    input r0 as credits.aleo/transfer_private_to_public.future;
     input r1 as field.public;
-    input r2 as u128.public;
-    get auctions[r0] into r3;
-    assert.eq r3.status 3u8;
-    cast block.height into r4 as u64;
-    lte r4 r3.reveal_deadline into r5;
-    assert.eq r5 true;
-    get bid_commitments[r1] into r6;
+    input r2 as field.public;
+    input r3 as u128.public;
+    await r0;
+    get auctions[r1] into r4;
+    assert.eq r4.status 3u8;
+    cast block.height into r5 as u64;
+    lte r5 r4.reveal_deadline into r6;
     assert.eq r6 true;
-    contains revealed_bids[r1] into r7;
-    not r7 into r8;
-    assert.eq r8 true;
-    set r2 into revealed_bids[r1];
-    get.or_use highest_bids[r0] 0u128 into r9;
-    get.or_use second_highest_bids[r0] 0u128 into r10;
-    gt r2 r9 into r11;
-    branch.eq r11 false to end_then_0_2;
-    set r9 into second_highest_bids[r0];
-    set r2 into highest_bids[r0];
-    set r1 into auction_winners[r0];
+    get bid_commitments[r2] into r7;
+    assert.eq r7 true;
+    contains revealed_bids[r2] into r8;
+    not r8 into r9;
+    assert.eq r9 true;
+    set r3 into revealed_bids[r2];
+    get.or_use auction_escrow[r1] 0u128 into r10;
+    add r10 r3 into r11;
+    set r11 into auction_escrow[r1];
+    get.or_use program_balance[0u8] 0u128 into r12;
+    add r12 r3 into r13;
+    set r13 into program_balance[0u8];
+    get.or_use highest_bids[r1] 0u128 into r14;
+    get.or_use second_highest_bids[r1] 0u128 into r15;
+    gt r3 r14 into r16;
+    branch.eq r16 false to end_then_0_2;
+    set r14 into second_highest_bids[r1];
+    set r3 into highest_bids[r1];
+    set r2 into auction_winners[r1];
     branch.eq true true to end_otherwise_0_3;
     position end_then_0_2;
-    gt r2 r10 into r12;
-    branch.eq r12 false to end_then_1_4;
-    set r2 into second_highest_bids[r0];
+    gt r3 r15 into r17;
+    branch.eq r17 false to end_then_1_4;
+    set r3 into second_highest_bids[r1];
     branch.eq true true to end_otherwise_1_5;
     position end_then_1_4;
     position end_otherwise_1_5;
@@ -425,30 +424,27 @@ finalize finalize_auction:
 
 
 function claim_win:
-    input r0 as SealedBid.record;
-    input r1 as EscrowReceipt.record;
-    input r2 as address.private;
-    input r3 as field.private;
-    assert.eq r0.auction_id r1.auction_id;
-    assert.eq r0.bid_nonce r1.bid_nonce;
+    input r0 as EscrowReceipt.record;
+    input r1 as address.private;
+    input r2 as field.private;
     assert.eq r0.token_type 1u8;
-    cast r0.owner r0.auction_id r0.bid_amount r0.bid_nonce into r4 as BidCommitment;
-    hash.bhp256 r4 into r5 as field;
-    mul r0.bid_amount 100u128 into r6;
-    div r6 10000u128 into r7;
-    sub r0.bid_amount r7 into r8;
-    cast r8 into r9 as u64;
-    call credits.aleo/transfer_public_to_private r2 r9 into r10 r11;
-    hash.bhp256 r0.bid_nonce into r12 as scalar;
-    cast r0.bid_amount into r13 as field;
-    commit.bhp256 r13 r12 into r14 as field;
-    cast self.caller r0.auction_id r3 r0.bid_amount 1u8 r5 into r15 as WinnerCertificate.record;
-    cast r2 r0.auction_id r3 r8 r7 1u8 into r16 as SellerReceipt.record;
-    async claim_win r11 r0.auction_id r5 r0.bid_amount r7 r3 r14 into r17;
-    output r15 as WinnerCertificate.record;
-    output r16 as SellerReceipt.record;
-    output r10 as credits.aleo/credits.record;
-    output r17 as obscura_auction.aleo/claim_win.future;
+    cast r0.owner r0.auction_id r0.escrowed_amount r0.bid_nonce into r3 as BidCommitment;
+    hash.bhp256 r3 into r4 as field;
+    mul r0.escrowed_amount 100u128 into r5;
+    div r5 10000u128 into r6;
+    sub r0.escrowed_amount r6 into r7;
+    cast r7 into r8 as u64;
+    call credits.aleo/transfer_public_to_private r1 r8 into r9 r10;
+    hash.bhp256 r0.bid_nonce into r11 as scalar;
+    cast r0.escrowed_amount into r12 as field;
+    commit.bhp256 r12 r11 into r13 as field;
+    cast self.caller r0.auction_id r2 r0.escrowed_amount 1u8 r4 into r14 as WinnerCertificate.record;
+    cast r1 r0.auction_id r2 r7 r6 1u8 into r15 as SellerReceipt.record;
+    async claim_win r10 r0.auction_id r4 r0.escrowed_amount r6 r2 r13 into r16;
+    output r14 as WinnerCertificate.record;
+    output r15 as SellerReceipt.record;
+    output r9 as credits.aleo/credits.record;
+    output r16 as obscura_auction.aleo/claim_win.future;
 
 finalize claim_win:
     input r0 as credits.aleo/transfer_public_to_private.future;
@@ -526,42 +522,9 @@ finalize claim_refund:
 
 
 
-
-function claim_unrevealed_refund:
-    input r0 as SealedBid.record;
-    input r1 as EscrowReceipt.record;
-    assert.eq r0.auction_id r1.auction_id;
-    assert.eq r0.bid_nonce r1.bid_nonce;
-    assert.eq r0.token_type 1u8;
-    cast r1.escrowed_amount into r2 as u64;
-    call credits.aleo/transfer_public_to_private self.caller r2 into r3 r4;
-    cast self.caller r1.auction_id r1.escrowed_amount r1.bid_nonce into r5 as BidCommitment;
-    hash.bhp256 r5 into r6 as field;
-    async claim_unrevealed_refund r4 r0.auction_id r6 r1.escrowed_amount 1u8 into r7;
-    output r3 as credits.aleo/credits.record;
-    output r7 as obscura_auction.aleo/claim_unrevealed_refund.future;
-
-finalize claim_unrevealed_refund:
-    input r0 as credits.aleo/transfer_public_to_private.future;
+function prove_won_auction:
+    input r0 as WinnerCertificate.record;
     input r1 as field.public;
-    input r2 as field.public;
-    input r3 as u128.public;
-    input r4 as u8.public;
-    await r0;
-    get auctions[r1] into r5;
-    is.eq r5.status 4u8 into r6;
-    is.eq r5.status 6u8 into r7;
-    or r6 r7 into r8;
-    assert.eq r8 true;
-    contains revealed_bids[r2] into r9;
-    not r9 into r10;
-    assert.eq r10 true;
-    get auction_escrow[r1] into r11;
-    sub r11 r3 into r12;
-    set r12 into auction_escrow[r1];
-    is.eq r4 1u8 into r13;
-    ternary r13 0u8 1u8 into r14;
-    get program_balance[r14] into r15;
-    sub r15 r3 into r16;
-    set r16 into program_balance[r14];
-
+    assert.eq r0.auction_id r1;
+    output r0 as WinnerCertificate.record;
+    output true as boolean.private;

@@ -1,14 +1,6 @@
 {
-  "program": "obscura_auction.aleo",
-  "version": "0.1.0",
-  "description": "Privacy-first sealed-bid auction protocol with Vickrey support on Aleo",
-  "license": "MIT",
-  "dependencies": [
-    {
-      "name": "credits.aleo",
-      "location": "network",
-      "network": "testnet",
-      "path": null
-    }
-  ]
+    "program": "obscura_auction.aleo",
+    "version": "0.0.0",
+    "description": "",
+    "license": "MIT"
 }
