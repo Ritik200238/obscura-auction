@@ -68,6 +68,7 @@ export default {
         'float': 'float 6s ease-in-out infinite',
         'gradient-flow': 'gradientFlow 4s ease-in-out infinite',
         'wallet-pulse': 'walletPulse 2s ease-in-out infinite',
+        'mesh-drift': 'meshDrift 12s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -102,6 +103,12 @@ export default {
         walletPulse: {
           '0%, 100%': { boxShadow: '0 0 0 0 rgba(139, 92, 246, 0.4)' },
           '50%': { boxShadow: '0 0 0 6px rgba(139, 92, 246, 0)' },
+        },
+        meshDrift: {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '25%': { backgroundPosition: '100% 25%' },
+          '50%': { backgroundPosition: '50% 100%' },
+          '75%': { backgroundPosition: '25% 0%' },
         },
       },
     },

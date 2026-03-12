@@ -10,6 +10,8 @@ import CreateAuction from './pages/CreateAuction'
 const AuctionDetail = React.lazy(() => import('./pages/AuctionDetail'))
 const MyActivity = React.lazy(() => import('./pages/MyActivity'))
 const Docs = React.lazy(() => import('./pages/Docs'))
+const Dashboard = React.lazy(() => import('./pages/Dashboard'))
+const VickreyExplainer = React.lazy(() => import('./pages/VickreyExplainer'))
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -81,6 +83,8 @@ function AnimatedRoutes() {
           <Route path="/create" element={<CreateAuction />} />
           <Route path="/auction/:id" element={<AuctionDetail />} />
           <Route path="/my-activity" element={<MyActivity />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/learn" element={<VickreyExplainer />} />
           <Route path="/docs" element={<Docs />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
