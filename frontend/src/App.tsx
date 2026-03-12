@@ -1,12 +1,15 @@
-import React from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import React, { Suspense, useEffect } from 'react'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
+import { pageVariants } from '@/lib/animations'
 import Layout from './components/layout/Layout'
 import Landing from './pages/Landing'
 import Browse from './pages/Browse'
 import CreateAuction from './pages/CreateAuction'
-import AuctionDetail from './pages/AuctionDetail'
-import MyActivity from './pages/MyActivity'
-import Docs from './pages/Docs'
+
+const AuctionDetail = React.lazy(() => import('./pages/AuctionDetail'))
+const MyActivity = React.lazy(() => import('./pages/MyActivity'))
+const Docs = React.lazy(() => import('./pages/Docs'))
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -52,11 +55,27 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-export default function App() {
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
+
+function AnimatedRoutes() {
+  const location = useLocation()
+
   return (
-    <ErrorBoundary>
-      <Layout>
-        <Routes>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location.pathname}
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+      >
+        <Routes location={location}>
           <Route path="/" element={<Landing />} />
           <Route path="/browse" element={<Browse />} />
           <Route path="/create" element={<CreateAuction />} />
@@ -65,6 +84,19 @@ export default function App() {
           <Route path="/docs" element={<Docs />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <ScrollToTop />
+      <Layout>
+        <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="w-6 h-6 border-2 border-accent-500 border-t-transparent rounded-full animate-spin" /></div>}>
+          <AnimatedRoutes />
+        </Suspense>
       </Layout>
     </ErrorBoundary>
   )

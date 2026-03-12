@@ -1,6 +1,7 @@
 export const config = {
-  programId: 'obscura_v2.aleo',
+  programId: 'obscura_v3.aleo',
   creditsProgram: 'credits.aleo',
+  usdcxProgramId: 'test_usdcx_stablecoin.aleo',
   explorerApi: 'https://api.explorer.provable.com/v1',
   explorerUrl: 'https://explorer.provable.com',
   backendApi: import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001',

@@ -1,10 +1,11 @@
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Clock, Users, Coins, Tag, ArrowUpRight } from 'lucide-react'
 import {
   STATUS,
   STATUS_LABELS,
   STATUS_COLORS,
   AUCTION_MODE,
+  TOKEN_TYPE,
   CATEGORY_LABELS,
   type AuctionData,
 } from '@/types'
@@ -16,8 +17,6 @@ interface AuctionCardProps {
 }
 
 export function AuctionCard({ auction, currentBlock }: AuctionCardProps) {
-  const navigate = useNavigate()
-
   const statusLabel = STATUS_LABELS[auction.status] || 'Unknown'
   const statusColor = STATUS_COLORS[auction.status] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'
   const categoryLabel = CATEGORY_LABELS[auction.category] || 'Other'
@@ -26,9 +25,9 @@ export function AuctionCard({ auction, currentBlock }: AuctionCardProps) {
   const timeLeft = blockHeightToTime(auction.deadline, currentBlock)
 
   return (
-    <div
-      onClick={() => navigate(`/auction/${auction.auction_id}`)}
-      className="card-hover cursor-pointer group relative overflow-hidden"
+    <Link
+      to={`/auction/${auction.auction_id}`}
+      className="card-hover cursor-pointer group relative overflow-hidden block"
     >
       {/* Subtle gradient accent at top */}
       <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${
@@ -73,7 +72,7 @@ export function AuctionCard({ auction, currentBlock }: AuctionCardProps) {
         </span>
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-surface-800/80 text-gray-400 text-xs">
           <Coins className="w-3 h-3" />
-          ALEO
+          {auction.token_type === TOKEN_TYPE.USDCX ? 'USDCx' : 'ALEO'}
         </span>
         <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs ${
           auction.auction_mode === AUCTION_MODE.VICKREY
@@ -101,6 +100,6 @@ export function AuctionCard({ auction, currentBlock }: AuctionCardProps) {
           </div>
         )}
       </div>
-    </div>
+    </Link>
   )
 }

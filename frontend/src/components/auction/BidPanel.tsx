@@ -4,17 +4,18 @@ import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
 import { useCountdown } from '@/hooks/useCountdown'
 import { useRecordStore } from '@/stores/recordStore'
-import type { AuctionData } from '@/types'
-import { generateNonce, toMicrocredits, formatTokenAmount } from '@/lib/aleo'
+import { TOKEN_TYPE, type AuctionData } from '@/types'
+import { generateNonce, toMicrocredits, formatTokenAmount, fetchMapping, parseAuctionData } from '@/lib/aleo'
 import { config } from '@/lib/config'
 import TransactionLink from '@/components/shared/TransactionLink'
+import TransactionProgress from '@/components/shared/TransactionProgress'
 
 interface BidPanelProps {
   auction: AuctionData
 }
 
 export default function BidPanel({ auction }: BidPanelProps) {
-  const { execute, loading, error: txError, txId, status: txStatus, reset } = useTransaction()
+  const { execute, loading, error: txError, txId, status: txStatus, reset, retryCheck } = useTransaction()
   const { connected } = useWalletStore()
   const { timeRemaining, isExpired } = useCountdown(auction.deadline)
   const { getForAuction } = useRecordStore()
@@ -24,7 +25,7 @@ export default function BidPanel({ auction }: BidPanelProps) {
 
   const existingRecords = getForAuction(auction.auction_id)
   const existingBid = existingRecords.bids.length > 0 ? existingRecords.bids[0] : null
-  const tokenSymbol = 'ALEO'
+  const tokenSymbol = auction.token_type === TOKEN_TYPE.USDCX ? 'USDCx' : 'ALEO'
 
   const handleBid = async () => {
     setFormError(null)
@@ -50,16 +51,24 @@ export default function BidPanel({ auction }: BidPanelProps) {
     const nonce = generateNonce()
     const microsStr = toMicrocredits(amount)
 
+    const auctionKey = auction.auction_id.endsWith('field') ? auction.auction_id : `${auction.auction_id}field`
+    const currentBidCount = auction.bid_count
+
+    // On-chain verification: check if bid_count has incremented
+    const onChainVerify = async () => {
+      const raw = await fetchMapping('auctions', auctionKey)
+      if (!raw) return false
+      const updated = parseAuctionData(raw, auction.auction_id)
+      return updated.bid_count > currentBidCount
+    }
+
     // Privacy design: place_bid only stores the commitment — NO token transfer.
     // Bid amounts are completely hidden during the sealed phase.
     // Tokens are escrowed at reveal_bid time (when amounts are intentionally public).
     await execute({
       functionName: 'place_bid',
-      inputs: [
-        auction.auction_id.endsWith('field') ? auction.auction_id : `${auction.auction_id}field`,
-        `${microsStr}u128`,
-        nonce,
-      ],
+      inputs: [auctionKey, `${microsStr}u128`, nonce, `${auction.token_type}u8`],
+      onChainVerify,
     })
   }
 
@@ -70,28 +79,23 @@ export default function BidPanel({ auction }: BidPanelProps) {
           <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center shrink-0">
             <CheckCircle className="w-5 h-5 text-green-400" />
           </div>
-          <div>
-            <h3 className="text-white font-semibold mb-1">Bid Submitted</h3>
-            <p className="text-gray-400 text-sm mb-3">
-              {txStatus === 'confirmed'
-                ? 'Your sealed bid has been confirmed on-chain.'
-                : txStatus === 'failed'
-                ? 'Transaction was rejected. Your funds were not moved.'
-                : 'Your sealed bid has been submitted. Waiting for on-chain confirmation...'}
-            </p>
-            {txStatus === 'pending' && (
-              <div className="flex items-center gap-2 text-xs text-accent-400 mb-3">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                <span>Confirming on-chain...</span>
-              </div>
-            )}
-            <div className="bg-surface-800 rounded-lg p-3">
+          <div className="flex-1">
+            <h3 className="text-white font-semibold mb-3">Bid Submitted</h3>
+            <TransactionProgress
+              status={txStatus}
+              txId={txId}
+              error={txError}
+              onRetry={retryCheck}
+            />
+            <div className="bg-surface-800 rounded-lg p-3 mt-3">
               <p className="text-xs text-gray-500 mb-0.5">Transaction</p>
               <TransactionLink txId={txId} className="text-xs break-all" />
             </div>
-            <p className="text-xs text-gray-500 mt-3">
-              Save your bid record -- you will need it during the reveal phase.
-            </p>
+            {txStatus === 'confirmed' && (
+              <p className="text-xs text-gray-500 mt-3">
+                Save your bid record — you will need it during the reveal phase.
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -156,9 +160,12 @@ export default function BidPanel({ auction }: BidPanelProps) {
             <p className="text-xs text-gray-400 leading-relaxed">
               <span className="text-green-400 font-medium">Zero amount leakage during bidding.</span>{' '}
               No tokens are transferred when placing a bid. Only a cryptographic commitment
-              (BHP256 hash) is stored on-chain. Your ALEO is only locked when you{' '}
+              (BHP256 hash) is stored on-chain. Your {tokenSymbol} is only locked when you{' '}
               <span className="text-white">reveal</span> — at which point your bid amount is
-              intentionally public. This is the correct sealed-bid architecture.
+              intentionally public.{' '}
+              {auction.token_type === TOKEN_TYPE.USDCX
+                ? 'USDCx uses public balance transfers during reveal (transfer_public_as_signer).'
+                : 'ALEO uses private record transfers during reveal (transfer_private_to_public).'}
             </p>
           </div>
 

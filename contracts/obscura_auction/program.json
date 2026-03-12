@@ -1,11 +1,17 @@
 {
-  "program": "obscura_v2.aleo",
+  "program": "obscura_v3.aleo",
   "version": "0.1.0",
-  "description": "Privacy-first sealed-bid auction protocol with Vickrey support on Aleo",
+  "description": "Privacy-first sealed-bid auction protocol with Vickrey support and dual token (ALEO + USDCx)",
   "license": "MIT",
   "dependencies": [
     {
       "name": "credits.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    },
+    {
+      "name": "test_usdcx_stablecoin.aleo",
       "location": "network",
       "network": "testnet",
       "path": null

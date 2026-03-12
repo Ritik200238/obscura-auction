@@ -1,4 +1,4 @@
-export const PROGRAM_ID = 'obscura_auction.aleo'
+export const PROGRAM_ID = 'obscura_v3.aleo'
 
 export const STATUS = {
   ACTIVE: 1,

@@ -1,5 +1,6 @@
 import { fetchMapping, fetchCurrentHeight } from './explorer';
 import { getAllAuctions, updateAuction } from './store';
+import { logger } from './logger';
 
 // Match contract's status constants exactly
 const STATUS_MAP: Record<number, string> = {
@@ -69,37 +70,52 @@ export async function syncAuction(auctionId: string): Promise<void> {
 
     await updateAuction(auctionId, updates);
   } catch (err) {
-    console.error(`[sync] Failed to sync auction ${auctionId}:`, err);
+    logger.error(`Failed to sync auction ${auctionId.slice(0, 16)}...:`, err);
   }
 }
 
 // Throttle: don't sync all auctions more than once per 30s
 let lastFullSync = 0;
+let syncInFlight: Promise<void> | null = null;
 const SYNC_COOLDOWN_MS = 30 * 1000;
 
 /**
  * Sync all non-terminal auctions. Throttled to once per 30s.
  * Called on-demand when auction list is requested.
+ * Uses a Promise sentinel to prevent concurrent syncs.
  */
-export async function syncAllAuctions(): Promise<void> {
+const TERMINAL_STATUSES = ['cancelled', 'expired', 'settled', 'failed'];
+
+export function syncAllAuctions(): Promise<void> {
   const now = Date.now();
-  if (now - lastFullSync < SYNC_COOLDOWN_MS) return;
+  if (now - lastFullSync < SYNC_COOLDOWN_MS) return Promise.resolve();
+  if (syncInFlight) return syncInFlight;
+
   lastFullSync = now;
+  syncInFlight = (async () => {
+    try {
+      const auctions = await getAllAuctions();
+      if (auctions.length === 0) {
+        lastFullSync = 0; // may be a transient storage failure; allow prompt retry
+        return;
+      }
 
-  try {
-    const auctions = await getAllAuctions();
-    if (auctions.length === 0) return;
+      const height = await fetchCurrentHeight();
+      logger.debug(`On-demand sync at height ${height} for ${auctions.length} auction(s)`);
 
-    const height = await fetchCurrentHeight();
-    console.log(`[sync] On-demand sync at height ${height} for ${auctions.length} auction(s)`);
-
-    for (const auction of auctions) {
-      if (['cancelled', 'expired'].includes(auction.status || '')) continue;
-      await syncAuction(auction.auction_id);
+      for (const auction of auctions) {
+        if (TERMINAL_STATUSES.includes(auction.status || '')) continue;
+        await syncAuction(auction.auction_id);
+      }
+    } catch (err) {
+      lastFullSync = 0; // allow immediate retry on next request
+      logger.error('Full sync failed:', err);
+    } finally {
+      syncInFlight = null;
     }
-  } catch (err) {
-    console.error('[sync] Full sync failed:', err);
-  }
+  })();
+
+  return syncInFlight;
 }
 
 /**
@@ -109,14 +125,14 @@ export async function syncAllAuctions(): Promise<void> {
 export function startBackgroundSync(): void {
   const isVercel = process.env.VERCEL === '1' || !!process.env.VERCEL_ENV;
   if (isVercel) {
-    console.log('[sync] Vercel detected — using on-demand sync');
+    logger.info('Vercel detected — using on-demand sync');
     return;
   }
 
-  console.log('[sync] Background sync started (interval: 30s)');
-  syncAllAuctions().catch((err) => console.error('[sync] Initial sync failed:', err));
+  logger.info('Background sync started (interval: 30s)');
+  syncAllAuctions().catch((err) => logger.error('Initial sync failed:', err));
 
   setInterval(() => {
-    syncAllAuctions().catch((err) => console.error('[sync] Periodic sync failed:', err));
+    syncAllAuctions().catch((err) => logger.error('Periodic sync failed:', err));
   }, 30 * 1000);
 }

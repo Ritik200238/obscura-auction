@@ -2,16 +2,17 @@ import { useState } from 'react'
 import { Scale, Loader2, AlertCircle, CheckCircle, Info } from 'lucide-react'
 import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
-import { toMicrocredits } from '@/lib/aleo'
+import { toMicrocredits, fetchMapping, parseAuctionData } from '@/lib/aleo'
 import type { AuctionData } from '@/types'
 import TransactionLink from '@/components/shared/TransactionLink'
+import TransactionProgress from '@/components/shared/TransactionProgress'
 
 interface SettlePanelProps {
   auction: AuctionData
 }
 
 export default function SettlePanel({ auction }: SettlePanelProps) {
-  const { execute, loading, error: txError, txId, status: txStatus, reset } = useTransaction()
+  const { execute, loading, error: txError, txId, status: txStatus, reset, retryCheck } = useTransaction()
   const { connected } = useWalletStore()
 
   const [reservePrice, setReservePrice] = useState('')
@@ -37,9 +38,18 @@ export default function SettlePanel({ auction }: SettlePanelProps) {
       ? auction.auction_id
       : `${auction.auction_id}field`
 
+    // On-chain verification: check if auction status changed to SETTLED (4)
+    const onChainVerify = async () => {
+      const raw = await fetchMapping('auctions', auctionKey)
+      if (!raw) return false
+      const updated = parseAuctionData(raw, auction.auction_id)
+      return updated.status === 4 // SETTLED
+    }
+
     await execute({
       functionName: 'finalize_auction',
       inputs: [auctionKey, `${microsStr}u128`],
+      onChainVerify,
     })
   }
 
@@ -52,19 +62,14 @@ export default function SettlePanel({ auction }: SettlePanelProps) {
           </div>
           <div>
             <h3 className="text-white font-semibold mb-1">Settlement Submitted</h3>
-            <p className="text-gray-400 text-sm mb-3">
-              {txStatus === 'confirmed'
-                ? 'Settlement confirmed on-chain. The auction outcome has been determined.'
-                : txStatus === 'failed'
-                ? 'Settlement transaction was rejected.'
-                : 'The finalize_auction transaction has been submitted. Waiting for confirmation...'}
-            </p>
-            {txStatus === 'pending' && (
-              <div className="flex items-center gap-2 text-xs text-accent-400 mb-3">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                <span>Confirming on-chain...</span>
-              </div>
-            )}
+            <div className="mb-3">
+              <TransactionProgress
+                status={txStatus}
+                txId={txId}
+                error={txError}
+                onRetry={retryCheck}
+              />
+            </div>
             <div className="bg-surface-800 rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-0.5">Transaction</p>
               <TransactionLink txId={txId} className="text-xs break-all" />

@@ -1,22 +1,47 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { fetchMapping, fetchTransaction } from '../explorer';
+import { logger } from '../logger';
 import {
   getAllAuctions,
   getAuctionById,
   createAuction,
   getBidsByAuction,
   createBid,
-  AuctionRecord,
+  getOverviewStats,
+  getRecentActivity,
+  getAuctionEvents,
+  getStorageType,
 } from '../store';
 import { syncAllAuctions } from '../sync';
+import { paginate } from '../utils';
 
 const router = Router();
 
-// GET /api/auctions — list all auctions
-router.get('/', async (_req: Request, res: Response) => {
+// Per-route rate limiters (attached inline to mutating routes)
+const createAuctionLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many auction creations. Maximum 5 per hour.' },
+});
+
+const bidLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many bid submissions. Maximum 20 per hour.' },
+});
+
+// GET /api/auctions — list all auctions (paginated)
+router.get('/', async (req: Request, res: Response) => {
   try {
-    // On-demand sync before returning data (throttled to 30s)
-    await syncAllAuctions();
+    // Sync is best-effort — don't block serving cached data if explorer is down
+    try { await syncAllAuctions(); } catch (err) {
+      logger.warn('Sync failed, returning cached data:', err);
+    }
     const auctions = await getAllAuctions();
 
     // Return public-safe view (strip encrypted fields)
@@ -35,9 +60,13 @@ router.get('/', async (_req: Request, res: Response) => {
       last_synced: a.last_synced,
     }));
 
-    res.json({ auctions: safeAuctions, count: safeAuctions.length });
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 20;
+    const result = paginate(safeAuctions, page, limit);
+
+    res.json({ auctions: result.data, total: result.total, page: result.page, limit: result.limit });
   } catch (err) {
-    console.error('[auctions] GET / failed:', err);
+    logger.error('GET /api/auctions failed:', err);
     res.status(500).json({ error: 'Failed to fetch auctions' });
   }
 });
@@ -92,13 +121,13 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (err) {
-    console.error(`[auctions] GET /${req.params.id} failed:`, err);
+    logger.error(`GET /api/auctions/${req.params.id} failed:`, err);
     res.status(500).json({ error: 'Failed to fetch auction' });
   }
 });
 
 // POST /api/auctions — register new auction metadata
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', createAuctionLimiter, async (req: Request, res: Response) => {
   try {
     const { auction_id, title, description, seller_address, tx_id, token_type, deadline } = req.body;
 
@@ -110,8 +139,8 @@ router.post('/', async (req: Request, res: Response) => {
       return;
     }
 
-    // Validate auction_id format (field hash — numeric string, possibly very large)
-    if (!auction_id || typeof auction_id !== 'string' || auction_id.trim().length === 0) {
+    // Validate auction_id format
+    if (typeof auction_id !== 'string' || auction_id.trim().length === 0) {
       res.status(400).json({ error: 'auction_id is required' });
       return;
     }
@@ -130,13 +159,15 @@ router.post('/', async (req: Request, res: Response) => {
 
     const record = await createAuction({
       auction_id,
-      title: title.slice(0, 200), // Cap title length
-      description: (description || '').slice(0, 2000), // Cap description
+      title: title.slice(0, 200),
+      description: (description || '').slice(0, 2000),
       seller_address,
       tx_id,
       token_type: typeof token_type === 'number' ? token_type : undefined,
       deadline: typeof deadline === 'number' ? deadline : undefined,
     });
+
+    logger.info(`Auction registered: ${auction_id.slice(0, 16)}...`);
 
     res.status(201).json({
       auction_id: record.auction_id,
@@ -150,13 +181,13 @@ router.post('/', async (req: Request, res: Response) => {
       res.status(409).json({ error: err.message });
       return;
     }
-    console.error('[auctions] POST / failed:', err);
+    logger.error('POST /api/auctions failed:', err);
     res.status(500).json({ error: 'Failed to create auction' });
   }
 });
 
 // POST /api/auctions/:id/bids — register a bid
-router.post('/:id/bids', async (req: Request, res: Response) => {
+router.post('/:id/bids', bidLimiter, async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
     const { bidder_address, bid_hash, tx_id } = req.body;
@@ -168,7 +199,24 @@ router.post('/:id/bids', async (req: Request, res: Response) => {
       return;
     }
 
-    // Verify auction exists
+    // Validate bidder_address format
+    if (!/^aleo1[a-z0-9]{58}$/.test(bidder_address)) {
+      res.status(400).json({ error: 'Invalid bidder address format' });
+      return;
+    }
+
+    // Validate bid_hash length
+    if (typeof bid_hash !== 'string' || bid_hash.length > 256) {
+      res.status(400).json({ error: 'Invalid bid_hash' });
+      return;
+    }
+
+    // Validate tx_id format
+    if (!/^at1[a-z0-9]+$/.test(tx_id)) {
+      res.status(400).json({ error: 'Invalid transaction ID format' });
+      return;
+    }
+
     const auction = await getAuctionById(id);
     if (!auction) {
       res.status(404).json({ error: 'Auction not found' });
@@ -182,6 +230,8 @@ router.post('/:id/bids', async (req: Request, res: Response) => {
       tx_id,
     });
 
+    logger.info(`Bid registered for auction ${id.slice(0, 16)}...`);
+
     res.status(201).json({
       auction_id: record.auction_id,
       bid_hash: record.bid_hash,
@@ -189,29 +239,38 @@ router.post('/:id/bids', async (req: Request, res: Response) => {
       created_at: record.created_at,
     });
   } catch (err) {
-    console.error(`[auctions] POST /${req.params.id}/bids failed:`, err);
+    logger.error(`POST /api/auctions/${req.params.id}/bids failed:`, err);
     res.status(500).json({ error: 'Failed to register bid' });
   }
 });
 
-// GET /api/auctions/:id/bids — list revealed bids for an auction
+// GET /api/auctions/:id/bids — list revealed bids (paginated)
 router.get('/:id/bids', async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
 
-    // Get locally tracked bids
+    // Validate auction exists before querying bids
+    const auction = await getAuctionById(id);
+    if (!auction) {
+      res.status(404).json({ error: 'Auction not found' });
+      return;
+    }
+
     const bids = await getBidsByAuction(id);
 
     // Return public-safe view (no encrypted addresses)
-    const safeBids = bids
-      .filter((b) => b.revealed)
-      .map((b) => ({
-        auction_id: b.auction_id,
-        bid_hash: b.bid_hash,
-        tx_id: b.tx_id,
-        revealed_amount: b.revealed_amount,
-        created_at: b.created_at,
-      }));
+    const safeBids = bids.map((b) => ({
+      auction_id: b.auction_id,
+      bid_hash: b.bid_hash,
+      tx_id: b.tx_id,
+      revealed: b.revealed || false,
+      revealed_amount: b.revealed_amount,
+      created_at: b.created_at,
+    }));
+
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 20;
+    const result = paginate(safeBids, page, limit);
 
     // Also try to fetch from on-chain revealed_bids mapping
     let onChainRevealed: string | null = null;
@@ -224,13 +283,28 @@ router.get('/:id/bids', async (req: Request, res: Response) => {
 
     res.json({
       auction_id: id,
-      bids: safeBids,
-      count: safeBids.length,
+      bids: result.data,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
       on_chain_summary: onChainRevealed,
     });
   } catch (err) {
-    console.error(`[auctions] GET /${req.params.id}/bids failed:`, err);
+    logger.error(`GET /api/auctions/${req.params.id}/bids failed:`, err);
     res.status(500).json({ error: 'Failed to fetch bids' });
+  }
+});
+
+// GET /api/auctions/:id/events — event sourcing: history for a specific auction
+router.get('/:id/events', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 50, 200);
+    const events = await getAuctionEvents(id, limit);
+    res.json({ auction_id: id, events, total: events.length });
+  } catch (err) {
+    logger.error(`GET /api/auctions/${req.params.id}/events failed:`, err);
+    res.status(500).json({ error: 'Failed to fetch auction events' });
   }
 });
 

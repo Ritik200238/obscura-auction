@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchMapping, fetchBlockHeight, parseAuctionData, parseU128, parseField } from '@/lib/aleo'
 import { useAuctionStore } from '@/stores/auctionStore'
 import type { AuctionData } from '@/types'
@@ -26,9 +26,18 @@ export function useAuction(auctionId: string | undefined): AuctionDetails {
   const [blockHeight, setBlockHeight] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const mountedRef = useRef(true)
+  const fetchIdRef = useRef<string | undefined>(undefined)
+
+  useEffect(() => {
+    return () => { mountedRef.current = false }
+  }, [])
 
   const fetchAuctionData = useCallback(async () => {
     if (!auctionId) return
+
+    const thisId = auctionId
+    fetchIdRef.current = thisId
 
     setLoading(true)
     setError(null)
@@ -43,6 +52,9 @@ export function useAuction(auctionId: string | undefined): AuctionDetails {
         fetchMapping('auction_winners', key),
         fetchBlockHeight(),
       ])
+
+      // Discard stale response if auctionId changed during fetch
+      if (!mountedRef.current || fetchIdRef.current !== thisId) return
 
       setBlockHeight(currentHeight)
 
@@ -67,9 +79,15 @@ export function useAuction(auctionId: string | undefined): AuctionDetails {
 
       setLoading(false)
     } catch (err) {
+      if (!mountedRef.current || fetchIdRef.current !== thisId) return
       setError(err instanceof Error ? err.message : 'Failed to fetch auction')
       setLoading(false)
     }
+  }, [auctionId, selectAuction])
+
+  // Clear stale auction data when navigating to a different auction
+  useEffect(() => {
+    selectAuction(null)
   }, [auctionId, selectAuction])
 
   // Initial fetch
@@ -88,7 +106,7 @@ export function useAuction(auctionId: string | undefined): AuctionDetails {
   useEffect(() => {
     const interval = setInterval(async () => {
       const height = await fetchBlockHeight()
-      if (height > 0) setBlockHeight(height)
+      if (height > 0 && mountedRef.current) setBlockHeight(height)
     }, 15_000)
     return () => clearInterval(interval)
   }, [])

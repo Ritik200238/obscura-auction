@@ -3,16 +3,17 @@ import { ArrowDownLeft, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
 import { useRecordStore } from '@/stores/recordStore'
-import { formatTokenAmount, serializeRecordForTx } from '@/lib/aleo'
+import { formatTokenAmount, serializeRecordForTx, fetchMapping } from '@/lib/aleo'
+import { TOKEN_TYPE, type AuctionData, type EscrowReceiptRecord } from '@/types'
 import TransactionLink from '@/components/shared/TransactionLink'
-import type { AuctionData, EscrowReceiptRecord } from '@/types'
+import TransactionProgress from '@/components/shared/TransactionProgress'
 
 interface RefundPanelProps {
   auction: AuctionData
 }
 
 export default function RefundPanel({ auction }: RefundPanelProps) {
-  const { execute, loading, error: txError, txId, status: txStatus, reset } = useTransaction()
+  const { execute, loading, error: txError, txId, status: txStatus, reset, retryCheck } = useTransaction()
   const { connected } = useWalletStore()
   const { getForAuction } = useRecordStore()
 
@@ -21,44 +22,45 @@ export default function RefundPanel({ auction }: RefundPanelProps) {
 
   const records = getForAuction(auction.auction_id)
   const receipts = records.receipts
-  const bids = records.bids
-  const handleRefund = async (_receipt: EscrowReceiptRecord, index: number, matchingBidIndex: number | undefined) => {
+  const isUsdcx = auction.token_type === TOKEN_TYPE.USDCX
+
+  const handleRefund = async (_receipt: EscrowReceiptRecord, index: number) => {
     reset()
     setClaimingIndex(index)
 
-    let functionName: string
-    const inputs: string[] = []
-    // Use raw records (with type suffixes) for the wallet prover
     const rawReceipt = records.rawReceipts[index]
     if (!rawReceipt) {
       setClaimingIndex(null)
       return
     }
 
-    if (matchingBidIndex !== undefined) {
-      // For unrevealed bids, need both SealedBid and EscrowReceipt
-      functionName = 'claim_unrevealed_refund'
-      const rawBid = records.rawBids[matchingBidIndex]
-      if (!rawBid) {
-        setClaimingIndex(null)
-        return
+    try {
+      // On-chain verification: check if escrow_balances decreased (refund processed)
+      const auctionKey = auction.auction_id.endsWith('field')
+        ? auction.auction_id
+        : `${auction.auction_id}field`
+      const onChainVerify = async () => {
+        const escrow = await fetchMapping('escrow_balances', auctionKey)
+        return escrow === null || escrow === '0u128'
       }
-      inputs.push(serializeRecordForTx(rawBid))
-      inputs.push(serializeRecordForTx(rawReceipt))
-    } else {
-      functionName = 'claim_refund'
-      inputs.push(serializeRecordForTx(rawReceipt))
-    }
 
-    const result = await execute({ functionName, inputs })
+      // Select correct refund transition based on token type
+      const functionName = isUsdcx ? 'claim_refund_usdcx' : 'claim_refund'
+      const result = await execute({
+        functionName,
+        inputs: [serializeRecordForTx(rawReceipt)],
+        onChainVerify,
+      })
 
-    if (result.transactionId) {
-      setClaimedIndices((prev) => new Set(prev).add(index))
+      if (result.transactionId) {
+        setClaimedIndices((prev) => new Set(prev).add(index))
+      }
+    } finally {
+      setClaimingIndex(null)
     }
-    setClaimingIndex(null)
   }
 
-  if (receipts.length === 0 && bids.length === 0) {
+  if (receipts.length === 0) {
     return null
   }
 
@@ -69,20 +71,10 @@ export default function RefundPanel({ auction }: RefundPanelProps) {
         Claim Refunds
       </h3>
 
-      {receipts.length === 0 ? (
-        <p className="text-gray-400 text-sm">
-          {connected
-            ? 'No escrow receipts found for this auction.'
-            : 'Connect your wallet to check for refundable bids.'}
-        </p>
-      ) : (
-        <div className="space-y-3">
+      <div className="space-y-3">
           {receipts.map((receipt, i) => {
             const isClaimed = claimedIndices.has(i)
             const isClaiming = claimingIndex === i
-            // Check if we have an unrevealed bid matching this receipt
-            const matchingBidIdx = bids.findIndex((b) => b.bid_nonce === receipt.bid_nonce)
-            const isUnrevealed = matchingBidIdx >= 0
 
             return (
               <div
@@ -93,9 +85,6 @@ export default function RefundPanel({ auction }: RefundPanelProps) {
                   <p className="text-sm text-white font-medium">
                     {formatTokenAmount(receipt.escrowed_amount, auction.token_type)}
                   </p>
-                  {isUnrevealed && (
-                    <p className="text-xs text-yellow-400 mt-0.5">Unrevealed bid</p>
-                  )}
                 </div>
 
                 {isClaimed ? (
@@ -105,14 +94,12 @@ export default function RefundPanel({ auction }: RefundPanelProps) {
                   </span>
                 ) : (
                   <button
-                    onClick={() => handleRefund(receipt, i, matchingBidIdx >= 0 ? matchingBidIdx : undefined)}
+                    onClick={() => handleRefund(receipt, i)}
                     disabled={loading || isClaiming}
                     className="btn-primary text-xs py-1.5 px-3"
                   >
                     {isClaiming ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : isUnrevealed ? (
-                      'Claim Unrevealed Refund'
                     ) : (
                       'Claim Refund'
                     )}
@@ -121,28 +108,21 @@ export default function RefundPanel({ auction }: RefundPanelProps) {
               </div>
             )
           })}
-        </div>
-      )}
+      </div>
 
       {/* Transaction status */}
       {txId && (
-        <div className="mt-4 bg-surface-800 rounded-lg p-3">
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-xs text-gray-500">Latest refund TX</p>
-            {txStatus === 'pending' && (
-              <span className="flex items-center gap-1 text-xs text-accent-400">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Confirming...
-              </span>
-            )}
-            {txStatus === 'confirmed' && (
-              <span className="flex items-center gap-1 text-xs text-green-400">
-                <CheckCircle className="w-3 h-3" />
-                Refunded
-              </span>
-            )}
+        <div className="mt-4 space-y-2">
+          <TransactionProgress
+            status={txStatus}
+            txId={txId}
+            error={txError}
+            onRetry={retryCheck}
+          />
+          <div className="bg-surface-800 rounded-lg p-3">
+            <p className="text-xs text-gray-500 mb-0.5">Latest refund TX</p>
+            <TransactionLink txId={txId} className="text-xs break-all" />
           </div>
-          <TransactionLink txId={txId} className="text-xs break-all" />
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { config } from '@/lib/config'
 
@@ -8,9 +8,13 @@ interface ExecuteOptions {
   inputs: string[]
   fee?: number
   privateFee?: boolean
+  /** Optional on-chain verification callback — the true source of truth.
+   *  Checked every 3rd poll cycle. If it returns true, the TX is confirmed
+   *  regardless of what the wallet adapter reports. */
+  onChainVerify?: () => Promise<boolean>
 }
 
-type TxStatus = 'idle' | 'submitting' | 'pending' | 'confirmed' | 'failed'
+type TxStatus = 'idle' | 'submitting' | 'pending' | 'confirmed' | 'unconfirmed' | 'failed'
 
 interface TransactionResult {
   transactionId: string | null
@@ -36,8 +40,13 @@ export function useTransaction() {
     }
   }, [])
 
+  // Clean up polling interval on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => stopPolling()
+  }, [stopPolling])
+
   const pollTransaction = useCallback(
-    (txId: string) => {
+    (txId: string, onChainVerify?: () => Promise<boolean>) => {
       let attempts = 0
       const maxAttempts = 40 // ~2 minutes at 3s intervals
 
@@ -45,15 +54,44 @@ export function useTransaction() {
 
       pollRef.current = setInterval(async () => {
         attempts++
+
         if (attempts > maxAttempts) {
           stopPolling()
-          setStatus('confirmed') // Assume confirmed after timeout — explorer will show real status
+          // Before giving up: try on-chain verification 3 times as final check
+          if (onChainVerify) {
+            for (let retry = 0; retry < 3; retry++) {
+              try {
+                const verified = await onChainVerify()
+                if (verified) {
+                  setStatus('confirmed')
+                  setLoading(false)
+                  return
+                }
+              } catch { /* ignore */ }
+              if (retry < 2) await new Promise((r) => setTimeout(r, 2000))
+            }
+          }
+          setStatus('unconfirmed')
           setLoading(false)
           return
         }
 
         try {
-          // Try wallet adapter's transactionStatus first
+          // On-chain verification every 3rd cycle — this is the SOURCE OF TRUTH
+          // (Veiled Markets pattern: wallet status is secondary, mapping state is primary)
+          if (onChainVerify && attempts > 1 && attempts % 3 === 0) {
+            try {
+              const verified = await onChainVerify()
+              if (verified) {
+                stopPolling()
+                setStatus('confirmed')
+                setLoading(false)
+                return
+              }
+            } catch { /* continue to wallet check */ }
+          }
+
+          // Try wallet adapter's transactionStatus
           if (transactionStatus) {
             const walletStatus: unknown = await transactionStatus(txId)
             if (walletStatus && typeof walletStatus === 'string') {
@@ -74,19 +112,14 @@ export function useTransaction() {
             }
           }
 
-          // Fallback: check explorer API
+          // Fallback: check explorer API for the transaction
           const url = `${config.explorerApi}/${config.network}/transaction/${txId}`
           const res = await fetch(url)
           if (res.ok) {
             const data = await res.json()
             if (data && data.type) {
-              // Transaction found on-chain
               stopPolling()
-              if (data.type === 'execute' && data.execution) {
-                setStatus('confirmed')
-              } else {
-                setStatus('confirmed')
-              }
+              setStatus('confirmed')
               setLoading(false)
               return
             }
@@ -140,8 +173,8 @@ export function useTransaction() {
         setTxId(transactionId)
 
         if (transactionId) {
-          // Start polling for confirmation
-          pollTransaction(transactionId)
+          // Start polling for confirmation, with optional on-chain verification
+          pollTransaction(transactionId, options.onChainVerify)
         } else {
           setLoading(false)
           setStatus('idle')
@@ -159,6 +192,14 @@ export function useTransaction() {
     [executeTransaction, pollTransaction, stopPolling]
   )
 
+  const retryCheck = useCallback(() => {
+    if (txId && status === 'unconfirmed') {
+      setStatus('pending')
+      setLoading(true)
+      pollTransaction(txId)
+    }
+  }, [txId, status, pollTransaction])
+
   const reset = useCallback(() => {
     stopPolling()
     setLoading(false)
@@ -167,5 +208,5 @@ export function useTransaction() {
     setStatus('idle')
   }, [stopPolling])
 
-  return { execute, loading, error, txId, status, transactionStatus, reset }
+  return { execute, loading, error, txId, status, transactionStatus, reset, retryCheck }
 }

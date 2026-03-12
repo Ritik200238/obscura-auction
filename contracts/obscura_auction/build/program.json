@@ -1,6 +1,9 @@
 {
-    "program": "obscura_v2.aleo",
-    "version": "0.0.0",
-    "description": "",
-    "license": "MIT"
+  "program": "obscura_v3.aleo",
+  "version": "0.1.0",
+  "description": "",
+  "license": "",
+  "leo": "3.4.0",
+  "dependencies": null,
+  "dev_dependencies": null
 }

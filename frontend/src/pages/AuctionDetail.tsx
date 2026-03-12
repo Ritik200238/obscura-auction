@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { fadeInUp, staggerContainer, scaleIn } from '@/lib/animations'
 import {
   ArrowLeft,
   Loader2,
@@ -14,6 +16,7 @@ import {
   Trophy,
   Shield,
   Zap,
+  Check,
 } from 'lucide-react'
 import { useAuction } from '@/hooks/useAuction'
 import { useRecords } from '@/hooks/useRecords'
@@ -37,11 +40,13 @@ import StatusBadge from '@/components/shared/StatusBadge'
 import TokenBadge from '@/components/shared/TokenBadge'
 import ModeBadge from '@/components/shared/ModeBadge'
 import CountdownTimer from '@/components/shared/CountdownTimer'
+import { ShimmerDetail } from '@/components/shared/Shimmer'
 import BidPanel from '@/components/auction/BidPanel'
 import RevealPanel from '@/components/auction/RevealPanel'
 import ClaimPanel from '@/components/auction/ClaimPanel'
 import RefundPanel from '@/components/auction/RefundPanel'
 import SettlePanel from '@/components/auction/SettlePanel'
+import PrivacyDashboard from '@/components/auction/PrivacyDashboard'
 import TransactionLink from '@/components/shared/TransactionLink'
 
 export default function AuctionDetail() {
@@ -69,9 +74,8 @@ export default function AuctionDetail() {
 
   if (loading && !auction) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 text-accent-400 animate-spin mb-4" />
-        <p className="text-gray-400">Loading auction data from Aleo...</p>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <ShimmerDetail />
       </div>
     )
   }
@@ -116,11 +120,19 @@ export default function AuctionDetail() {
         <span className="text-gray-400 text-sm font-mono">{truncateId(auction.auction_id, 12)}</span>
       </div>
 
+      {/* Horizontal phase timeline */}
+      <PhaseTimeline status={auction.status} />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main content */}
-        <div className="lg:col-span-2 space-y-6">
+        <motion.div
+          className="lg:col-span-2 space-y-6"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
           {/* Header card */}
-          <div className="card relative overflow-hidden">
+          <motion.div variants={fadeInUp} className="card relative overflow-hidden">
             {/* Status accent line */}
             <div className={`absolute top-0 left-0 right-0 h-0.5 ${
               isActive ? 'bg-gradient-to-r from-green-500 to-emerald-400' :
@@ -153,7 +165,7 @@ export default function AuctionDetail() {
             </div>
 
             {/* Info grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <InfoCard icon={<TokenBadge tokenType={auction.token_type} />} label="Token" />
               <InfoCard
                 icon={<Users className="w-4 h-4 text-accent-400" />}
@@ -182,7 +194,12 @@ export default function AuctionDetail() {
                 </p>
               </div>
             )}
-          </div>
+          </motion.div>
+
+          {/* Privacy Dashboard — the #1 differentiator */}
+          <motion.div variants={fadeInUp}>
+            <PrivacyDashboard status={auction.status} auctionMode={auction.auction_mode} />
+          </motion.div>
 
           {/* Bid summary (post-reveal only) */}
           {(isSettled || isFailed || isRevealing) && (highestBid > 0n || secondHighest > 0n) && (
@@ -192,7 +209,7 @@ export default function AuctionDetail() {
                 <Trophy className="w-4 h-4 text-accent-400" />
                 Revealed Bid Summary
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-surface-800 rounded-lg p-4">
                   <p className="text-xs text-gray-500 mb-1">Highest Revealed Bid</p>
                   <p className="text-xl font-bold text-white">
@@ -255,34 +272,50 @@ export default function AuctionDetail() {
             <CloseBiddingCard auctionId={auction.auction_id} onSuccess={refresh} />
           )}
 
-          {isActive && auction.bid_count === 0 && (
+          {isActive && auction.bid_count === 0 && blockHeight <= auction.deadline && (
             <CancelAuctionCard auctionId={auction.auction_id} onSuccess={refresh} />
           )}
 
           {/* Phase-based action panels */}
-          {isActive && <BidPanel auction={auction} />}
+          {isActive && blockHeight <= auction.deadline && (
+            <motion.div variants={scaleIn}>
+              <BidPanel auction={auction} />
+            </motion.div>
+          )}
 
           {isRevealing && (
             <>
-              <RevealPanel auction={auction} />
+              <motion.div variants={scaleIn}>
+                <RevealPanel auction={auction} />
+              </motion.div>
               {auction.reveal_deadline > 0 && blockHeight > auction.reveal_deadline && (
-                <SettlePanel auction={auction} />
+                <motion.div variants={scaleIn}>
+                  <SettlePanel auction={auction} />
+                </motion.div>
               )}
             </>
           )}
 
           {isSettled && (
             <>
-              <ClaimPanel
-                auction={auction}
-                highestBid={highestBid}
-                secondHighest={secondHighest}
-              />
-              <RefundPanel auction={auction} />
+              <motion.div variants={scaleIn}>
+                <ClaimPanel
+                  auction={auction}
+                  highestBid={highestBid}
+                  secondHighest={secondHighest}
+                />
+              </motion.div>
+              <motion.div variants={scaleIn}>
+                <RefundPanel auction={auction} />
+              </motion.div>
             </>
           )}
 
-          {isFailed && <RefundPanel auction={auction} />}
+          {isFailed && (
+            <motion.div variants={scaleIn}>
+              <RefundPanel auction={auction} />
+            </motion.div>
+          )}
 
           {isCancelled && (
             <div className="card">
@@ -315,7 +348,7 @@ export default function AuctionDetail() {
               </div>
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Sidebar */}
         <div className="space-y-6">
@@ -413,6 +446,85 @@ export default function AuctionDetail() {
   )
 }
 
+/** Horizontal phase timeline — shows auction progress at a glance */
+function PhaseTimeline({ status }: { status: number }) {
+  const phases = [
+    { label: 'Created', statusThreshold: 0 },
+    { label: 'Sealed', statusThreshold: 1 },
+    { label: 'Reveal', statusThreshold: 3 },
+    { label: 'Settle', statusThreshold: 4 },
+    { label: 'Complete', statusThreshold: 5 },
+  ]
+
+  // Map status to phase index
+  function getPhaseIndex(s: number): number {
+    if (s === STATUS.ACTIVE || s === STATUS.CLOSED) return 1
+    if (s === STATUS.REVEALING) return 2
+    if (s === STATUS.SETTLED) return 4
+    if (s === STATUS.FAILED || s === STATUS.CANCELLED || s === STATUS.EXPIRED) return -1
+    return 0
+  }
+
+  const currentPhase = getPhaseIndex(status)
+  const isFinal = status === STATUS.FAILED || status === STATUS.CANCELLED || status === STATUS.EXPIRED
+
+  const phaseColor = (i: number) => {
+    if (isFinal) return i === 0 ? 'bg-gray-500' : 'bg-surface-700'
+    if (i < currentPhase) return 'bg-accent-500'
+    if (i === currentPhase) return 'bg-accent-400'
+    return 'bg-surface-700'
+  }
+
+  const barColor = (i: number) => {
+    if (isFinal) return 'bg-surface-700'
+    if (i < currentPhase) return 'bg-accent-500/40'
+    return 'bg-surface-700'
+  }
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center">
+        {phases.map((phase, i) => (
+          <div key={phase.label} className="flex items-center flex-1 last:flex-none">
+            {/* Node */}
+            <div className="flex flex-col items-center">
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-500 ${phaseColor(i)} ${
+                  i === currentPhase && !isFinal ? 'ring-2 ring-accent-400/30 ring-offset-2 ring-offset-surface-950' : ''
+                }`}
+              >
+                {i < currentPhase && !isFinal ? (
+                  <Check className="w-3.5 h-3.5 text-white" />
+                ) : i === currentPhase && !isFinal ? (
+                  <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                ) : (
+                  <div className="w-1.5 h-1.5 rounded-full bg-surface-600" />
+                )}
+              </div>
+              <span
+                className={`text-[10px] mt-1.5 font-medium whitespace-nowrap ${
+                  i === currentPhase && !isFinal
+                    ? 'text-accent-400'
+                    : i < currentPhase && !isFinal
+                    ? 'text-gray-400'
+                    : 'text-gray-600'
+                }`}
+              >
+                {phase.label}
+              </span>
+            </div>
+
+            {/* Connector bar */}
+            {i < phases.length - 1 && (
+              <div className={`flex-1 h-0.5 mx-1 rounded-full transition-colors duration-500 ${barColor(i)}`} />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function InfoCard({
   icon,
   label,
@@ -457,10 +569,14 @@ function CloseBiddingCard({ auctionId, onSuccess }: { auctionId: string; onSucce
   const { connected } = useWallet()
 
   const handleClose = async () => {
-    const key = auctionId.endsWith('field') ? auctionId : `${auctionId}field`
-    const result = await execute({ functionName: 'close_bidding', inputs: [key] })
-    if (result.transactionId) {
-      setTimeout(onSuccess, 3000)
+    try {
+      const key = auctionId.endsWith('field') ? auctionId : `${auctionId}field`
+      const result = await execute({ functionName: 'close_bidding', inputs: [key] })
+      if (result.transactionId) {
+        setTimeout(onSuccess, 3000)
+      }
+    } catch {
+      // Error is surfaced via useTransaction's error state
     }
   }
 
@@ -504,10 +620,14 @@ function CancelAuctionCard({ auctionId, onSuccess }: { auctionId: string; onSucc
   const { connected } = useWallet()
 
   const handleCancel = async () => {
-    const key = auctionId.endsWith('field') ? auctionId : `${auctionId}field`
-    const result = await execute({ functionName: 'cancel_auction', inputs: [key] })
-    if (result.transactionId) {
-      setTimeout(onSuccess, 3000)
+    try {
+      const key = auctionId.endsWith('field') ? auctionId : `${auctionId}field`
+      const result = await execute({ functionName: 'cancel_auction', inputs: [key] })
+      if (result.transactionId) {
+        setTimeout(onSuccess, 3000)
+      }
+    } catch {
+      // Error is surfaced via useTransaction's error state
     }
   }
 

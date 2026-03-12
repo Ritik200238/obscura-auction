@@ -13,11 +13,10 @@
 
 | Resource | URL |
 |----------|-----|
-| Smart Contract v2 | [`obscura_v2.aleo`](https://explorer.provable.com/transaction/at1qy5h67s6629k07rf0vp2f6jxrh5xhqpxm6td2c8cmsl0s7233cgsafp7hk) on Aleo Testnet |
-| Deploy TX v2 | `at1qy5h67s6629k07rf0vp2f6jxrh5xhqpxm6td2c8cmsl0s7233cgsafp7hk` |
-| Initialize TX v2 | `at13tuzlf4k3wtltp47v2e7uvklh246l8s0pgnqn8ewawhtc56z2qyqc2tnfl` |
+| Smart Contract v3 | [`obscura_v3.aleo`](https://testnet.explorer.provable.com/program/obscura_v3.aleo) on Aleo Testnet |
+| Deploy TX v3 | [`at1f3sxnlttr6spyvzgjhg7j9n40r088xuck04a9z5wxnuv9m09gc9suq928a`](https://testnet.explorer.provable.com/transaction/at1f3sxnlttr6spyvzgjhg7j9n40r088xuck04a9z5wxnuv9m09gc9suq928a) |
+| Smart Contract v2 | [`obscura_v2.aleo`](https://explorer.provable.com/transaction/at1qy5h67s6629k07rf0vp2f6jxrh5xhqpxm6td2c8cmsl0s7233cgsafp7hk) (superseded) |
 | Smart Contract v1 | [`obscura_auction.aleo`](https://explorer.provable.com/transaction/at1j58ds0rvhpwtspyvmr9wjxkrd2jq3xg2v25p8se4ezsv40a8xupswz58g4) (initial, superseded) |
-| Initialize TX v1 | `at127myrsahfjvysa0ul3vxg0vt7jzut5hardpgtc8ncpeasdy5wgys4f6lla` |
 | Frontend | [obscura-auction-95hm.vercel.app](https://obscura-auction-95hm.vercel.app) |
 | Backend API | [obscura-auction-igia.vercel.app](https://obscura-auction-igia.vercel.app/health) |
 | Repository | [github.com/Ritik200238/obscura-auction](https://github.com/Ritik200238/obscura-auction) |
@@ -55,14 +54,16 @@ Traditional on-chain auctions expose all bids publicly, enabling front-running a
 
 ## Technical Highlights
 
-### Smart Contract (10 transitions)
+### Smart Contract (17 transitions)
 - **Commit-Reveal Sealed Bids** -- strictest privacy model for auctions
 - **Vickrey (Second-Price) Auctions** -- first implementation on Aleo; winner pays 2nd-highest bid
-- **Anti-Sniping** -- bids in last 10 min extend deadline by 10 min
-- **ALEO Credits** -- fully private escrow via credits.aleo
+- **Anti-Sniping** -- block-height-based deadline extensions prevent last-second manipulation
+- **Dual Token Support** -- ALEO Credits (credits.aleo) + USDCx Stablecoin (test_usdcx_stablecoin.aleo)
 - **Full Escrow** -- funds locked in program balance until settlement/refund
+- **Settlement & Payment Proofs** -- BHP256 hashes for tamper-evident on-chain verification
+- **Selective Disclosure** -- prove_won_auction transition proves winning without revealing bid amount
 - **4 Record Types** -- SealedBid, EscrowReceipt, WinnerCertificate, SellerReceipt
-- **11 Mappings** -- minimal public data, hashed identities
+- **13 Mappings** -- minimal public data, hashed identities
 - **8-State Machine** -- Active -> Revealing -> Settled/Failed/Cancelled/Expired
 
 ### Frontend
@@ -89,8 +90,10 @@ Traditional on-chain auctions expose all bids publicly, enabling front-running a
 ## Token Integration
 
 - **ALEO Credits**: Private deposit via `transfer_private_to_public`, private payout via `transfer_public_to_private`
-- Bidders deposit private credits to the program's public escrow
-- Winners and losers receive payouts as private credit records (no public trace of recipient)
+- **USDCx Stablecoin**: Integration with `test_usdcx_stablecoin.aleo` for stablecoin-denominated auctions
+- Bidders deposit tokens to the program's public escrow
+- Winners and losers receive payouts as private records (no public trace of recipient)
+- Sellers choose token type at auction creation — all flows work for both ALEO and USDCx
 
 ## Demo Flow
 

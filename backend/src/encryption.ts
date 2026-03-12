@@ -1,14 +1,10 @@
 import crypto from 'crypto';
 
-// Lazy check — warn but don't crash the entire server
-const MASTER_KEY = process.env.ENCRYPTION_KEY || '';
-if (!MASTER_KEY || MASTER_KEY.length < 64) {
-  console.warn('[encryption] WARNING: ENCRYPTION_KEY not set or too short. Using fallback key. Set ENCRYPTION_KEY (64 hex chars) in environment variables.');
-}
-const EFFECTIVE_KEY = MASTER_KEY.length >= 64 ? MASTER_KEY : 'a3f8b2e1d4c6a9f7e0b5d8c3a6f9e2b1d4c7a0f3e6b9d2c5a8f1e4b7d0c3a6';
+// ENCRYPTION_KEY is validated at startup by env.ts — guaranteed to exist here
+const MASTER_KEY = process.env.ENCRYPTION_KEY!;
 
 function deriveKey(table: string, column: string): Buffer {
-  return crypto.createHash('sha256').update(`${EFFECTIVE_KEY}:${table}:${column}`).digest();
+  return crypto.createHash('sha256').update(`${MASTER_KEY}:${table}:${column}`).digest();
 }
 
 export function encrypt(plaintext: string, table: string, column: string): string {
@@ -21,9 +17,14 @@ export function encrypt(plaintext: string, table: string, column: string): strin
 }
 
 export function decrypt(ciphertext: string, table: string, column: string): string {
-  const [ivHex, encHex, tagHex] = ciphertext.split(':');
+  const parts = ciphertext.split(':');
+  if (parts.length !== 3) throw new Error(`Invalid ciphertext format (expected 3 parts, got ${parts.length})`);
+  const [ivHex, encHex, tagHex] = parts;
   const key = deriveKey(table, column);
   const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivHex, 'hex'));
   decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
-  return decipher.update(Buffer.from(encHex, 'hex')) + decipher.final('utf8');
+  return Buffer.concat([
+    decipher.update(Buffer.from(encHex, 'hex')),
+    decipher.final()
+  ]).toString('utf8');
 }

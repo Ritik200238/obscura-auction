@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { useTransaction } from '@/hooks/useTransaction'
@@ -16,6 +16,12 @@ import {
   Shield,
   Sparkles,
   TrendingUp,
+  Eye,
+  Tag,
+  Coins,
+  Clock,
+  Copy,
+  Users,
 } from 'lucide-react'
 import TransactionLink from '@/components/shared/TransactionLink'
 
@@ -44,13 +50,23 @@ export default function CreateAuction() {
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState(4)
   const [reservePrice, setReservePrice] = useState('')
-  const tokenType = TOKEN_TYPE.ALEO
+  const [tokenType, setTokenType] = useState<number>(TOKEN_TYPE.ALEO)
   const [auctionMode, setAuctionMode] = useState<number>(AUCTION_MODE.FIRST_PRICE)
   const [duration, setDuration] = useState('24h')
   const [formError, setFormError] = useState<string | null>(null)
   const [createdAuctionId, setCreatedAuctionId] = useState<string | null>(null)
   const [onChainAuctionId, setOnChainAuctionId] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const pollCleanupRef = useRef<(() => void) | null>(null)
+
+  const handleCopy = useCallback((text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }).catch(() => {
+      // Clipboard API unavailable (non-HTTPS or denied) — silent fail
+    })
+  }, [])
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -69,6 +85,11 @@ export default function CreateAuction() {
     const micros = Math.floor(parseFloat(reservePrice) * 1_000_000)
     if (micros < 1000) {
       setFormError('Minimum reserve price is 0.001 (1000 microcredits)')
+      return false
+    }
+    const blocks = durationToBlocks(duration)
+    if (blocks < config.minAuctionDuration) {
+      setFormError(`Auction duration must be at least ${config.minAuctionDuration} blocks (~1 hour)`)
       return false
     }
     setFormError(null)
@@ -147,16 +168,18 @@ export default function CreateAuction() {
   if (txId && createdAuctionId) {
     return (
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="card text-center">
+        <div className="card text-center glow-success">
           <div className="w-16 h-16 rounded-2xl bg-green-500/20 flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-8 h-8 text-green-400" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Auction Created</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">Auction Created Successfully!</h2>
           <p className="text-gray-400 mb-4">
             {txStatus === 'confirmed'
               ? 'Your auction has been confirmed on-chain and is now live.'
               : txStatus === 'failed'
               ? 'Transaction was rejected by the network.'
+              : txStatus === 'unconfirmed'
+              ? 'Transaction submitted but not yet confirmed on-chain. Check back later.'
               : 'Your auction has been submitted to the Aleo network. Waiting for confirmation...'}
           </p>
           {txStatus === 'pending' && (
@@ -175,8 +198,22 @@ export default function CreateAuction() {
             {onChainAuctionId ? (
               <div className="bg-accent-500/10 border border-accent-500/20 rounded-lg p-4">
                 <p className="text-xs text-accent-400 mb-1">On-Chain Auction ID</p>
-                <p className="text-sm text-white font-mono break-all">{onChainAuctionId}field</p>
-                <p className="text-xs text-gray-500 mt-1">Share this ID with bidders so they can find your auction.</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-sm text-white font-mono break-all flex-1">{onChainAuctionId}field</p>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(`${onChainAuctionId}field`)}
+                    className="shrink-0 p-1.5 rounded-lg hover:bg-surface-700 transition-colors"
+                    title="Copy auction ID"
+                  >
+                    {copied ? (
+                      <CheckCircle className="w-3.5 h-3.5 text-green-400" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500">Share this ID with bidders so they can find your auction.</p>
               </div>
             ) : txStatus === 'confirmed' || txStatus === 'pending' ? (
               <div className="flex items-center gap-2 text-xs text-gray-400">
@@ -217,10 +254,15 @@ export default function CreateAuction() {
     )
   }
 
+  const categoryLabel = categories.find(c => c.value === category)?.label || 'Other'
+  const modeLabel = auctionMode === AUCTION_MODE.VICKREY ? 'Vickrey' : 'First-Price'
+  const tokenLabel = tokenType === TOKEN_TYPE.USDCX ? 'USDCx' : 'ALEO'
+  const durationLabel = durations.find(d => d.value === duration)?.label || duration
+
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 flex items-center gap-3">
           <Shield className="w-7 h-7 text-accent-400" />
           Create Auction
         </h1>
@@ -230,6 +272,29 @@ export default function CreateAuction() {
         </p>
       </div>
 
+      {/* Step indicator */}
+      <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
+        {[
+          { num: 1, label: 'Item Details', icon: Gavel, done: !!title.trim() },
+          { num: 2, label: 'Auction Settings', icon: Info, done: !!reservePrice && parseFloat(reservePrice) > 0 },
+          { num: 3, label: 'Review & Create', icon: CheckCircle, done: false },
+        ].map((step, i) => (
+          <div key={step.num} className="flex items-center gap-2 shrink-0">
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              step.done
+                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                : 'bg-surface-800/80 text-gray-500 border border-surface-700/50'
+            }`}>
+              <step.icon className="w-3.5 h-3.5" />
+              <span>{step.num}. {step.label}</span>
+            </div>
+            {i < 2 && <ArrowRight className="w-3.5 h-3.5 text-surface-600 shrink-0" />}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr,340px] gap-6 items-start">
+      {/* Left: Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Quick Templates */}
         <div className="card">
@@ -237,7 +302,7 @@ export default function CreateAuction() {
             <Sparkles className="w-4 h-4 text-accent-400" />
             Quick Templates
           </h3>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {[
               { label: 'Digital Art', cat: 1, dur: '24h', mode: AUCTION_MODE.VICKREY, reserve: '1' },
               { label: 'Collectible', cat: 2, dur: '3d', mode: AUCTION_MODE.FIRST_PRICE, reserve: '0.5' },
@@ -265,7 +330,7 @@ export default function CreateAuction() {
         <div className="card">
           <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
             <Gavel className="w-4 h-4 text-accent-400" />
-            Item Details
+            1. Item Details
           </h3>
 
           <div className="space-y-4">
@@ -275,7 +340,7 @@ export default function CreateAuction() {
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter item title"
+                placeholder="e.g., Rare Aleo Genesis NFT #42"
                 className="input-field"
                 maxLength={100}
               />
@@ -289,7 +354,7 @@ export default function CreateAuction() {
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe your item (stored off-chain only)"
+                placeholder="Describe your item in detail — only visible to bidders (stored encrypted off-chain)"
                 className="input-field min-h-[80px] resize-y"
                 maxLength={500}
               />
@@ -316,7 +381,7 @@ export default function CreateAuction() {
         <div className="card">
           <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
             <Info className="w-4 h-4 text-accent-400" />
-            Auction Parameters
+            2. Auction Parameters
           </h3>
 
           <div className="space-y-4">
@@ -334,7 +399,7 @@ export default function CreateAuction() {
                   className="input-field pr-20"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-                  ALEO
+                  {tokenType === TOKEN_TYPE.USDCX ? 'USDCx' : 'ALEO'}
                 </span>
               </div>
               <p className="text-xs text-gray-600 mt-1">
@@ -344,21 +409,53 @@ export default function CreateAuction() {
               </p>
             </div>
 
-            {/* Token Type — ALEO only */}
+            {/* Token Type */}
             <div>
               <label className="block text-sm text-gray-400 mb-2">Token</label>
-              <div className="p-3 rounded-lg border border-accent-500 bg-accent-500/10 text-sm font-medium text-accent-400">
-                ALEO Credits
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setTokenType(TOKEN_TYPE.ALEO)}
+                  className={`p-3 rounded-lg border text-left transition-all ${
+                    tokenType === TOKEN_TYPE.ALEO
+                      ? 'border-accent-500 bg-accent-500/10'
+                      : 'border-surface-700 bg-surface-800 hover:border-surface-600'
+                  }`}
+                >
+                  <p className={`text-sm font-medium ${
+                    tokenType === TOKEN_TYPE.ALEO ? 'text-accent-400' : 'text-gray-300'
+                  }`}>
+                    ALEO Credits
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Private via credits.aleo records
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTokenType(TOKEN_TYPE.USDCX)}
+                  className={`p-3 rounded-lg border text-left transition-all ${
+                    tokenType === TOKEN_TYPE.USDCX
+                      ? 'border-accent-500 bg-accent-500/10'
+                      : 'border-surface-700 bg-surface-800 hover:border-surface-600'
+                  }`}
+                >
+                  <p className={`text-sm font-medium ${
+                    tokenType === TOKEN_TYPE.USDCX ? 'text-accent-400' : 'text-gray-300'
+                  }`}>
+                    USDCx Stablecoin
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Public balance via test_usdcx_stablecoin.aleo
+                  </p>
+                </button>
               </div>
-              <p className="text-xs text-gray-600 mt-1">
-                All bids and payouts use private ALEO credits via credits.aleo.
-              </p>
             </div>
 
             {/* Auction Mode */}
             <div>
               <label className="block text-sm text-gray-400 mb-2">Auction Mode</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setAuctionMode(AUCTION_MODE.FIRST_PRICE)}
@@ -464,6 +561,20 @@ export default function CreateAuction() {
           </div>
         )}
 
+        {/* Mobile preview summary */}
+        <div className="lg:hidden card border-accent-500/20 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Eye className="w-3.5 h-3.5 text-accent-400" />
+            <span className="text-xs font-medium text-white">Preview</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div><span className="text-gray-500">Title: </span><span className="text-white truncate">{title.trim() || '—'}</span></div>
+            <div><span className="text-gray-500">Mode: </span><span className="text-white">{modeLabel}</span></div>
+            <div><span className="text-gray-500">Token: </span><span className="text-white">{tokenLabel}</span></div>
+            <div><span className="text-gray-500">Reserve: </span><span className="text-white font-mono">{reservePrice || '—'}</span></div>
+          </div>
+        </div>
+
         {/* Submit */}
         <button
           type="submit"
@@ -485,6 +596,88 @@ export default function CreateAuction() {
           )}
         </button>
       </form>
+
+      {/* Right: Live Preview Panel */}
+      <div className="hidden lg:block">
+        <div className="sticky top-24">
+          <div className="card border-accent-500/20">
+            <div className="flex items-center gap-2 mb-4">
+              <Eye className="w-4 h-4 text-accent-400" />
+              <h3 className="text-sm font-semibold text-white">Live Preview</h3>
+            </div>
+            <p className="text-[10px] text-gray-600 mb-4">How bidders will see your auction</p>
+
+            {/* Preview card mimicking AuctionCard */}
+            <div className="bg-surface-800/60 border border-surface-700/50 rounded-xl p-4 relative overflow-hidden">
+              {/* Top gradient bar */}
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-green-500/60 to-accent-500/40" />
+
+              {/* Header */}
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-white font-semibold text-sm truncate">
+                    {title.trim() || 'Untitled Auction'}
+                  </h4>
+                  <p className="text-[10px] text-gray-600 font-mono mt-0.5">preview...id</p>
+                </div>
+                <span className="badge text-xs bg-green-500/20 text-green-400 border-green-500/30 ml-2">
+                  Active
+                </span>
+              </div>
+
+              {/* Badges */}
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-surface-700/80 text-gray-400 text-xs">
+                  <Tag className="w-3 h-3" /> {categoryLabel}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-surface-700/80 text-gray-400 text-xs">
+                  <Coins className="w-3 h-3" /> {tokenLabel}
+                </span>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs ${
+                  auctionMode === AUCTION_MODE.VICKREY ? 'bg-brand-cyan/10 text-brand-cyan' : 'bg-surface-700/80 text-gray-400'
+                }`}>
+                  {modeLabel}
+                </span>
+              </div>
+
+              {/* Stats */}
+              <div className="flex items-center justify-between pt-3 border-t border-surface-700/50">
+                <div className="flex items-center gap-1.5 text-gray-500 text-xs">
+                  <Users className="w-3.5 h-3.5" />
+                  <span>0 bids</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs">
+                  <Clock className="w-3.5 h-3.5 text-gray-500" />
+                  <span className="text-gray-300 font-medium">{durationLabel}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Preview details */}
+            <div className="mt-4 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Reserve</span>
+                <span className="text-white font-mono">
+                  {reservePrice ? `${reservePrice} ${tokenLabel}` : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Mode</span>
+                <span className="text-white">{modeLabel}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Duration</span>
+                <span className="text-white">{durationLabel}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Privacy</span>
+                <span className="text-green-400">Reserve hashed · Bids sealed</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
     </div>
   )
 }

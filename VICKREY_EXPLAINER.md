@@ -28,9 +28,118 @@ In a Vickrey auction, the optimal strategy is **always to bid your true valuatio
 - If you bid 70 instead (underbidding):
   - You might lose to a 90 bid that you would have beaten. ✗
 - If you bid 120 instead (overbidding):
-  - You might win when someone bid 105 and end up paying 105. No benefit over bidding 100. ✗
+  - You might win when someone bid 105 and end up paying 105 — you overpaid. ✗
 
 **Conclusion**: Bidding your true value is a dominant strategy. It's rational regardless of what others do. This is called **incentive compatibility** or **truthfulness**.
+
+---
+
+## Concrete Numerical Example: Full Auction Flow
+
+### Setup
+
+A seller lists a rare digital art piece on Obscura in **Vickrey mode** with:
+- Reserve price: 50 ALEO (stored as BHP256 hash)
+- Token: ALEO Credits
+- Duration: 24 hours
+
+### Bidding Phase (amounts invisible)
+
+| Bidder | True Valuation | Bid Amount | On-Chain Visible? |
+|--------|---------------|------------|-------------------|
+| Alice | 100 ALEO | 100 ALEO | NO — encrypted in SealedBid record |
+| Bob | 80 ALEO | 80 ALEO | NO — encrypted in SealedBid record |
+| Charlie | 60 ALEO | 60 ALEO | NO — encrypted in SealedBid record |
+
+Each bidder calls `place_bid`. **No tokens transfer.** The only public change is `bid_count: 0 → 1 → 2 → 3`. An observer knows "3 bids were placed" but nothing about amounts.
+
+### Reveal Phase (amounts become public)
+
+After `close_bidding`, each bidder reveals:
+
+| Bidder | Revealed Amount | Escrowed | highest_bids | second_highest_bids |
+|--------|----------------|----------|-------------|-------------------|
+| Alice (reveals first) | 100 ALEO | 100 ALEO | 100 | 0 |
+| Bob (reveals second) | 80 ALEO | 80 ALEO | 100 | 80 |
+| Charlie (reveals third) | 60 ALEO | 60 ALEO | 100 | 80 |
+
+Total escrowed: 240 ALEO in `auction_escrow`.
+
+### Settlement
+
+Seller calls `finalize_auction(auction_id, 50)`:
+- Reserve price verified: `BHP256(50) == stored_hash` ✓
+- Highest bid (100) ≥ reserve (50) ✓
+- Second-highest bid (80) > 0 ✓ (Vickrey requires ≥ 2 revealed bids)
+- Status → SETTLED
+- `settlement_proofs[auction_id]` = BHP256(SettlementProof{...}) stored on-chain
+
+### Claim (Vickrey Settlement Math)
+
+**Alice (winner) calls `claim_win_vickrey`:**
+
+```
+Alice's escrowed amount:     100.000000 ALEO (100000000 microcredits)
+Second-highest bid:           80.000000 ALEO (from on-chain mapping)
+
+Platform fee (1% of sale price):
+  fee = 80 × 100 / 10000 =    0.800000 ALEO
+
+Seller receives:
+  second_price - fee = 80 - 0.8 = 79.200000 ALEO
+  → Delivered as private credits record (recipient hidden)
+
+Alice receives (refund):
+  escrowed - second_price = 100 - 80 = 20.000000 ALEO
+  → Delivered as private credits record
+
+Platform treasury receives:
+  fee = 0.800000 ALEO
+
+Verification:
+  seller (79.2) + winner refund (20.0) + fee (0.8) = 100.0 ALEO ✓
+  = Alice's original escrowed amount ✓
+```
+
+**Bob and Charlie (losers) call `claim_refund`:**
+
+```
+Bob refunded:    80.000000 ALEO → private credits record
+Charlie refunded: 60.000000 ALEO → private credits record
+```
+
+### Final Accounting
+
+| Participant | Started With | Ended With | Net Change |
+|-------------|-------------|------------|------------|
+| Alice (winner) | -100 ALEO escrowed | +20 ALEO refund + item | -80 ALEO (paid 2nd price) |
+| Bob (loser) | -80 ALEO escrowed | +80 ALEO refund | 0 |
+| Charlie (loser) | -60 ALEO escrowed | +60 ALEO refund | 0 |
+| Seller | item | +79.2 ALEO | +79.2 ALEO |
+| Platform | — | +0.8 ALEO fee | +0.8 ALEO |
+
+**Result**: Alice valued the item at 100 ALEO but only paid 80 ALEO (the second price). She captured 20 ALEO of consumer surplus — her incentive for bidding truthfully. If she had bid 90 (shading), she would have still won and still paid 80, but risked losing if Bob had bid 95.
+
+---
+
+## Why This Is Different from First-Price
+
+In the same scenario with **First-Price** mode:
+
+| | First-Price | Vickrey |
+|---|---|---|
+| Alice's optimal bid | ~85 ALEO (shade below true value 100) | 100 ALEO (bid true value) |
+| Alice pays | 85 ALEO (her bid) | 80 ALEO (second-highest bid) |
+| Seller receives | 84.15 ALEO (85 - 1% fee) | 79.2 ALEO (80 - 1% fee) |
+| Alice's surplus | 15 ALEO | 20 ALEO |
+| Price discovery | Poor — bids don't reflect true values | Excellent — bids reflect true values |
+| Strategy | Complex — must guess what others bid | Simple — always bid true value |
+
+**Why Vickrey is better:**
+1. **Truthful bidding** — Bidders don't need to strategize. The dominant strategy is transparent.
+2. **Efficient allocation** — The item always goes to the person who values it most.
+3. **Fair pricing** — The price reflects market competition (second bidder's willingness to pay), not the winner's maximum.
+4. **Revenue equivalence** — In theory, the seller's expected revenue is the same under both formats (Revenue Equivalence Theorem). In practice, Vickrey often generates higher revenue because bidders don't shade.
 
 ---
 
@@ -48,12 +157,14 @@ Without cryptographic proof:
 
 | Attack | Without ZK | With Obscura |
 |--------|-----------|--------------|
-| Fake second bid | Undetectable | `second_highest_bids` mapping updated by on-chain finalize logic — cannot be manipulated |
-| Inflate second price | Trivial for seller | Impossible: all bids are verified hashes |
-| Wrong winner | Seller decides | Cryptographic proof required: only true EscrowReceipt holder can claim |
-| Dispute second price | No recourse | `second_highest_bids[auction_id]` is public on-chain and immutable |
+| Fake second bid | Undetectable | `bid_commitments` hash must exist from real `place_bid` TX |
+| Inflate second price | Trivial for seller | `second_highest_bids` updated by on-chain finalize logic — immutable |
+| Wrong winner declared | Seller decides | `auction_winners` set by on-chain comparison — cryptographic proof required to claim |
+| Dispute second price | No recourse | `second_highest_bids[auction_id]` is public, immutable, and auditable |
+| Tamper with settlement | Undetectable | `settlement_proofs[auction_id]` stores tamper-evident hash |
+| Lie about payment amount | No verification | `payment_proofs[auction_id]` stores verifiable commitment |
 
-Obscura tracks the second-highest bid in the `second_highest_bids` on-chain mapping, updated atomically during the `reveal_bid` finalize step. No party — not the seller, not the platform — can alter this value after it's set.
+Obscura tracks the second-highest bid in the `second_highest_bids` on-chain mapping, updated atomically during the `finalize_reveal_bid` step. No party — not the seller, not the platform — can alter this value after it's set.
 
 ---
 
@@ -67,6 +178,7 @@ Vickrey auctions require two things that are technically difficult on public blo
 On Ethereum-style public blockchains:
 - All state is public — you cannot seal bids without elaborate commit-reveal schemes
 - Even with commit-reveal, the ordering of reveals leaks information
+- Token transfers during bidding leak amounts
 - Implementing verifiable Vickrey requires complex off-chain proofs
 
 **On Aleo, Obscura achieves this natively:**
@@ -75,24 +187,20 @@ On Ethereum-style public blockchains:
 place_bid:
   → SealedBid record (private) — bid amount encrypted, only owner can read
   → bid_commitments[hash] = true (public) — proves bid was submitted, reveals nothing
+  → NO TOKEN TRANSFER — amount completely invisible
 
 reveal_bid:
   → Consumes SealedBid record (proves ownership, amount disclosed)
   → Updates highest_bids and second_highest_bids atomically in finalize
   → Both mappings are public and immutable on-chain
-```
+  → Token escrow happens here (amount intentionally public)
 
-The `finalize_reveal_bid` function is the key innovation:
-
+claim_win_vickrey:
+  → Caller passes claimed_second_price as private input
+  → Finalize verifies against second_highest_bids[auction_id]
+  → Seller paid (second_price - fee), winner refunded (escrowed - second_price)
+  → settlement_proofs and payment_proofs stored on-chain
 ```
-if revealed_amount > current_highest:
-    second_highest_bids[auction_id] = current_highest
-    highest_bids[auction_id] = revealed_amount
-else if revealed_amount > current_second:
-    second_highest_bids[auction_id] = revealed_amount
-```
-
-This runs on-chain, in the finalize block, with no possibility of external manipulation. Aleo's finalize execution is atomic and trustless.
 
 **No other auction protocol on the Aleo blockchain has implemented this.**
 
@@ -104,7 +212,7 @@ Vickrey auctions are used everywhere high-value, private bidding matters:
 
 **Spectrum auctions**: Governments sell wireless spectrum licenses. Bidders (telecom companies) need sealed bids to prevent collusion. The FCC has studied Vickrey mechanisms extensively.
 
-**Google Ads (Generalized Vickrey)**: Google's AdWords uses a generalized form of second-price auctions. You bid your max CPC; you pay just above the next bidder's bid. Same principle.
+**Google Ads (Generalized Vickrey)**: Google's AdWords uses a generalized form of second-price auctions. You bid your max CPC; you pay just above the next bidder's bid.
 
 **Domain name sales**: ICANN's new gTLD auction used sealed-bid second-price mechanisms for initial rights.
 
@@ -119,33 +227,45 @@ Vickrey auctions are used everywhere high-value, private bidding matters:
 ## Obscura's Implementation
 
 ```
-Contract: obscura_auction.aleo
+Contract: obscura_v3.aleo
 Mode:     auction_mode = 2u8 (MODE_VICKREY)
 
 Key mappings:
   highest_bids[auction_id] → u128       (highest revealed bid)
   second_highest_bids[auction_id] → u128 (second-highest revealed bid)
 
+Key transitions:
+  claim_win_vickrey         → ALEO: seller gets 2nd price - fee, winner refunded difference
+  claim_win_vickrey_usdcx   → USDCx: same logic, public balance transfers
+
 Requirements:
   - Minimum 2 revealed bids to settle in Vickrey mode
-  - finalize_auction checks bid_count >= 2 when auction_mode == MODE_VICKREY
+  - finalize_auction checks second_highest_bids > 0 when auction_mode == MODE_VICKREY
+  - If only 1 bid revealed → STATUS_FAILED (all bidders refunded)
 
-Guarantee:
-  - second_highest_bids is set by on-chain finalize code
-  - No party can alter it post-reveal
-  - Any observer can verify the value on-chain via Explorer API
+Routing logic:
+  - If highest_bid == second_highest_bid → use claim_win (no refund needed)
+  - If highest_bid > second_highest_bid → use claim_win_vickrey (refund difference)
+  - Finalize guards enforce correct routing
+
+Proofs:
+  - settlement_proofs[auction_id] = BHP256(SettlementProof{auction_id, highest, second, winner_hash, block})
+  - payment_proofs[auction_id] = BHP256::commit_to_field(amount, nonce_scalar)
 ```
 
-The second-highest bid value is stored on-chain at `second_highest_bids[auction_id]`. After settlement, it is publicly verifiable by anyone with the auction ID. This is the "proof of fair auction" — not a ZK proof in the cryptographic sense, but a publicly auditable on-chain record that the second price was computed correctly.
+The second-highest bid value is stored on-chain at `second_highest_bids[auction_id]`. After settlement, it is publicly verifiable by anyone with the auction ID. Combined with the settlement proof hash, this provides "proof of fair auction" — a publicly auditable on-chain record that the second price was computed correctly and the settlement was not tampered with.
 
 ---
 
 ## Summary
 
-| Property | Obscura Vickrey | Traditional Vickrey |
-|----------|----------------|---------------------|
-| Bid privacy during bidding | Full (ZK records) | Depends on auctioneer |
-| Second price verifiability | On-chain, public | Auctioneer's word |
-| Seller manipulation | Impossible | Possible |
-| Incentive compatibility | Proven by mechanism | Claimed by auctioneer |
-| First on Aleo | Yes | N/A |
+| Property | Obscura Vickrey | Traditional Vickrey | First-Price Sealed |
+|----------|----------------|---------------------|-------------------|
+| Bid privacy during bidding | Full (ZK records, no transfer) | Depends on auctioneer | Full (ZK records, no transfer) |
+| Second price verifiability | On-chain, immutable, auditable | Auctioneer's word | N/A |
+| Seller manipulation | Impossible (on-chain logic) | Possible | Possible (can reject bids) |
+| Incentive compatibility | Mathematically proven | Claimed by auctioneer | Not incentive-compatible |
+| Settlement integrity | Settlement proofs on-chain | None | Settlement proofs on-chain |
+| Payment verifiability | Payment proofs on-chain | None | Payment proofs on-chain |
+| Winner proves ownership | ZK transition (prove_won_auction) | Paper certificate | ZK transition |
+| First on Aleo | Yes | N/A | N/A |

@@ -2,29 +2,6 @@ import { config } from './config'
 import type { AuctionData, AuctionPhase } from '@/types'
 
 /**
- * Parse an Aleo mapping value response into key-value pairs.
- * Handles the struct format returned by the explorer API:
- * "{ field1: value1, field2: value2, ... }"
- */
-export function parseMappingValue(raw: string): Record<string, string> {
-  const result: Record<string, string> = {}
-  const inner = raw.replace(/^\s*\{/, '').replace(/\}\s*$/, '').trim()
-  if (!inner) return result
-
-  const pairs = inner.split(',')
-  for (const pair of pairs) {
-    const colonIdx = pair.indexOf(':')
-    if (colonIdx === -1) continue
-    const key = pair.slice(0, colonIdx).trim()
-    const value = pair.slice(colonIdx + 1).trim()
-    if (key) {
-      result[key] = value
-    }
-  }
-  return result
-}
-
-/**
  * Fetch a mapping value from the Aleo explorer API.
  * Accepts optional programId for cross-program lookups.
  */
@@ -76,11 +53,6 @@ export function parseU64(val: string): number {
   return parseInt(val.replace(/u64\s*$/, '').trim(), 10) || 0
 }
 
-/** Parse a u32 value from Aleo format (e.g. "100u32") */
-export function parseU32(val: string): number {
-  return parseInt(val.replace(/u32\s*$/, '').trim(), 10) || 0
-}
-
 /** Parse a u8 value from Aleo format (e.g. "1u8") */
 export function parseU8(val: string): number {
   return parseInt(val.replace(/u8\s*$/, '').trim(), 10) || 0
@@ -89,11 +61,6 @@ export function parseU8(val: string): number {
 /** Parse a field value from Aleo format (e.g. "123field") */
 export function parseField(val: string): string {
   return val.replace(/field\s*$/, '').trim()
-}
-
-/** Parse a bool from Aleo format */
-export function parseBool(val: string): boolean {
-  return val.trim() === 'true'
 }
 
 /**
@@ -124,26 +91,11 @@ export function parseAuctionData(raw: string, auctionId?: string): AuctionData {
   }
 }
 
-/** Human-readable status label */
-export function getStatusLabel(status: number): string {
-  const labels: Record<number, string> = {
-    1: 'Active',
-    2: 'Closed',
-    3: 'Revealing',
-    4: 'Settled',
-    5: 'Cancelled',
-    6: 'Failed',
-    7: 'Disputed',
-    8: 'Expired',
-  }
-  return labels[status] || 'Unknown'
-}
-
 /** Map status number to phase string */
 export function getPhase(status: number): AuctionPhase {
   const phases: Record<number, AuctionPhase> = {
     1: 'active',
-    2: 'active',
+    2: 'revealing',
     3: 'revealing',
     4: 'settled',
     5: 'cancelled',
@@ -422,6 +374,24 @@ export function pollForAuctionId(
 }
 
 /**
+ * Fetch the user's public USDCx balance from on-chain mapping.
+ * USDCx uses public balances (transfer_public_as_signer), so we can
+ * read the account mapping directly from the explorer API.
+ * Returns balance in microcredits (u128), or 0 if not found.
+ */
+export async function fetchUsdcxBalance(address: string): Promise<bigint> {
+  try {
+    const raw = await fetchMapping('account', address, config.usdcxProgramId)
+    if (!raw) return 0n
+    // Value format: "1000000u128" or just a number
+    const cleaned = raw.replace(/u128\s*$/, '').replace(/"/g, '').trim()
+    return BigInt(cleaned)
+  } catch {
+    return 0n
+  }
+}
+
+/**
  * Fetch a credits.aleo/credits record with sufficient balance for a transaction.
  * Uses the wallet adapter's requestRecords to find unspent records.
  * Returns the plaintext string ready to pass as a transaction input.
@@ -454,7 +424,7 @@ export async function fetchCreditsRecord(
         const data = record.data as Record<string, unknown>
         const rawNonce = record.nonce || record._nonce || data._nonce
         if (rawNonce && data.microcredits && record.owner) {
-          const mc = String(data.microcredits).replace(/[^0-9]/g, '')
+          const mc = String(data.microcredits).replace(/u64.*$/, '').replace(/[^0-9]/g, '')
           const owner = String(record.owner).replace(/\.private$/, '')
           const nonce = String(rawNonce).replace(/\.public$/, '').replace(/group$/, '')
           plaintext = `{ owner: ${owner}.private, microcredits: ${mc}u64.private, _nonce: ${nonce}group.public }`

@@ -3,6 +3,7 @@ import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { WalletMultiButton } from '@provablehq/aleo-wallet-adaptor-react-ui'
 import { Shield, Search, Plus, Activity, BookOpen, Menu, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useWalletStore } from '@/stores/walletStore'
 
 const navLinks = [
@@ -25,6 +26,11 @@ export default function Header() {
       clearStore()
     }
   }, [connected, publicKey, wallet, setWallet, clearStore])
+
+  // Close mobile nav on route change
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [location.pathname])
 
   return (
     <header className="sticky top-0 z-50 glass border-b border-surface-700/30">
@@ -51,7 +57,7 @@ export default function Header() {
                 <Link
                   key={to}
                   to={to}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                     isActive
                       ? 'text-accent-400 bg-accent-500/10'
                       : 'text-gray-400 hover:text-white hover:bg-surface-800/60'
@@ -59,6 +65,9 @@ export default function Header() {
                 >
                   <Icon className="w-4 h-4" />
                   {label}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-gradient-to-r from-accent-500 to-accent-400 rounded-full" />
+                  )}
                 </Link>
               )
             })}
@@ -66,7 +75,9 @@ export default function Header() {
 
           {/* Wallet Button + Mobile Menu Toggle */}
           <div className="flex items-center gap-3">
-            <WalletMultiButton />
+            <div className={!connected ? 'animate-wallet-pulse rounded-xl' : ''}>
+              <WalletMultiButton />
+            </div>
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               className="md:hidden text-gray-400 hover:text-white p-2 rounded-lg hover:bg-surface-800/60 transition-colors"
@@ -76,26 +87,42 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile Nav */}
-        {mobileOpen && (
-          <nav className="md:hidden pb-4 border-t border-surface-700/30 mt-2 pt-3 space-y-1 animate-fade-in">
-            {navLinks.map(({ to, label, icon: Icon }) => (
-              <Link
-                key={to}
-                to={to}
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  location.pathname === to
-                    ? 'text-accent-400 bg-accent-500/10'
-                    : 'text-gray-400 hover:text-white hover:bg-surface-800/60'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                {label}
-              </Link>
-            ))}
-          </nav>
-        )}
+        {/* Mobile Nav — animated slide-in */}
+        <AnimatePresence>
+          {mobileOpen && (
+            <motion.nav
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="md:hidden overflow-hidden border-t border-surface-700/30 mt-2"
+            >
+              <div className="pb-4 pt-3 space-y-1">
+                {navLinks.map(({ to, label, icon: Icon }, i) => (
+                  <motion.div
+                    key={to}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05, duration: 0.2 }}
+                  >
+                    <Link
+                      to={to}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                        location.pathname === to
+                          ? 'text-accent-400 bg-accent-500/10'
+                          : 'text-gray-400 hover:text-white hover:bg-surface-800/60'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {label}
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.nav>
+          )}
+        </AnimatePresence>
       </div>
     </header>
   )
