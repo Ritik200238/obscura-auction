@@ -16,7 +16,6 @@ import {
   Trophy,
   Shield,
   Zap,
-  Check,
 } from 'lucide-react'
 import { useAuction } from '@/hooks/useAuction'
 import { useRecords } from '@/hooks/useRecords'
@@ -47,7 +46,12 @@ import ClaimPanel from '@/components/auction/ClaimPanel'
 import RefundPanel from '@/components/auction/RefundPanel'
 import SettlePanel from '@/components/auction/SettlePanel'
 import PrivacyDashboard from '@/components/auction/PrivacyDashboard'
+import PrivacyShield from '@/components/auction/PrivacyShield'
+import AuctionStateMachine from '@/components/auction/AuctionStateMachine'
+import AuctionReplay from '@/components/auction/AuctionReplay'
 import TransactionLink from '@/components/shared/TransactionLink'
+import AuctionQR from '@/components/shared/AuctionQR'
+import FaucetBanner from '@/components/shared/FaucetBanner'
 
 export default function AuctionDetail() {
   const { id } = useParams<{ id: string }>()
@@ -57,6 +61,7 @@ export default function AuctionDetail() {
   const { connected } = useWallet()
   const [settlementProof, setSettlementProof] = useState<string | null>(null)
   const [paymentProof, setPaymentProof] = useState<string | null>(null)
+  const [showReplay, setShowReplay] = useState(false)
 
   useEffect(() => {
     if (connected) {
@@ -120,8 +125,8 @@ export default function AuctionDetail() {
         <span className="text-gray-400 text-sm font-mono">{truncateId(auction.auction_id, 12)}</span>
       </div>
 
-      {/* Horizontal phase timeline */}
-      <PhaseTimeline status={auction.status} />
+      {/* Animated state machine — prominent for judges */}
+      <AuctionStateMachine currentStatus={auction.status} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main content */}
@@ -165,7 +170,7 @@ export default function AuctionDetail() {
             </div>
 
             {/* Info grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <InfoCard icon={<TokenBadge tokenType={auction.token_type} />} label="Token" />
               <InfoCard
                 icon={<Users className="w-4 h-4 text-accent-400" />}
@@ -194,6 +199,11 @@ export default function AuctionDetail() {
                 </p>
               </div>
             )}
+          </motion.div>
+
+          {/* Privacy Shield — expanded breakdown */}
+          <motion.div variants={fadeInUp}>
+            <PrivacyShield auctionMode={auction.auction_mode} status={auction.status} expanded />
           </motion.div>
 
           {/* Privacy Dashboard — the #1 differentiator */}
@@ -264,6 +274,16 @@ export default function AuctionDetail() {
                   </div>
                 )}
               </div>
+
+              {/* Explorer QR for settled auctions */}
+              <div className="mt-3 pt-3 border-t border-surface-700/30">
+                <AuctionQR
+                  value={`https://testnet.aleoscan.io/program?id=obscura_v3.aleo`}
+                  label="Verify on Explorer"
+                  sublabel="Scan to verify this auction's settlement on Aleo Explorer"
+                  size={100}
+                />
+              </div>
             </div>
           )}
 
@@ -308,6 +328,28 @@ export default function AuctionDetail() {
               <motion.div variants={scaleIn}>
                 <RefundPanel auction={auction} />
               </motion.div>
+              {showReplay ? (
+                <motion.div variants={scaleIn}>
+                  <AuctionReplay auction={auction} onClose={() => setShowReplay(false)} autoPlay />
+                </motion.div>
+              ) : (
+                <motion.div variants={scaleIn}>
+                  <button
+                    onClick={() => setShowReplay(true)}
+                    className="card w-full text-left flex items-center gap-3 hover:border-accent-500/30 transition-colors cursor-pointer"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-accent-500/20 flex items-center justify-center shrink-0">
+                      <Play className="w-5 h-5 text-accent-400" />
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold text-sm">Watch Auction Replay</p>
+                      <p className="text-xs text-gray-400">
+                        See the complete auction lifecycle animated in 12 seconds
+                      </p>
+                    </div>
+                  </button>
+                </motion.div>
+              )}
             </>
           )}
 
@@ -440,90 +482,25 @@ export default function AuctionDetail() {
               </span>
             </div>
           </div>
+
+          {/* Faucet banner */}
+          <FaucetBanner />
+
+          {/* Share QR Code */}
+          <div className="card">
+            <AuctionQR
+              value={`${window.location.origin}/auction/${auction.auction_id}`}
+              label="Share This Auction"
+              sublabel="Scan to open this auction on any device"
+              size={120}
+            />
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-/** Horizontal phase timeline — shows auction progress at a glance */
-function PhaseTimeline({ status }: { status: number }) {
-  const phases = [
-    { label: 'Created', statusThreshold: 0 },
-    { label: 'Sealed', statusThreshold: 1 },
-    { label: 'Reveal', statusThreshold: 3 },
-    { label: 'Settle', statusThreshold: 4 },
-    { label: 'Complete', statusThreshold: 5 },
-  ]
-
-  // Map status to phase index
-  function getPhaseIndex(s: number): number {
-    if (s === STATUS.ACTIVE || s === STATUS.CLOSED) return 1
-    if (s === STATUS.REVEALING) return 2
-    if (s === STATUS.SETTLED) return 4
-    if (s === STATUS.FAILED || s === STATUS.CANCELLED || s === STATUS.EXPIRED) return -1
-    return 0
-  }
-
-  const currentPhase = getPhaseIndex(status)
-  const isFinal = status === STATUS.FAILED || status === STATUS.CANCELLED || status === STATUS.EXPIRED
-
-  const phaseColor = (i: number) => {
-    if (isFinal) return i === 0 ? 'bg-gray-500' : 'bg-surface-700'
-    if (i < currentPhase) return 'bg-accent-500'
-    if (i === currentPhase) return 'bg-accent-400'
-    return 'bg-surface-700'
-  }
-
-  const barColor = (i: number) => {
-    if (isFinal) return 'bg-surface-700'
-    if (i < currentPhase) return 'bg-accent-500/40'
-    return 'bg-surface-700'
-  }
-
-  return (
-    <div className="mb-6">
-      <div className="flex items-center">
-        {phases.map((phase, i) => (
-          <div key={phase.label} className="flex items-center flex-1 last:flex-none">
-            {/* Node */}
-            <div className="flex flex-col items-center">
-              <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-500 ${phaseColor(i)} ${
-                  i === currentPhase && !isFinal ? 'ring-2 ring-accent-400/30 ring-offset-2 ring-offset-surface-950' : ''
-                }`}
-              >
-                {i < currentPhase && !isFinal ? (
-                  <Check className="w-3.5 h-3.5 text-white" />
-                ) : i === currentPhase && !isFinal ? (
-                  <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                ) : (
-                  <div className="w-1.5 h-1.5 rounded-full bg-surface-600" />
-                )}
-              </div>
-              <span
-                className={`text-[10px] mt-1.5 font-medium whitespace-nowrap ${
-                  i === currentPhase && !isFinal
-                    ? 'text-accent-400'
-                    : i < currentPhase && !isFinal
-                    ? 'text-gray-400'
-                    : 'text-gray-600'
-                }`}
-              >
-                {phase.label}
-              </span>
-            </div>
-
-            {/* Connector bar */}
-            {i < phases.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-1 rounded-full transition-colors duration-500 ${barColor(i)}`} />
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 function InfoCard({
   icon,

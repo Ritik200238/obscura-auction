@@ -24,6 +24,8 @@ import {
   Users,
 } from 'lucide-react'
 import TransactionLink from '@/components/shared/TransactionLink'
+import AuctionQR from '@/components/shared/AuctionQR'
+import FaucetBanner from '@/components/shared/FaucetBanner'
 
 const categories = [
   { value: 1, label: 'Art' },
@@ -221,6 +223,18 @@ export default function CreateAuction() {
                 <span>Extracting auction ID from on-chain transaction...</span>
               </div>
             ) : null}
+
+            {/* QR Code for sharing */}
+            {onChainAuctionId && (
+              <div className="bg-surface-800 rounded-lg p-4">
+                <AuctionQR
+                  value={`${window.location.origin}/auction/${onChainAuctionId}`}
+                  label="Share Auction"
+                  sublabel="Bidders can scan this QR to find your auction directly"
+                  size={140}
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -271,6 +285,9 @@ export default function CreateAuction() {
           the reveal phase.
         </p>
       </div>
+
+      {/* Faucet banner for low balance */}
+      <FaucetBanner />
 
       {/* Step indicator */}
       <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
