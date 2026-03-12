@@ -16,6 +16,16 @@ export function encrypt(plaintext: string, table: string, column: string): strin
   return `${iv.toString('hex')}:${encrypted.toString('hex')}:${tag.toString('hex')}`;
 }
 
+/**
+ * Deterministic HMAC hash for indexed lookups.
+ * Same input always produces the same output (unlike encrypt which uses random IV).
+ * Used for WHERE clauses — store alongside encrypted value.
+ */
+export function hmacHash(plaintext: string, table: string, column: string): string {
+  const key = deriveKey(table, column);
+  return crypto.createHmac('sha256', key).update(plaintext).digest('hex');
+}
+
 export function decrypt(ciphertext: string, table: string, column: string): string {
   const parts = ciphertext.split(':');
   if (parts.length !== 3) throw new Error(`Invalid ciphertext format (expected 3 parts, got ${parts.length})`);

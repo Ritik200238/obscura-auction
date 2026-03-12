@@ -1,4 +1,4 @@
-import { encrypt, decrypt } from './encryption';
+import { encrypt, decrypt, hmacHash } from './encryption';
 import { logger } from './logger';
 import { useSupabase, getSupabase } from './supabase';
 
@@ -189,20 +189,16 @@ export async function getAuctionsBySeller(sellerAddress: string): Promise<Auctio
   if (useSupabase) {
     const sb = getSupabase();
     if (sb) {
-      // seller_hash stores the encrypted seller address — we must scan and decrypt
-      const { data, error } = await sb.from('auctions').select('*');
+      const addressHash = hmacHash(sellerAddress, 'auctions', 'seller_address');
+      const { data, error } = await sb
+        .from('auctions')
+        .select('*')
+        .eq('seller_address_hash', addressHash)
+        .order('created_at', { ascending: false });
       if (error) {
         logger.error('Supabase getAuctionsBySeller failed:', error.message);
       } else if (data) {
-        return data
-          .filter((row: any) => {
-            try {
-              return decrypt(row.seller_hash, 'auctions', 'seller_address') === sellerAddress;
-            } catch {
-              return false;
-            }
-          })
-          .map(dbRowToAuction);
+        return data.map(dbRowToAuction);
       }
       return [];
     }
@@ -242,12 +238,14 @@ export async function createAuction(params: {
       const encTitle = encrypt(params.title, 'auctions', 'title');
       const encDesc = encrypt(params.description || '', 'auctions', 'description');
       const encSeller = encrypt(params.seller_address, 'auctions', 'seller_address');
+      const sellerHash = hmacHash(params.seller_address, 'auctions', 'seller_address');
 
       const row = {
         auction_id: params.auction_id,
         title: encTitle,
         description: encDesc,
         seller_hash: encSeller,
+        seller_address_hash: sellerHash,
         settlement_tx: params.tx_id,
         current_status: 1,
         token_type: params.token_type || 1,
@@ -406,20 +404,16 @@ export async function getBidsByBidder(bidderAddress: string): Promise<BidRecord[
   if (useSupabase) {
     const sb = getSupabase();
     if (sb) {
-      // bidder_hash stores encrypted bidder address — must scan and decrypt
-      const { data, error } = await sb.from('bids').select('*');
+      const addressHash = hmacHash(bidderAddress, 'bids', 'bidder_address');
+      const { data, error } = await sb
+        .from('bids')
+        .select('*')
+        .eq('bidder_address_hash', addressHash)
+        .order('created_at', { ascending: false });
       if (error) {
         logger.error('Supabase getBidsByBidder failed:', error.message);
       } else if (data) {
-        return data
-          .filter((row: any) => {
-            try {
-              return decrypt(row.bidder_hash, 'bids', 'bidder_address') === bidderAddress;
-            } catch {
-              return false;
-            }
-          })
-          .map(dbRowToBid);
+        return data.map(dbRowToBid);
       }
       return [];
     }
@@ -444,12 +438,14 @@ export async function createBid(params: {
     const sb = getSupabase();
     if (sb) {
       const encBidder = encrypt(params.bidder_address, 'bids', 'bidder_address');
+      const bidderHash = hmacHash(params.bidder_address, 'bids', 'bidder_address');
 
       const row = {
         auction_id: params.auction_id,
         bid_hash: params.bid_hash,
         commitment: params.bid_hash,
         bidder_hash: encBidder,
+        bidder_address_hash: bidderHash,
         status: 'sealed',
         transaction_id: params.tx_id,
       };
