@@ -10,6 +10,7 @@ import {
   type AuctionData,
 } from '@/types'
 import { truncateId, blockHeightToTime } from '@/lib/aleo'
+import PrivacyShield from '@/components/auction/PrivacyShield'
 
 interface AuctionCardProps {
   auction: AuctionData
@@ -81,6 +82,11 @@ export function AuctionCard({ auction, currentBlock }: AuctionCardProps) {
         }`}>
           {modeLabel}
         </span>
+      </div>
+
+      {/* Privacy badge — stopPropagation prevents Link navigation on click */}
+      <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+        <PrivacyShield auctionMode={auction.auction_mode} status={auction.status} />
       </div>
 
       {/* Stats */}

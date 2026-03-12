@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Lock, Loader2, AlertCircle, CheckCircle, Info } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
 import { useCountdown } from '@/hooks/useCountdown'
@@ -9,6 +10,7 @@ import { generateNonce, toMicrocredits, formatTokenAmount, fetchMapping, parseAu
 import { config } from '@/lib/config'
 import TransactionLink from '@/components/shared/TransactionLink'
 import TransactionProgress from '@/components/shared/TransactionProgress'
+import AuctionQR from '@/components/shared/AuctionQR'
 
 interface BidPanelProps {
   auction: AuctionData
@@ -22,6 +24,15 @@ export default function BidPanel({ auction }: BidPanelProps) {
 
   const [bidAmount, setBidAmount] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
+
+  // Toast notifications for bid status changes
+  const prevTxStatus = useRef(txStatus)
+  useEffect(() => {
+    if (prevTxStatus.current === txStatus) return
+    if (txStatus === 'confirmed') toast.success('Sealed bid placed!')
+    if (txStatus === 'failed') toast.error(txError || 'Bid transaction failed')
+    prevTxStatus.current = txStatus
+  }, [txStatus, txError])
 
   const existingRecords = getForAuction(auction.auction_id)
   const existingBid = existingRecords.bids.length > 0 ? existingRecords.bids[0] : null
@@ -92,9 +103,19 @@ export default function BidPanel({ auction }: BidPanelProps) {
               <TransactionLink txId={txId} className="text-xs break-all" />
             </div>
             {txStatus === 'confirmed' && (
-              <p className="text-xs text-gray-500 mt-3">
-                Save your bid record — you will need it during the reveal phase.
-              </p>
+              <>
+                <p className="text-xs text-gray-500 mt-3 mb-3">
+                  Save your bid record — you will need it during the reveal phase.
+                </p>
+                <div className="bg-surface-800 rounded-lg p-3">
+                  <AuctionQR
+                    value={`${window.location.origin}/auction/${auction.auction_id}`}
+                    label="Share This Auction"
+                    sublabel="Share with other bidders — your bid amount stays sealed"
+                    size={120}
+                  />
+                </div>
+              </>
             )}
           </div>
         </div>

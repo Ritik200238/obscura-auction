@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Eye, Loader2, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
 import { useCountdown } from '@/hooks/useCountdown'
@@ -25,6 +26,15 @@ export default function RevealPanel({ auction }: RevealPanelProps) {
   const [revealingIndex, setRevealingIndex] = useState<number | null>(null)
   const [revealedIndices, setRevealedIndices] = useState<Set<number>>(new Set())
   const [revealError, setRevealError] = useState<string | null>(null)
+
+  // Toast notifications for reveal status changes
+  const prevTxStatus = useRef(txStatus)
+  useEffect(() => {
+    if (prevTxStatus.current === txStatus) return
+    if (txStatus === 'confirmed') toast.success('Bid revealed successfully!')
+    if (txStatus === 'failed') toast.error(txError || 'Reveal transaction failed')
+    prevTxStatus.current = txStatus
+  }, [txStatus, txError])
   const [balanceError, setBalanceError] = useState<string | null>(null)
   const [usdcxBalance, setUsdcxBalance] = useState<bigint | null>(null)
 

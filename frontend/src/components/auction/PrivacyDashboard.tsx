@@ -106,18 +106,18 @@ export default function PrivacyDashboard({ status, auctionMode }: PrivacyDashboa
           const state = item.getState(status)
           const Icon = item.icon
           return (
-            <div key={item.label} className="flex items-center gap-3 p-2.5 rounded-lg bg-surface-800/60">
+            <div key={item.label} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-lg bg-surface-800/60">
               <Icon className={`w-3.5 h-3.5 shrink-0 ${
                 state.level === 'private' ? 'text-green-400' :
                 state.level === 'hashed' ? 'text-amber-400' :
                 'text-gray-400'
               }`} />
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-white font-medium">{item.label}</p>
+                <p className="text-xs text-white font-medium truncate">{item.label}</p>
               </div>
               {/* Privacy bar */}
-              <div className="flex items-center gap-2 shrink-0">
-                <div className={`h-1.5 w-16 rounded-full overflow-hidden ${
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <div className={`h-1.5 w-10 sm:w-16 rounded-full overflow-hidden ${
                   state.level === 'private' ? 'bg-green-500/20' :
                   state.level === 'hashed' ? 'bg-amber-500/20' :
                   'bg-gray-500/20'

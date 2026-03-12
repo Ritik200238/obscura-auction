@@ -1,15 +1,18 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { WalletMultiButton } from '@provablehq/aleo-wallet-adaptor-react-ui'
-import { Shield, Search, Plus, Activity, BookOpen, Menu, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Shield, Search, Plus, Activity, BookOpen, Menu, X, BarChart3, Lightbulb } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
+import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useWalletStore } from '@/stores/walletStore'
 
 const navLinks = [
   { to: '/browse', label: 'Browse', icon: Search },
   { to: '/create', label: 'Create', icon: Plus },
-  { to: '/my-activity', label: 'My Activity', icon: Activity },
+  { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
+  { to: '/my-activity', label: 'Activity', icon: Activity },
+  { to: '/learn', label: 'Learn', icon: Lightbulb },
   { to: '/docs', label: 'Docs', icon: BookOpen },
 ]
 
@@ -18,13 +21,21 @@ export default function Header() {
   const { address: publicKey, wallet, connected } = useWallet()
   const { setWallet, disconnect: clearStore } = useWalletStore()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const prevConnected = useRef(connected)
 
   useEffect(() => {
     if (connected && publicKey) {
       setWallet(publicKey, wallet?.adapter?.name || 'unknown')
+      if (!prevConnected.current) {
+        toast.success('Wallet connected')
+      }
     } else if (!connected) {
+      if (prevConnected.current) {
+        toast('Wallet disconnected', { icon: '\uD83D\uDC4B' })
+      }
       clearStore()
     }
+    prevConnected.current = connected
   }, [connected, publicKey, wallet, setWallet, clearStore])
 
   // Close mobile nav on route change
