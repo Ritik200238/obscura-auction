@@ -14,3 +14,10 @@ frontend/build/
 contracts/*/outputs/
 *.prover
 *.verifier
+
+# Internal strategy & planning docs (not for judges)
+NULLPAY_KILLER_PLAN.md
+OBSCURA_10X_MASTERPLAN.md
+IMPLEMENTATION_PROMPTS.md
+AKINDO_UPDATE_DRAFT.md
+.polish-loop/
