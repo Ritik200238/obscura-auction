@@ -181,9 +181,8 @@ router.post('/', createAuctionLimiter, async (req: Request, res: Response) => {
       res.status(409).json({ error: err.message });
       return;
     }
-    const errMsg = err instanceof Error ? err.message : String(err);
-    logger.error('POST /api/auctions failed:', errMsg);
-    res.status(500).json({ error: 'Failed to create auction', detail: errMsg });
+    logger.error('POST /api/auctions failed:', err);
+    res.status(500).json({ error: 'Failed to create auction' });
   }
 });
 
