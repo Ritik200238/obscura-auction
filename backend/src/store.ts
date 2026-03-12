@@ -68,11 +68,20 @@ async function logEvent(
 
 // --- Supabase row ↔ AuctionRecord converters ---
 
+function safeDecrypt(ciphertext: string, table: string, column: string): string {
+  try {
+    return decrypt(ciphertext, table, column);
+  } catch (err) {
+    logger.error(`Decrypt failed for ${table}.${column}:`, err);
+    return '[encrypted]';
+  }
+}
+
 function dbRowToAuction(row: any): AuctionRecord {
   return {
     auction_id: row.auction_id,
-    title: row.title ? decrypt(row.title, 'auctions', 'title') : '',
-    description: row.description ? decrypt(row.description, 'auctions', 'description') : '',
+    title: row.title ? safeDecrypt(row.title, 'auctions', 'title') : '',
+    description: row.description ? safeDecrypt(row.description, 'auctions', 'description') : '',
     seller_address_encrypted: row.seller_hash || '',
     tx_id: row.settlement_tx || '',
     created_at: row.created_at,
@@ -157,6 +166,7 @@ export async function getAllAuctions(): Promise<AuctionRecord[]> {
       if (error) {
         logger.error('Supabase getAllAuctions failed:', error.message);
       } else if (data) {
+        logger.debug(`getAllAuctions: ${data.length} rows from Supabase`);
         return data.map(dbRowToAuction);
       }
     }
