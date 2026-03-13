@@ -6,7 +6,7 @@ export const config = {
   explorerUrl: 'https://explorer.provable.com',
   backendApi: import.meta.env.VITE_BACKEND_URL || (import.meta.env.PROD ? 'https://obscura-auction.onrender.com' : 'http://localhost:3001'),
   network: 'testnet' as const,
-  defaultFee: 0.5, // ALEO
+  defaultFee: 500_000, // microcredits (= 0.5 ALEO). TransactionOptions.fee is in microcredits.
   blockTime: 15, // seconds per block (approximate)
   blocksPerHour: 240,
   revealWindowBlocks: 2880,

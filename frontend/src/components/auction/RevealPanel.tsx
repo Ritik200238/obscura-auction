@@ -101,13 +101,13 @@ export default function RevealPanel({ auction }: RevealPanelProps) {
       } else {
         // ALEO path: reveal_bid needs a credits record with sufficient balance
         const bidAmountMicro = parseInt(bid.bid_amount.replace(/[^0-9]/g, ''), 10) || 0
-        const feeMicro = Math.floor(config.defaultFee * 1_000_000)
+        const feeMicro = config.defaultFee // already in microcredits
         const totalNeeded = bidAmountMicro + feeMicro
 
         const creditsRecord = await fetchCreditsRecord(requestRecords, totalNeeded)
         if (!creditsRecord) {
           const bidAleo = (bidAmountMicro / 1_000_000).toFixed(3)
-          const feeAleo = config.defaultFee.toFixed(3)
+          const feeAleo = (feeMicro / 1_000_000).toFixed(3)
           const totalAleo = (totalNeeded / 1_000_000).toFixed(3)
           setBalanceError(
             `Insufficient balance. You need ${totalAleo} ALEO (bid: ${bidAleo} + fee: ${feeAleo}). ` +
