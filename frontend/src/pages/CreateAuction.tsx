@@ -185,14 +185,16 @@ export default function CreateAuction() {
         // Shield returns shield_* temp IDs and its transactionStatus() may never
         // return the real at1... ID. This scans blocks directly to confirm.
         onChainVerify: async () => {
-          const found = await scanBlocksForCreateAuction(startHeight, 15)
+          console.log('[CreateAuction] Block scan: checking from height', startHeight)
+          const found = await scanBlocksForCreateAuction(startHeight, 20)
           if (found) {
-            console.log('[CreateAuction] Block scan found TX:', found.txId, 'Auction:', found.auctionId)
+            console.log('[CreateAuction] Block scan FOUND TX:', found.txId, 'Auction:', found.auctionId)
             setOnChainAuctionId(found.auctionId)
             setConfirmedTxId(found.txId)
             registerAuctionWithBackend(found.auctionId, found.txId)
             return true
           }
+          console.log('[CreateAuction] Block scan: not found yet')
           return false
         },
       })
