@@ -64,8 +64,16 @@ router.get('/', async (req: Request, res: Response) => {
     }
     const auctions = await getAllAuctions();
 
+    // Filter out test/debug auctions with fake TX IDs
+    const realAuctions = auctions.filter((a) => {
+      if (!a.tx_id) return false;
+      // Fake TX IDs contain repeated 0s or "test"/"debug" patterns
+      if (/test|debug/i.test(a.tx_id) || /test|debug/i.test(a.auction_id)) return false;
+      return true;
+    });
+
     // Return public-safe view (strip encrypted fields)
-    const safeAuctions = auctions.map((a) => ({
+    const safeAuctions = realAuctions.map((a) => ({
       auction_id: a.auction_id,
       title: a.title,
       description: a.description,

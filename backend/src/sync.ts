@@ -105,6 +105,8 @@ export function syncAllAuctions(): Promise<void> {
 
       for (const auction of auctions) {
         if (TERMINAL_STATUSES.includes(auction.status || '')) continue;
+        // Skip test/debug auctions — they don't exist on-chain
+        if (/test|debug/i.test(auction.auction_id) || /test|debug/i.test(auction.tx_id || '')) continue;
 
         // Auto-expire: if auction is active, deadline passed, and no bids, mark expired
         if (auction.status === 'active' && auction.deadline && height > auction.deadline + 2880) {
