@@ -14,9 +14,10 @@ import TransactionProgress from '@/components/shared/TransactionProgress'
 
 interface RevealPanelProps {
   auction: AuctionData
+  onRevealConfirmed?: () => void
 }
 
-export default function RevealPanel({ auction }: RevealPanelProps) {
+export default function RevealPanel({ auction, onRevealConfirmed }: RevealPanelProps) {
   const { execute, loading, error: txError, txId, status: txStatus, reset, retryCheck } = useTransaction()
   const { connected } = useWalletStore()
   const { requestRecords } = useWallet()
@@ -31,10 +32,13 @@ export default function RevealPanel({ auction }: RevealPanelProps) {
   const prevTxStatus = useRef(txStatus)
   useEffect(() => {
     if (prevTxStatus.current === txStatus) return
-    if (txStatus === 'confirmed') toast.success('Bid revealed successfully!')
+    if (txStatus === 'confirmed') {
+      toast.success('Bid revealed successfully!')
+      onRevealConfirmed?.()
+    }
     if (txStatus === 'failed') toast.error(txError || 'Reveal transaction failed')
     prevTxStatus.current = txStatus
-  }, [txStatus, txError])
+  }, [txStatus, txError, onRevealConfirmed])
   const [balanceError, setBalanceError] = useState<string | null>(null)
   const [usdcxBalance, setUsdcxBalance] = useState<bigint | null>(null)
 

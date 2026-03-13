@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { fadeInUp, staggerContainer, scaleIn } from '@/lib/animations'
+import { useCallback } from 'react'
 import {
   ArrowLeft,
   Loader2,
@@ -69,6 +70,12 @@ export default function AuctionDetail() {
       refreshRecords()
     }
   }, [connected, refreshRecords])
+
+  // Called when a bid/reveal/settle confirms — refresh everything
+  const handleTxConfirmed = useCallback(() => {
+    refresh()
+    refreshRecords()
+  }, [refresh, refreshRecords])
 
   // Fetch on-chain proofs when auction is settled
   useEffect(() => {
@@ -300,14 +307,14 @@ export default function AuctionDetail() {
           {/* Phase-based action panels */}
           {isActive && blockHeight <= auction.deadline && (
             <motion.div variants={scaleIn}>
-              <BidPanel auction={auction} />
+              <BidPanel auction={auction} onBidConfirmed={handleTxConfirmed} />
             </motion.div>
           )}
 
           {isRevealing && (
             <>
               <motion.div variants={scaleIn}>
-                <RevealPanel auction={auction} />
+                <RevealPanel auction={auction} onRevealConfirmed={handleTxConfirmed} />
               </motion.div>
               {auction.reveal_deadline > 0 && blockHeight > auction.reveal_deadline && (
                 <motion.div variants={scaleIn}>

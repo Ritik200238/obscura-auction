@@ -14,9 +14,10 @@ import AuctionQR from '@/components/shared/AuctionQR'
 
 interface BidPanelProps {
   auction: AuctionData
+  onBidConfirmed?: () => void
 }
 
-export default function BidPanel({ auction }: BidPanelProps) {
+export default function BidPanel({ auction, onBidConfirmed }: BidPanelProps) {
   const { execute, loading, error: txError, txId, status: txStatus, reset, retryCheck } = useTransaction()
   const { connected } = useWalletStore()
   const { timeRemaining, isExpired } = useCountdown(auction.deadline)
@@ -25,14 +26,17 @@ export default function BidPanel({ auction }: BidPanelProps) {
   const [bidAmount, setBidAmount] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
 
-  // Toast notifications for bid status changes
+  // Toast notifications for bid status changes + trigger parent refresh
   const prevTxStatus = useRef(txStatus)
   useEffect(() => {
     if (prevTxStatus.current === txStatus) return
-    if (txStatus === 'confirmed') toast.success('Sealed bid placed!')
+    if (txStatus === 'confirmed') {
+      toast.success('Sealed bid placed!')
+      onBidConfirmed?.()
+    }
     if (txStatus === 'failed') toast.error(txError || 'Bid transaction failed')
     prevTxStatus.current = txStatus
-  }, [txStatus, txError])
+  }, [txStatus, txError, onBidConfirmed])
 
   const existingRecords = getForAuction(auction.auction_id)
   const existingBid = existingRecords.bids.length > 0 ? existingRecords.bids[0] : null
