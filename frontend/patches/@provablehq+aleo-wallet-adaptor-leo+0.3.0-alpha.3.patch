@@ -1,0 +1,85 @@
+diff --git a/node_modules/@provablehq/aleo-wallet-adaptor-leo/dist/index.js b/node_modules/@provablehq/aleo-wallet-adaptor-leo/dist/index.js
+index 9383c0d..39161da 100644
+--- a/node_modules/@provablehq/aleo-wallet-adaptor-leo/dist/index.js
++++ b/node_modules/@provablehq/aleo-wallet-adaptor-leo/dist/index.js
+@@ -118,11 +118,18 @@ var LeoWalletAdapter = class extends import_aleo_wallet_adaptor_core.BaseAleoWal
+    */
+   async connect(network, decryptPermission, programs) {
+     try {
++      // Re-read wallet reference from window (constructor sets it too early)
++      if (!this._leoWallet) {
++        this._leoWallet = window.leoWallet || window.leo;
++      }
+       if (this.readyState !== import_aleo_wallet_standard.WalletReadyState.INSTALLED) {
+         throw new import_aleo_wallet_adaptor_core.WalletConnectionError("Leo Wallet is not available");
+       }
++      if (!this._leoWallet) {
++        throw new import_aleo_wallet_adaptor_core.WalletConnectionError("Leo Wallet extension not found");
++      }
+       try {
+-        await this._leoWallet?.connect(decryptPermission, LEO_NETWORK_MAP[network], programs);
++        await this._leoWallet.connect(decryptPermission, LEO_NETWORK_MAP[network], programs);
+         this.network = network;
+       } catch (error) {
+         if (error instanceof Object && "name" in error && (error.name === "InvalidParamsAleoWalletError" || error.name !== "NotGrantedAleoWalletError")) {
+@@ -134,7 +141,16 @@ var LeoWalletAdapter = class extends import_aleo_wallet_adaptor_core.BaseAleoWal
+           error instanceof Error ? error.message : "Connection failed"
+         );
+       }
+-      this._publicKey = this._leoWallet?.publicKey || "";
++      // Leo Wallet may populate publicKey asynchronously — poll briefly
++      let pk = this._leoWallet.publicKey || "";
++      if (!pk) {
++        for (let i = 0; i < 20; i++) {
++          await new Promise(r => setTimeout(r, 100));
++          pk = this._leoWallet.publicKey || "";
++          if (pk) break;
++        }
++      }
++      this._publicKey = pk;
+       this.decryptPermission = decryptPermission;
+       if (!this._publicKey) {
+         throw new import_aleo_wallet_adaptor_core.WalletConnectionError("No address returned from wallet");
+diff --git a/node_modules/@provablehq/aleo-wallet-adaptor-leo/dist/index.mjs b/node_modules/@provablehq/aleo-wallet-adaptor-leo/dist/index.mjs
+index 154140a..1363cdb 100644
+--- a/node_modules/@provablehq/aleo-wallet-adaptor-leo/dist/index.mjs
++++ b/node_modules/@provablehq/aleo-wallet-adaptor-leo/dist/index.mjs
+@@ -107,11 +107,19 @@ var LeoWalletAdapter = class extends BaseAleoWalletAdapter {
+    */
+   async connect(network, decryptPermission, programs) {
+     try {
++      // Re-read wallet reference from window (constructor sets it too early,
++      // before scopePollingDetectionStrategy has detected the extension)
++      if (!this._leoWallet) {
++        this._leoWallet = window.leoWallet || window.leo;
++      }
+       if (this.readyState !== WalletReadyState.INSTALLED) {
+         throw new WalletConnectionError("Leo Wallet is not available");
+       }
++      if (!this._leoWallet) {
++        throw new WalletConnectionError("Leo Wallet extension not found");
++      }
+       try {
+-        await this._leoWallet?.connect(decryptPermission, LEO_NETWORK_MAP[network], programs);
++        await this._leoWallet.connect(decryptPermission, LEO_NETWORK_MAP[network], programs);
+         this.network = network;
+       } catch (error) {
+         if (error instanceof Object && "name" in error && (error.name === "InvalidParamsAleoWalletError" || error.name !== "NotGrantedAleoWalletError")) {
+@@ -123,7 +131,16 @@ var LeoWalletAdapter = class extends BaseAleoWalletAdapter {
+           error instanceof Error ? error.message : "Connection failed"
+         );
+       }
+-      this._publicKey = this._leoWallet?.publicKey || "";
++      // Leo Wallet may populate publicKey asynchronously — poll briefly
++      let pk = this._leoWallet.publicKey || "";
++      if (!pk) {
++        for (let i = 0; i < 20; i++) {
++          await new Promise(r => setTimeout(r, 100));
++          pk = this._leoWallet.publicKey || "";
++          if (pk) break;
++        }
++      }
++      this._publicKey = pk;
+       this.decryptPermission = decryptPermission;
+       if (!this._publicKey) {
+         throw new WalletConnectionError("No address returned from wallet");
