@@ -315,7 +315,7 @@ export default function Browse() {
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-accent-500/20 to-accent-600/10 flex items-center justify-center mx-auto mb-5">
             <PackageOpen className="w-10 h-10 text-accent-400" />
           </div>
-          <h3 className="text-2xl font-bold text-white mb-2">
+          <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">
             {auctions.length === 0 ? 'Be the First to Create a Private Auction' : 'No Matching Auctions'}
           </h3>
           <p className="text-gray-400 text-sm max-w-md mx-auto mb-6">
@@ -388,7 +388,7 @@ function ActivityPulse({ auctions }: { auctions: AuctionData[] }) {
             <div className="w-2 h-2 rounded-full bg-green-400" />
             <div className="absolute inset-0 w-2 h-2 rounded-full bg-green-400 animate-ping" />
           </div>
-          <span className="text-xs font-semibold text-green-400 uppercase tracking-wider">Live</span>
+          <span className="text-[10px] font-semibold text-green-400 uppercase tracking-widest">Live</span>
         </div>
 
         <div className="w-px h-4 bg-surface-700 hidden sm:block" />

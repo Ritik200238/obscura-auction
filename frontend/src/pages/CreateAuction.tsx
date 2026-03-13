@@ -352,7 +352,7 @@ export default function CreateAuction() {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1.5">Item Title</label>
+              <label className="block text-sm text-gray-400 mb-1.5 font-medium">Item Title</label>
               <input
                 type="text"
                 value={title}
@@ -367,7 +367,7 @@ export default function CreateAuction() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1.5">Description</label>
+              <label className="block text-sm text-gray-400 mb-1.5 font-medium">Description</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -378,7 +378,7 @@ export default function CreateAuction() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1.5">Category</label>
+              <label className="block text-sm text-gray-400 mb-1.5 font-medium">Category</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(Number(e.target.value))}
@@ -404,7 +404,7 @@ export default function CreateAuction() {
           <div className="space-y-4">
             {/* Reserve Price */}
             <div>
-              <label className="block text-sm text-gray-400 mb-1.5">Reserve Price</label>
+              <label className="block text-sm text-gray-400 mb-1.5 font-medium">Reserve Price</label>
               <div className="relative">
                 <input
                   type="number"
@@ -428,7 +428,7 @@ export default function CreateAuction() {
 
             {/* Token Type */}
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Token</label>
+              <label className="block text-sm text-gray-400 mb-2 font-medium">Token</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -471,7 +471,7 @@ export default function CreateAuction() {
 
             {/* Auction Mode */}
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Auction Mode</label>
+              <label className="block text-sm text-gray-400 mb-2 font-medium">Auction Mode</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -540,7 +540,7 @@ export default function CreateAuction() {
 
             {/* Duration */}
             <div>
-              <label className="block text-sm text-gray-400 mb-1.5">Bidding Duration</label>
+              <label className="block text-sm text-gray-400 mb-1.5 font-medium">Bidding Duration</label>
               <select
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}

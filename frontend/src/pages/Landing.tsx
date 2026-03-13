@@ -378,7 +378,7 @@ export default function Landing() {
 
         <div className="relative z-10 text-center max-w-5xl mx-auto">
           {/* Staggered blur-to-sharp words */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 mb-8">
+          <div className="flex flex-col items-center justify-center gap-1 sm:gap-2 mb-8">
             {heroWords.map((word, i) => (
               <motion.span
                 key={word}
@@ -386,7 +386,7 @@ export default function Landing() {
                 initial="hidden"
                 animate="visible"
                 variants={wordVariants}
-                className="text-4xl sm:text-7xl lg:text-9xl font-extrabold tracking-tight text-white"
+                className="text-5xl sm:text-8xl lg:text-9xl font-extrabold tracking-tighter text-white leading-none"
                 style={{
                   textShadow: i === 0
                     ? '0 0 60px rgba(124, 58, 237, 0.3)'
@@ -404,7 +404,7 @@ export default function Landing() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.8, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed"
+            className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed font-medium"
           >
             The first zero-knowledge Vickrey auction protocol on Aleo
           </motion.p>
@@ -456,7 +456,7 @@ export default function Landing() {
         <AnimatedSection>
           <motion.div variants={fadeInUp} className="text-center mb-16">
             <h2 className="text-3xl sm:text-5xl font-bold text-white mb-4">How It Works</h2>
-            <p className="text-gray-400 max-w-lg mx-auto text-lg">Three phases. Zero trust required.</p>
+            <p className="text-gray-400 max-w-lg mx-auto text-lg font-medium">Three phases. Zero trust required.</p>
           </motion.div>
         </AnimatedSection>
 
@@ -476,7 +476,7 @@ export default function Landing() {
                 <Shield className="w-6 h-6 text-emerald-400" />
               </div>
               <SealVisual />
-              <h3 className="text-lg font-bold text-white mb-3 mt-5 tracking-wide">SEALED BIDS</h3>
+              <h3 className="text-lg font-bold text-white mb-3 mt-5 tracking-tight">SEALED BIDS</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
                 Every bid encrypted with BHP256 commitments. No one sees amounts until reveal.
               </p>
@@ -498,7 +498,7 @@ export default function Landing() {
                 <Eye className="w-6 h-6 text-cyan-400" />
               </div>
               <RevealVisual />
-              <h3 className="text-lg font-bold text-white mb-3 mt-5 tracking-wide">ZERO-KNOWLEDGE REVEAL</h3>
+              <h3 className="text-lg font-bold text-white mb-3 mt-5 tracking-tight">ZERO-KNOWLEDGE REVEAL</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
                 Commitments verified cryptographically. Your bid proves itself without exposing others.
               </p>
@@ -520,7 +520,7 @@ export default function Landing() {
                 <Gavel className="w-6 h-6 text-purple-400" />
               </div>
               <SettleVisual />
-              <h3 className="text-lg font-bold text-white mb-3 mt-5 tracking-wide">VICKREY SETTLEMENT</h3>
+              <h3 className="text-lg font-bold text-white mb-3 mt-5 tracking-tight">VICKREY SETTLEMENT</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
                 Winner pays second-highest price. Fair pricing guaranteed by protocol economics.
               </p>
@@ -590,8 +590,8 @@ export default function Landing() {
               <p className="text-3xl sm:text-5xl font-extrabold text-white font-mono mb-2">
                 <AnimatedCounter target={stat.value} />
               </p>
-              <p className="text-sm text-gray-300 font-medium">{stat.label}</p>
-              <p className="text-xs text-gray-600 mt-1">{stat.detail}</p>
+              <p className="text-xs text-gray-300 font-medium uppercase tracking-wide">{stat.label}</p>
+              <p className="text-[11px] text-gray-600 mt-1">{stat.detail}</p>
             </motion.div>
           ))}
         </AnimatedSection>

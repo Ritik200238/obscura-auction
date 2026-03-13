@@ -34,7 +34,7 @@ export default function MyActivity() {
 
           {/* What you'll see preview */}
           <div className="max-w-sm mx-auto">
-            <p className="text-xs text-gray-600 uppercase tracking-wider mb-3">What you'll see</p>
+            <p className="text-[10px] text-gray-600 uppercase tracking-widest font-medium mb-3">What you'll see</p>
             <div className="space-y-2">
               {[
                 { icon: Lock, label: 'Sealed Bids', desc: 'Your encrypted bids across all auctions', color: 'text-accent-400' },
