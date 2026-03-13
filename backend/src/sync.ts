@@ -105,6 +105,16 @@ export function syncAllAuctions(): Promise<void> {
 
       for (const auction of auctions) {
         if (TERMINAL_STATUSES.includes(auction.status || '')) continue;
+
+        // Auto-expire: if auction is active, deadline passed, and no bids, mark expired
+        if (auction.status === 'active' && auction.deadline && height > auction.deadline + 2880) {
+          if ((auction.bid_count || 0) === 0) {
+            logger.info(`Auto-expiring auction ${auction.auction_id.slice(0, 16)} (deadline ${auction.deadline}, current ${height})`);
+            await updateAuction(auction.auction_id, { status: 'expired' });
+            continue;
+          }
+        }
+
         await syncAuction(auction.auction_id);
       }
     } catch (err) {

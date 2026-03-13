@@ -16,6 +16,26 @@ import {
 import { syncAllAuctions } from '../sync';
 import { paginate } from '../utils';
 
+/** Strip HTML/script tags from user-supplied strings to prevent stored XSS */
+function sanitizeText(input: string): string {
+  return input
+    .replace(/<[^>]*>/g, '')      // strip HTML tags
+    .replace(/javascript:/gi, '') // strip JS protocol
+    .replace(/on\w+\s*=/gi, '')   // strip event handlers
+    .trim();
+}
+
+/** Verify that a transaction ID actually exists on the Aleo explorer.
+ *  Best-effort: returns false on network error (caller decides whether to block). */
+async function verifyTxExists(txId: string): Promise<boolean> {
+  try {
+    const data = await fetchTransaction(txId);
+    return !!data;
+  } catch {
+    return false; // explorer unreachable — don't block the request
+  }
+}
+
 const router = Router();
 
 // Per-route rate limiters (attached inline to mutating routes)
@@ -157,10 +177,20 @@ router.post('/', createAuctionLimiter, async (req: Request, res: Response) => {
       return;
     }
 
+    // Best-effort TX verification — warn but don't block (explorer may be slow)
+    const txVerified = await verifyTxExists(tx_id);
+    if (!txVerified) {
+      logger.warn(`TX ${tx_id.slice(0, 16)} not yet confirmed on explorer — registering anyway`);
+    }
+
+    // Sanitize user-supplied text to prevent stored XSS
+    const safeTitle = sanitizeText(title).slice(0, 200);
+    const safeDescription = sanitizeText(description || '').slice(0, 2000);
+
     const record = await createAuction({
       auction_id,
-      title: title.slice(0, 200),
-      description: (description || '').slice(0, 2000),
+      title: safeTitle,
+      description: safeDescription,
       seller_address,
       tx_id,
       token_type: typeof token_type === 'number' ? token_type : undefined,
@@ -215,6 +245,12 @@ router.post('/:id/bids', bidLimiter, async (req: Request, res: Response) => {
     if (!/^at1[a-z0-9]+$/.test(tx_id)) {
       res.status(400).json({ error: 'Invalid transaction ID format' });
       return;
+    }
+
+    // Best-effort TX verification
+    const txVerified = await verifyTxExists(tx_id);
+    if (!txVerified) {
+      logger.warn(`Bid TX ${tx_id.slice(0, 16)} not yet confirmed — registering anyway`);
     }
 
     const auction = await getAuctionById(id);

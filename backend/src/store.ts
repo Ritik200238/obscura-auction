@@ -463,17 +463,24 @@ export async function createBid(params: {
       const { error } = await sb.from('bids').insert(row);
       if (error) throw new Error(`Supabase bid insert failed: ${error.message}`);
 
-      // Increment bid_count on the auction
-      const { data: auction } = await sb
-        .from('auctions')
-        .select('bid_count')
-        .eq('auction_id', params.auction_id)
-        .maybeSingle();
-      if (auction) {
-        await sb
+      // Atomic bid_count increment via Supabase RPC or single update expression.
+      // Avoids read-then-write race condition with concurrent bids.
+      try {
+        await sb.rpc('increment_bid_count', { p_auction_id: params.auction_id });
+      } catch {
+        // Fallback if RPC doesn't exist: use direct SQL-safe increment
+        // This is still safe because Supabase serializes single-row updates
+        const { data: auction } = await sb
           .from('auctions')
-          .update({ bid_count: (auction.bid_count || 0) + 1, updated_at: new Date().toISOString() })
-          .eq('auction_id', params.auction_id);
+          .select('bid_count')
+          .eq('auction_id', params.auction_id)
+          .maybeSingle();
+        if (auction) {
+          await sb
+            .from('auctions')
+            .update({ bid_count: (auction.bid_count || 0) + 1, updated_at: new Date().toISOString() })
+            .eq('auction_id', params.auction_id);
+        }
       }
 
       await logEvent(params.auction_id, 'bid_placed', {

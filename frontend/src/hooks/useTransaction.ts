@@ -3,6 +3,11 @@ import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { config } from '@/lib/config'
 import { useWalletStore } from '@/stores/walletStore'
 
+/** Refresh wallet balance after a short delay (finalize needs time to propagate) */
+function scheduleBalanceRefresh() {
+  setTimeout(() => useWalletStore.getState().refreshBalance(), 5000)
+}
+
 interface ExecuteOptions {
   program?: string
   functionName: string
@@ -92,6 +97,7 @@ export function useTransaction() {
               stopPolling()
               setStatus('confirmed')
               setLoading(false)
+              scheduleBalanceRefresh()
               return
             }
           } catch { /* continue to wallet check */ }
@@ -127,6 +133,7 @@ export function useTransaction() {
                 stopPolling()
                 setStatus('confirmed')
                 setLoading(false)
+                scheduleBalanceRefresh()
                 return
               }
               if (['rejected', 'failed', 'aborted'].includes(s)) {
@@ -160,6 +167,7 @@ export function useTransaction() {
                 setTxId(currentTxId) // ensure state has the real ID
                 setStatus('confirmed')
                 setLoading(false)
+                scheduleBalanceRefresh()
                 return
               }
             }

@@ -304,6 +304,22 @@ export default function AuctionDetail() {
             <CancelAuctionCard auctionId={auction.auction_id} onSuccess={refresh} />
           )}
 
+          {/* Bidder notice: deadline passed but bidding not yet closed */}
+          {isActive && blockHeight > auction.deadline && auction.bid_count > 0 && (
+            <div className="card border-amber-500/20 bg-amber-500/5">
+              <div className="flex items-start gap-3">
+                <Clock className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-amber-300 font-semibold text-sm">Bidding Deadline Passed</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    The seller needs to close bidding to start the reveal phase.
+                    Prepare your bid record — you will need it to reveal.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Phase-based action panels */}
           {isActive && blockHeight <= auction.deadline && (
             <motion.div variants={scaleIn}>
@@ -403,7 +419,7 @@ export default function AuctionDetail() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Countdown */}
-          {(isActive || isRevealing) && (
+          {(isActive || (isRevealing && auction.reveal_deadline > 0)) && (
             <div className="card">
               <h3 className="text-sm text-gray-500 mb-3">
                 {isActive ? 'Bidding Ends In' : 'Reveal Deadline'}
@@ -557,9 +573,18 @@ function CloseBiddingCard({ auctionId, onSuccess }: { auctionId: string; onSucce
   const handleClose = async () => {
     try {
       const key = auctionId.endsWith('field') ? auctionId : `${auctionId}field`
-      const result = await execute({ functionName: 'close_bidding', inputs: [key] })
+      const result = await execute({
+        functionName: 'close_bidding',
+        inputs: [key],
+        onChainVerify: async () => {
+          const raw = await (await import('@/lib/aleo')).fetchMapping('auctions', key)
+          if (!raw) return false
+          const statusMatch = raw.match(/status:\s*(\d+)u8/)
+          return statusMatch ? parseInt(statusMatch[1]) >= 2 : false
+        },
+      })
       if (result.transactionId) {
-        setTimeout(onSuccess, 3000)
+        setTimeout(onSuccess, 8000) // Give finalize time to propagate
       }
     } catch {
       // Error is surfaced via useTransaction's error state
@@ -608,9 +633,18 @@ function CancelAuctionCard({ auctionId, onSuccess }: { auctionId: string; onSucc
   const handleCancel = async () => {
     try {
       const key = auctionId.endsWith('field') ? auctionId : `${auctionId}field`
-      const result = await execute({ functionName: 'cancel_auction', inputs: [key] })
+      const result = await execute({
+        functionName: 'cancel_auction',
+        inputs: [key],
+        onChainVerify: async () => {
+          const raw = await (await import('@/lib/aleo')).fetchMapping('auctions', key)
+          if (!raw) return false
+          const statusMatch = raw.match(/status:\s*(\d+)u8/)
+          return statusMatch ? parseInt(statusMatch[1]) === 5 : false
+        },
+      })
       if (result.transactionId) {
-        setTimeout(onSuccess, 3000)
+        setTimeout(onSuccess, 8000)
       }
     } catch {
       // Error is surfaced via useTransaction's error state
