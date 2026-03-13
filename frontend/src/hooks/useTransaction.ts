@@ -94,12 +94,19 @@ export function useTransaction() {
           // Try wallet adapter's transactionStatus
           if (transactionStatus) {
             const walletStatus: unknown = await transactionStatus(txId)
-            // Adapters return either a string or { status: string }
+            // Adapters return either a string or { status: string, transactionId?: string }
             let statusStr: string | null = null
+            let realTxId: string | null = null
             if (typeof walletStatus === 'string') {
               statusStr = walletStatus
-            } else if (walletStatus && typeof walletStatus === 'object' && 'status' in walletStatus) {
-              statusStr = String((walletStatus as any).status)
+            } else if (walletStatus && typeof walletStatus === 'object') {
+              if ('status' in walletStatus) statusStr = String((walletStatus as any).status)
+              // Shield returns the real on-chain TX ID once proved/broadcast
+              if ('transactionId' in walletStatus) realTxId = (walletStatus as any).transactionId
+            }
+            // Update txId if we got the real on-chain ID (replaces shield_* temp ID)
+            if (realTxId && realTxId.startsWith('at1')) {
+              setTxId(realTxId)
             }
             if (statusStr) {
               const s = statusStr.toLowerCase()
@@ -119,16 +126,19 @@ export function useTransaction() {
             }
           }
 
-          // Fallback: check explorer API for the transaction
-          const url = `${config.explorerApi}/${config.network}/transaction/${txId}`
-          const res = await fetch(url)
-          if (res.ok) {
-            const data = await res.json()
-            if (data && data.type) {
-              stopPolling()
-              setStatus('confirmed')
-              setLoading(false)
-              return
+          // Fallback: check explorer API — skip for temporary shield_* IDs
+          const isRealTxId = txId.startsWith('at1') || txId.startsWith('au1')
+          if (isRealTxId) {
+            const url = `${config.explorerApi}/${config.network}/transaction/${txId}`
+            const res = await fetch(url)
+            if (res.ok) {
+              const data = await res.json()
+              if (data && data.type) {
+                stopPolling()
+                setStatus('confirmed')
+                setLoading(false)
+                return
+              }
             }
           }
         } catch {
