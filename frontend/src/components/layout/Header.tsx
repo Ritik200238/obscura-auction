@@ -1,7 +1,8 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { WalletMultiButton } from '@provablehq/aleo-wallet-adaptor-react-ui'
-import { Shield, Search, Plus, Activity, BookOpen, Menu, X, BarChart3, Lightbulb } from 'lucide-react'
+import { Search, Plus, Activity, BookOpen, Menu, X, BarChart3, Lightbulb } from 'lucide-react'
+import ObscuraLogo from '@/components/shared/ObscuraLogo'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -62,9 +63,7 @@ export default function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-accent-500/30 to-accent-600/20 flex items-center justify-center group-hover:from-accent-500/40 group-hover:to-accent-600/30 transition-all duration-300">
-              <Shield className="w-4 h-4 text-accent-400" />
-            </div>
+            <ObscuraLogo size={32} className="group-hover:opacity-90 transition-opacity duration-300" />
             <span className="text-lg font-bold text-white tracking-tight">
               Obscura
             </span>

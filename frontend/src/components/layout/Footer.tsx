@@ -1,5 +1,6 @@
-import { Shield, ExternalLink, Github } from 'lucide-react'
+import { ExternalLink, Github } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import ObscuraLogo from '@/components/shared/ObscuraLogo'
 
 export default function Footer() {
   return (
@@ -9,9 +10,7 @@ export default function Footer() {
           {/* Top row */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-accent-500/20 flex items-center justify-center">
-                <Shield className="w-3 h-3 text-accent-400" />
-              </div>
+              <ObscuraLogo size={24} />
               <span className="text-sm font-medium text-gray-400">Obscura</span>
               <span className="text-xs text-gray-600">Privacy-first sealed-bid auctions</span>
             </div>
