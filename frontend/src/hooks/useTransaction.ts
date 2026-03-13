@@ -135,7 +135,10 @@ export function useTransaction() {
             }
           } catch (e) {
             // transactionStatus failed — DON'T rethrow, continue to explorer check
-            console.log('[useTransaction] transactionStatus error (continuing):', e)
+            // Only log occasionally to avoid console spam
+            if (attempts <= 3 || attempts % 10 === 0) {
+              console.log('[useTransaction] transactionStatus error (attempt ' + attempts + '):', e)
+            }
           }
         }
 
@@ -246,6 +249,10 @@ export function useTransaction() {
         // Leo Wallet can't prove complex programs locally — suggest Shield
         if (msg.includes('Failed to execute') || msg.includes('Could not create')) {
           msg += '. Leo Wallet may not support local proving for this program — try Shield Wallet (shield.app) which uses delegated proving.'
+        }
+        // Shield Wallet extension communication failure
+        if (msg.includes('No response') || msg.includes('message port closed')) {
+          msg = 'Shield Wallet did not respond. Try: (1) Disable other wallet extensions (MetaMask, Phantom), (2) Refresh the page, (3) Reconnect Shield Wallet. If the issue persists, restart your browser.'
         }
         setError(msg)
         setLoading(false)
