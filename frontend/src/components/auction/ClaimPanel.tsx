@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Award, Loader2, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react'
 import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
@@ -22,6 +22,21 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
 
   const [sellerAddress, setSellerAddress] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
+  // Try to fetch seller address from backend metadata
+  const [fetchedSellerAddr, setFetchedSellerAddr] = useState<string | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    fetch(`${config.backendApi}/api/auctions/${auction.auction_id}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!cancelled && data?.seller_address) {
+          setFetchedSellerAddr(data.seller_address)
+          setSellerAddress(prev => prev || data.seller_address)
+        }
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [auction.auction_id])
 
   const records = getForAuction(auction.auction_id)
   const winnerCert = records.winnerCert
@@ -234,7 +249,10 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
           disabled={loading}
         />
         <p className="text-xs text-gray-600 mt-1">
-          The seller's Aleo address. Required to complete the transfer.
+          The seller's Aleo address — required to route the payment.
+          {fetchedSellerAddr
+            ? ' Auto-filled from auction metadata.'
+            : ' Ask the auction creator for their address, or check the auction description.'}
         </p>
       </div>
 

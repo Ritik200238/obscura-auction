@@ -104,28 +104,15 @@ export default function Browse() {
                 const onChain = parseAuctionData(raw, a.auction_id)
                 return { ...onChain, title: a.title, description: a.description }
               }
-              return {
-                auction_id: a.auction_id,
-                item_hash: '', seller_hash: '', category: 4,
-                token_type: a.token_type || 1, auction_mode: 1, status: 1,
-                deadline: a.deadline || 0, reveal_deadline: 0,
-                bid_count: a.bid_count || 0, reserve_price_hash: '',
-                created_at: 0, dispute_deadline: 0,
-                title: a.title, description: a.description,
-              }
+              // On-chain data unavailable — skip this auction rather than
+              // fabricating status:1 (ACTIVE) which misleads users
+              return null
             })
           )
-          const enriched: AuctionData[] = results.map((r, i) =>
-            r.status === 'fulfilled' ? r.value : {
-              auction_id: data.auctions[i].auction_id,
-              item_hash: '', seller_hash: '', category: 4,
-              token_type: data.auctions[i].token_type || 1, auction_mode: 1, status: 1,
-              deadline: data.auctions[i].deadline || 0, reveal_deadline: 0,
-              bid_count: data.auctions[i].bid_count || 0, reserve_price_hash: '',
-              created_at: 0, dispute_deadline: 0,
-              title: data.auctions[i].title, description: data.auctions[i].description,
-            }
-          )
+          const enriched: AuctionData[] = results
+            .filter((r): r is PromiseFulfilledResult<AuctionData | null> => r.status === 'fulfilled')
+            .map(r => r.value)
+            .filter((v): v is AuctionData => v !== null)
           setAuctions(enriched)
           cacheAuctionIds(enriched) // Save to localStorage for fallback
         }

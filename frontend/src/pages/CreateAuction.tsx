@@ -61,7 +61,10 @@ export default function CreateAuction() {
   const [onChainAuctionId, setOnChainAuctionId] = useState<string | null>(null)
   const [confirmedTxId, setConfirmedTxId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [idExtractionTimedOut, setIdExtractionTimedOut] = useState(false)
+  const [backendNotice, setBackendNotice] = useState<string | null>(null)
   const pollCleanupRef = useRef<(() => void) | null>(null)
+  const idTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Store form data at submit time for use in the txId-watching useEffect
   const submitDataRef = useRef<{
     title: string
@@ -80,10 +83,33 @@ export default function CreateAuction() {
     })
   }, [])
 
-  // Cleanup polling on unmount
+  // Cleanup polling and timeout on unmount
   useEffect(() => {
-    return () => { pollCleanupRef.current?.() }
+    return () => {
+      pollCleanupRef.current?.()
+      if (idTimeoutRef.current) clearTimeout(idTimeoutRef.current)
+    }
   }, [])
+
+  // If TX is confirmed but auction ID extraction is stuck, time out after 2 minutes
+  useEffect(() => {
+    if (txStatus === 'confirmed' && !onChainAuctionId && createdAuctionId) {
+      idTimeoutRef.current = setTimeout(() => {
+        if (!onChainAuctionId) {
+          setIdExtractionTimedOut(true)
+          pollCleanupRef.current?.()
+        }
+      }, 120_000) // 2 minutes
+      return () => {
+        if (idTimeoutRef.current) clearTimeout(idTimeoutRef.current)
+      }
+    }
+    // Clear timeout if we get the ID
+    if (onChainAuctionId && idTimeoutRef.current) {
+      clearTimeout(idTimeoutRef.current)
+      idTimeoutRef.current = null
+    }
+  }, [txStatus, onChainAuctionId, createdAuctionId])
 
   // Save auction to localStorage so Browse page can find it without backend
   const saveAuctionToLocalCache = useCallback((auctionId: string) => {
@@ -101,7 +127,7 @@ export default function CreateAuction() {
       if (!list.some((e: any) => e.auction_id === auctionId)) {
         list.unshift(entry)
         localStorage.setItem(CACHE_KEY, JSON.stringify(list))
-        console.log('[CreateAuction] Saved auction to local cache:', auctionId)
+        if (import.meta.env.DEV) console.log('[CreateAuction] Saved auction to local cache:', auctionId)
       }
     } catch { /* localStorage unavailable */ }
   }, [title, description])
@@ -125,7 +151,9 @@ export default function CreateAuction() {
         token_type: data.tokenType,
         deadline: data.deadlineHeight,
       }),
-    }).catch(() => { /* best-effort */ })
+    }).catch(() => {
+      setBackendNotice('Auction created on-chain! The indexer is currently unavailable, so it won\'t appear in Browse. Share the auction ID directly with bidders.')
+    })
   }, [saveAuctionToLocalCache])
 
   // Watch txId from useTransaction — when Shield's temp ID resolves to a real at1... ID,
@@ -209,16 +237,16 @@ export default function CreateAuction() {
         // Shield returns shield_* temp IDs and its transactionStatus() may never
         // return the real at1... ID. This scans blocks directly to confirm.
         onChainVerify: async () => {
-          console.log('[CreateAuction] Block scan: checking from height', startHeight)
+          if (import.meta.env.DEV) console.log('[CreateAuction] Block scan: checking from height', startHeight)
           const found = await scanBlocksForCreateAuction(startHeight, 20)
           if (found) {
-            console.log('[CreateAuction] Block scan FOUND TX:', found.txId, 'Auction:', found.auctionId)
+            if (import.meta.env.DEV) console.log('[CreateAuction] Block scan FOUND TX:', found.txId, 'Auction:', found.auctionId)
             setOnChainAuctionId(found.auctionId)
             setConfirmedTxId(found.txId)
             registerAuctionWithBackend(found.auctionId, found.txId)
             return true
           }
-          console.log('[CreateAuction] Block scan: not found yet')
+          if (import.meta.env.DEV) console.log('[CreateAuction] Block scan: not found yet')
           return false
         },
       })
@@ -266,7 +294,7 @@ export default function CreateAuction() {
               : txStatus === 'failed'
               ? 'Transaction was rejected by the network.'
               : txStatus === 'unconfirmed'
-              ? 'Transaction submitted but confirmation timed out. It may still confirm — check the explorer shortly.'
+              ? 'Confirmation timed out — the transaction may still confirm. Check the explorer link below.'
               : 'Your auction has been submitted. ZK proof generation + block confirmation takes ~1-3 minutes.'}
           </p>
           {(txStatus === 'pending' || txStatus === 'submitting') && (
@@ -302,6 +330,20 @@ export default function CreateAuction() {
                 </div>
                 <p className="text-xs text-gray-500">Share this ID with bidders so they can find your auction.</p>
               </div>
+            ) : idExtractionTimedOut ? (
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                <p className="text-xs text-yellow-300 mb-2">
+                  Could not extract the auction ID automatically. This can happen with Shield Wallet's delegated proving.
+                </p>
+                <p className="text-xs text-gray-400 mb-2">
+                  Your auction <strong className="text-white">is created on-chain</strong>. To find the auction ID:
+                </p>
+                <ol className="text-xs text-gray-400 list-decimal list-inside space-y-1 mb-2">
+                  <li>Open the transaction in the explorer (link above)</li>
+                  <li>Look for the <code className="text-accent-400">create_auction</code> finalize output</li>
+                  <li>The auction ID is the <code className="text-accent-400">field</code> value in the first output</li>
+                </ol>
+              </div>
             ) : txStatus === 'confirmed' || txStatus === 'pending' ? (
               <div className="flex items-center gap-2 text-xs text-gray-400">
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -321,6 +363,13 @@ export default function CreateAuction() {
               </div>
             )}
           </div>
+
+          {backendNotice && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 mb-4">
+              <AlertCircle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
+              <p className="text-sm text-yellow-300">{backendNotice}</p>
+            </div>
+          )}
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             {onChainAuctionId ? (
