@@ -14,6 +14,7 @@ import '@provablehq/aleo-wallet-adaptor-react-ui/dist/styles.css'
 import App from './App'
 import './index.css'
 import { config } from './lib/config'
+import toast from 'react-hot-toast'
 
 const wallets = [
   new ShieldWalletAdapter(),   // Primary (delegated proving)
@@ -22,6 +23,16 @@ const wallets = [
   new FoxWalletAdapter(),      // Fox wallet
   new SoterWalletAdapter(),    // Soter wallet
 ]
+
+const handleWalletError = (error: Error) => {
+  if (error.name === 'WalletNotReadyError') {
+    toast.error('Wallet extension not detected. Install it from the page that just opened, then refresh.', { duration: 5000 })
+  } else if (error.name === 'WalletConnectionError') {
+    toast.error(`Connection failed: ${error.message}`)
+  } else {
+    console.error('[Wallet]', error)
+  }
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -35,6 +46,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         config.creditsProgram,
         config.usdcxProgramId,
       ]}
+      onError={handleWalletError}
     >
       <WalletModalProvider>
         <BrowserRouter>

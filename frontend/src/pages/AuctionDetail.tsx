@@ -52,6 +52,7 @@ import AuctionReplay from '@/components/auction/AuctionReplay'
 import TransactionLink from '@/components/shared/TransactionLink'
 import AuctionQR from '@/components/shared/AuctionQR'
 import FaucetBanner from '@/components/shared/FaucetBanner'
+import ShieldWalletBanner from '@/components/shared/ShieldWalletBanner'
 
 export default function AuctionDetail() {
   const { id } = useParams<{ id: string }>()
@@ -485,6 +486,7 @@ export default function AuctionDetail() {
 
           {/* Faucet banner */}
           <FaucetBanner />
+          <ShieldWalletBanner />
 
           {/* Share QR Code */}
           <div className="card">

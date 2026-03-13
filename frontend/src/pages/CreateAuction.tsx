@@ -26,6 +26,7 @@ import {
 import TransactionLink from '@/components/shared/TransactionLink'
 import AuctionQR from '@/components/shared/AuctionQR'
 import FaucetBanner from '@/components/shared/FaucetBanner'
+import ShieldWalletBanner from '@/components/shared/ShieldWalletBanner'
 
 const categories = [
   { value: 1, label: 'Art' },
@@ -288,6 +289,7 @@ export default function CreateAuction() {
 
       {/* Faucet banner for low balance */}
       <FaucetBanner />
+      <ShieldWalletBanner />
 
       {/* Step indicator */}
       <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
