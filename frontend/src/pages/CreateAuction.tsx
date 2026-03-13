@@ -61,6 +61,14 @@ export default function CreateAuction() {
   const [onChainAuctionId, setOnChainAuctionId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const pollCleanupRef = useRef<(() => void) | null>(null)
+  // Store form data at submit time for use in the txId-watching useEffect
+  const submitDataRef = useRef<{
+    title: string
+    description: string
+    seller: string
+    tokenType: number
+    deadlineHeight: number
+  } | null>(null)
 
   const handleCopy = useCallback((text: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -75,6 +83,47 @@ export default function CreateAuction() {
   useEffect(() => {
     return () => { pollCleanupRef.current?.() }
   }, [])
+
+  // Helper: register auction with backend (best-effort)
+  const registerAuctionWithBackend = useCallback((auctionId: string, transactionId: string) => {
+    const data = submitDataRef.current
+    if (!data) return
+    fetch(`${config.backendApi}/api/auctions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        auction_id: auctionId,
+        title: data.title,
+        description: data.description,
+        seller_address: data.seller,
+        tx_id: transactionId,
+        token_type: data.tokenType,
+        deadline: data.deadlineHeight,
+      }),
+    }).catch(() => { /* best-effort */ })
+  }, [])
+
+  // Watch txId from useTransaction — when Shield's temp ID resolves to a real at1... ID,
+  // restart pollForAuctionId with the real ID so we can extract the on-chain auction_id.
+  useEffect(() => {
+    if (!txId || !createdAuctionId || onChainAuctionId) return
+
+    const isRealId = txId.startsWith('at1') || txId.startsWith('au1')
+    if (!isRealId) return
+
+    // If createdAuctionId was already a real ID (Leo Wallet), polling was started in handleSubmit
+    if (createdAuctionId.startsWith('at1') || createdAuctionId.startsWith('au1')) return
+
+    // Shield case: txId just updated from shield_* to at1... — restart polling
+    pollCleanupRef.current?.()
+    pollCleanupRef.current = pollForAuctionId(
+      txId,
+      (realAuctionId) => {
+        setOnChainAuctionId(realAuctionId)
+        registerAuctionWithBackend(realAuctionId, txId)
+      }
+    )
+  }, [txId, createdAuctionId, onChainAuctionId, registerAuctionWithBackend])
 
   const validate = (): boolean => {
     if (!title.trim()) {
@@ -132,35 +181,30 @@ export default function CreateAuction() {
       if (result.transactionId) {
         setCreatedAuctionId(result.transactionId)
 
-        // Poll explorer to extract the real on-chain auction_id from TX outputs
-        const titleTrimmed = title.trim()
-        const descTrimmed = description.trim()
-        const sellerAddr = publicKey || ''
-        const txIdForBackend = result.transactionId
+        // Store form data for the txId-watching useEffect below.
+        // We DON'T start pollForAuctionId here because Shield Wallet returns
+        // a temp shield_* ID that always 404s on the explorer. Instead, a
+        // useEffect watches txId and starts polling when it resolves to a real at1... ID.
+        submitDataRef.current = {
+          title: title.trim(),
+          description: description.trim(),
+          seller: publicKey || '',
+          tokenType,
+          deadlineHeight,
+        }
 
-        pollCleanupRef.current = pollForAuctionId(
-          result.transactionId,
-          (realAuctionId) => {
-            setOnChainAuctionId(realAuctionId)
-
-            // Register auction metadata with backend using the REAL on-chain auction_id
-            fetch(`${config.backendApi}/api/auctions`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                auction_id: realAuctionId,
-                title: titleTrimmed,
-                description: descTrimmed,
-                seller_address: sellerAddr,
-                tx_id: txIdForBackend,
-                token_type: tokenType,
-                deadline: deadlineHeight,
-              }),
-            }).catch(() => {
-              // Backend registration is best-effort — auction still works on-chain
-            })
-          }
-        )
+        // If the ID is already a real on-chain TX ID (Leo Wallet), start polling immediately
+        const isRealId = result.transactionId.startsWith('at1') || result.transactionId.startsWith('au1')
+        if (isRealId) {
+          pollCleanupRef.current = pollForAuctionId(
+            result.transactionId,
+            (realAuctionId) => {
+              setOnChainAuctionId(realAuctionId)
+              registerAuctionWithBackend(realAuctionId, result.transactionId!)
+            }
+          )
+        }
+        // For shield_* temp IDs, the useEffect below handles polling once the real ID arrives
       }
     } catch {
       setFormError('Failed to create auction. Check your wallet and try again.')
@@ -185,7 +229,7 @@ export default function CreateAuction() {
               ? 'Transaction submitted but confirmation timed out. It may still confirm — check the explorer shortly.'
               : 'Your auction has been submitted. ZK proof generation + block confirmation takes ~1-3 minutes.'}
           </p>
-          {txStatus === 'pending' && (
+          {(txStatus === 'pending' || txStatus === 'submitting') && (
             <div className="flex items-center justify-center gap-2 text-xs text-accent-400 mb-4">
               <Loader2 className="w-3 h-3 animate-spin" />
               <span>Generating ZK proof & confirming on-chain...</span>
