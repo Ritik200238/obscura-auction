@@ -419,7 +419,7 @@ function ActivityPulse({ auctions }: { auctions: AuctionData[] }) {
             Last activity: <span className="text-white font-medium">{lastActivity}</span>
           </span>
           <span className="hidden md:flex items-center gap-1">
-            <Coins className="w-3 h-3 text-purple-400" />
+            <Coins className="w-3 h-3 text-accent-400" />
             TVL: <span className="text-white font-medium">{estimatedTvl} ALEO</span>
           </span>
         </div>

@@ -150,7 +150,7 @@ export default function AuctionDetail() {
             <div className={`absolute top-0 left-0 right-0 h-0.5 ${
               isActive ? 'bg-gradient-to-r from-green-500 to-emerald-400' :
               isRevealing ? 'bg-gradient-to-r from-yellow-500 to-amber-400' :
-              isSettled ? 'bg-gradient-to-r from-accent-500 to-purple-400' :
+              isSettled ? 'bg-gradient-to-r from-accent-500 to-accent-400' :
               'bg-gradient-to-r from-gray-600 to-gray-500'
             }`} />
 

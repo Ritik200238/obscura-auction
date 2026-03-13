@@ -180,7 +180,7 @@ export default function AuctionReplay({ auction, bids, onClose, autoPlay }: Auct
                 <motion.div
                   animate={{
                     backgroundColor:
-                      stateIdx > i ? 'rgb(168, 85, 247)' :
+                      stateIdx > i ? 'rgb(8, 145, 178)' :
                       stateIdx === i ? 'rgb(34, 211, 238)' :
                       'rgb(55, 55, 70)',
                   }}
@@ -190,7 +190,7 @@ export default function AuctionReplay({ auction, bids, onClose, autoPlay }: Auct
                     stateIdx === i
                       ? { boxShadow: '0 0 12px rgba(34, 211, 238, 0.5)' }
                       : stateIdx > i
-                      ? { boxShadow: '0 0 6px rgba(168, 85, 247, 0.3)' }
+                      ? { boxShadow: '0 0 6px rgba(8, 145, 178, 0.3)' }
                       : undefined
                   }
                 >
@@ -205,7 +205,7 @@ export default function AuctionReplay({ auction, bids, onClose, autoPlay }: Auct
                 </motion.div>
                 <span
                   className={`text-[8px] sm:text-[9px] mt-1 font-medium hidden sm:block ${
-                    stateIdx > i ? 'text-purple-300' :
+                    stateIdx > i ? 'text-accent-300' :
                     stateIdx === i ? 'text-cyan-400' :
                     'text-gray-600'
                   }`}
@@ -220,7 +220,7 @@ export default function AuctionReplay({ auction, bids, onClose, autoPlay }: Auct
                       initial={{ width: 0 }}
                       animate={{ width: '100%' }}
                       transition={{ duration: 0.4 }}
-                      className="h-full bg-purple-500/60 rounded-full"
+                      className="h-full bg-accent-500/60 rounded-full"
                     />
                   )}
                 </div>
@@ -311,7 +311,7 @@ export default function AuctionReplay({ auction, bids, onClose, autoPlay }: Auct
                           ? 'bg-surface-800/40 border border-cyan-500/20'
                           : 'bg-surface-800/40 border border-accent-500/20'
                       }`}
-                      style={!isSettling ? { boxShadow: '0 0 20px rgba(139, 92, 246, 0.08)' } : undefined}
+                      style={!isSettling ? { boxShadow: '0 0 20px rgba(6, 182, 212, 0.08)' } : undefined}
                     >
                       {/* Flash sweep — fires once when frame enters 2 */}
                       {frame === 2 && (
@@ -479,8 +479,8 @@ export default function AuctionReplay({ auction, bids, onClose, autoPlay }: Auct
                           scale: [0.5, 1, 1, 0.9],
                         }}
                         transition={{ delay: i * 0.1, duration: 0.7, ease: 'easeOut' }}
-                        className="w-7 h-7 rounded-full bg-gradient-to-br from-accent-500 to-purple-400 flex items-center justify-center"
-                        style={{ boxShadow: '0 0 16px rgba(139, 92, 246, 0.3)' }}
+                        className="w-7 h-7 rounded-full bg-gradient-to-br from-accent-500 to-accent-400 flex items-center justify-center"
+                        style={{ boxShadow: '0 0 16px rgba(6, 182, 212, 0.3)' }}
                       >
                         <Coins className="w-3 h-3 text-white" />
                       </motion.div>

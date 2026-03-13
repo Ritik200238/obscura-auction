@@ -182,8 +182,8 @@ function SettleVisual() {
           transition={{ delay: 0.4, duration: 0.5 }}
           className="flex items-center gap-1.5"
         >
-          <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-            <span className="text-[9px] font-bold text-purple-400">B1</span>
+          <div className="w-6 h-6 rounded-full bg-accent-500/20 flex items-center justify-center">
+            <span className="text-[9px] font-bold text-accent-400">B1</span>
           </div>
           <span className="text-[10px] font-mono text-gray-500">500k</span>
         </motion.div>
@@ -218,7 +218,7 @@ function SettleVisual() {
         className="flex justify-center mb-2"
         style={{ transformOrigin: 'top' }}
       >
-        <div className="w-px h-5 bg-gradient-to-b from-purple-500/40 to-accent-500/60" />
+        <div className="w-px h-5 bg-gradient-to-b from-accent-500/40 to-accent-500/60" />
       </motion.div>
 
       {/* Winner result */}
@@ -389,10 +389,10 @@ export default function Landing() {
                 className="text-5xl sm:text-8xl lg:text-9xl font-extrabold tracking-tighter text-white leading-none"
                 style={{
                   textShadow: i === 0
-                    ? '0 0 60px rgba(124, 58, 237, 0.3)'
-                    : i === 1
                     ? '0 0 60px rgba(6, 182, 212, 0.3)'
-                    : '0 0 60px rgba(168, 85, 247, 0.3)',
+                    : i === 1
+                    ? '0 0 60px rgba(20, 184, 166, 0.3)'
+                    : '0 0 60px rgba(8, 145, 178, 0.3)',
                 }}
               >
                 {word}
@@ -513,11 +513,11 @@ export default function Landing() {
           >
             <div
               className="h-full rounded-2xl p-6 sm:p-8 bg-white/5 backdrop-blur-xl border border-white/10 hover:border-white/[0.15] transition-all duration-500"
-              style={{ boxShadow: '0 0 40px rgba(168, 85, 247, 0.1)' }}
+              style={{ boxShadow: '0 0 40px rgba(8, 145, 178, 0.1)' }}
             >
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-sm font-bold text-gray-400 font-mono">3</div>
-                <Gavel className="w-6 h-6 text-purple-400" />
+                <Gavel className="w-6 h-6 text-accent-400" />
               </div>
               <SettleVisual />
               <h3 className="text-lg font-bold text-white mb-3 mt-5 tracking-tight">VICKREY SETTLEMENT</h3>
@@ -768,7 +768,7 @@ export default function Landing() {
             <div
               className="absolute inset-0"
               style={{
-                boxShadow: 'inset 0 0 80px rgba(124, 58, 237, 0.1), inset 0 0 120px rgba(6, 182, 212, 0.05)',
+                boxShadow: 'inset 0 0 80px rgba(6, 182, 212, 0.1), inset 0 0 120px rgba(20, 184, 166, 0.05)',
               }}
             />
 
