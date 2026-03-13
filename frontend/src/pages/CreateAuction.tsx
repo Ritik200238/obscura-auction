@@ -85,8 +85,32 @@ export default function CreateAuction() {
     return () => { pollCleanupRef.current?.() }
   }, [])
 
-  // Helper: register auction with backend (best-effort)
+  // Save auction to localStorage so Browse page can find it without backend
+  const saveAuctionToLocalCache = useCallback((auctionId: string) => {
+    try {
+      const CACHE_KEY = 'obscura_auction_ids'
+      const data = submitDataRef.current
+      const entry = {
+        auction_id: auctionId,
+        title: data?.title || title.trim(),
+        description: data?.description || description.trim(),
+      }
+      const cached = localStorage.getItem(CACHE_KEY)
+      const list = cached ? JSON.parse(cached) : []
+      // Don't duplicate
+      if (!list.some((e: any) => e.auction_id === auctionId)) {
+        list.unshift(entry)
+        localStorage.setItem(CACHE_KEY, JSON.stringify(list))
+        console.log('[CreateAuction] Saved auction to local cache:', auctionId)
+      }
+    } catch { /* localStorage unavailable */ }
+  }, [title, description])
+
+  // Helper: register auction with backend (best-effort) + save to local cache
   const registerAuctionWithBackend = useCallback((auctionId: string, transactionId: string) => {
+    // Always save locally so Browse works without backend
+    saveAuctionToLocalCache(auctionId)
+
     const data = submitDataRef.current
     if (!data) return
     fetch(`${config.backendApi}/api/auctions`, {
@@ -102,7 +126,7 @@ export default function CreateAuction() {
         deadline: data.deadlineHeight,
       }),
     }).catch(() => { /* best-effort */ })
-  }, [])
+  }, [saveAuctionToLocalCache])
 
   // Watch txId from useTransaction — when Shield's temp ID resolves to a real at1... ID,
   // restart pollForAuctionId with the real ID so we can extract the on-chain auction_id.
