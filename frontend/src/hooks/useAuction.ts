@@ -95,21 +95,12 @@ export function useAuction(auctionId: string | undefined): AuctionDetails {
     fetchAuctionData()
   }, [fetchAuctionData])
 
-  // Auto-refresh every 15 seconds for responsive updates
+  // Auto-refresh every 15 seconds (also updates block height since fetchAuctionData calls fetchBlockHeight)
   useEffect(() => {
     if (!auctionId) return
     const interval = setInterval(fetchAuctionData, 15_000)
     return () => clearInterval(interval)
   }, [auctionId, fetchAuctionData])
-
-  // Keep block height updated every 15 seconds
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const height = await fetchBlockHeight()
-      if (height > 0 && mountedRef.current) setBlockHeight(height)
-    }, 15_000)
-    return () => clearInterval(interval)
-  }, [])
 
   return {
     auction: selectedAuction,
