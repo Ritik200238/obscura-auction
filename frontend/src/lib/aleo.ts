@@ -351,12 +351,14 @@ export async function scanBlocksForCreateAuction(
 
     for (let h = latestHeight; h >= startHeight; h--) {
       try {
-        const res = await fetch(`${config.explorerApi}/${config.network}/block/${h}`)
+        // IMPORTANT: /block/{height} does NOT include transactions.
+        // Must use /block/{height}/transactions which returns ConfirmedTransaction[] directly.
+        const res = await fetch(`${config.explorerApi}/${config.network}/block/${h}/transactions`)
         if (!res.ok) continue
-        const block = await res.json()
+        const transactions = await res.json()
 
-        const transactions = block?.transactions
-        if (!Array.isArray(transactions)) continue
+        // Response is directly an array of ConfirmedTransaction, not wrapped in a block
+        if (!Array.isArray(transactions) || transactions.length === 0) continue
 
         for (const confirmed of transactions) {
           if (confirmed.status !== 'accepted') continue
