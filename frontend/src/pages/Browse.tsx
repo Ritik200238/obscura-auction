@@ -9,7 +9,6 @@ import { config } from '@/lib/config'
 import { AuctionCard } from '@/components/auction/AuctionCard'
 import { ShimmerCard } from '@/components/shared/Shimmer'
 import FaucetBanner from '@/components/shared/FaucetBanner'
-import { demoAuctions } from '@/data/demoAuctions'
 import { STATUS, TOKEN_TYPE, AUCTION_MODE } from '@/types'
 import type { AuctionData } from '@/types'
 
@@ -210,7 +209,7 @@ export default function Browse() {
       <FaucetBanner />
 
       {/* Activity Pulse Bar */}
-      <ActivityPulse auctions={auctions} demoMode={auctions.length === 0} />
+      {auctions.length > 0 && <ActivityPulse auctions={auctions} />}
 
       {/* Direct On-Chain Lookup — prominent */}
       <div className="glass-card p-5 mb-6 glow-sm">
@@ -251,16 +250,16 @@ export default function Browse() {
           </div>
 
           {/* Filter groups */}
-          <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex flex-wrap gap-2 items-center w-full lg:w-auto">
             <Filter className="w-4 h-4 text-gray-500 hidden sm:block" />
 
             {/* Status filter */}
-            <div className="flex rounded-lg overflow-hidden border border-surface-700">
+            <div className="flex rounded-lg overflow-x-auto border border-surface-700 max-w-full">
               {statusFilters.map((f) => (
                 <button
                   key={f.label}
                   onClick={() => setFilters({ status: f.value })}
-                  className={`px-3 py-2 sm:py-1.5 text-xs font-medium transition-colors min-h-[36px] ${
+                  className={`px-3 py-2 sm:py-1.5 text-xs font-medium transition-colors min-h-[36px] whitespace-nowrap ${
                     filters.status === f.value
                       ? 'bg-accent-500 text-white'
                       : 'bg-surface-800 text-gray-400 hover:text-white'
@@ -312,55 +311,34 @@ export default function Browse() {
           ))}
         </div>
       ) : displayed.length === 0 ? (
-        <div>
-          {/* Better empty state */}
-          <div className="text-center py-12 mb-8">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-accent-500/20 to-accent-600/10 flex items-center justify-center mx-auto mb-5">
-              <PackageOpen className="w-10 h-10 text-accent-400" />
-            </div>
-            <h3 className="text-2xl font-bold text-white mb-2">
-              {auctions.length === 0 ? 'Be the First to Create a Private Auction' : 'No Matching Auctions'}
-            </h3>
-            <p className="text-gray-400 text-sm max-w-md mx-auto mb-6">
-              {auctions.length === 0
-                ? 'The marketplace is ready. Create a sealed-bid auction and your listing will appear here — fully private on Aleo.'
-                : 'No auctions match your current filters. Try adjusting your search or create a new auction.'}
-            </p>
+        <div className="text-center py-12">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-accent-500/20 to-accent-600/10 flex items-center justify-center mx-auto mb-5">
+            <PackageOpen className="w-10 h-10 text-accent-400" />
+          </div>
+          <h3 className="text-2xl font-bold text-white mb-2">
+            {auctions.length === 0 ? 'Be the First to Create a Private Auction' : 'No Matching Auctions'}
+          </h3>
+          <p className="text-gray-400 text-sm max-w-md mx-auto mb-6">
+            {auctions.length === 0
+              ? 'The marketplace is ready. Create a sealed-bid auction and your listing will appear here — fully private on Aleo.'
+              : 'No auctions match your current filters. Try adjusting your search or create a new auction.'}
+          </p>
+          <div className="flex items-center justify-center gap-3">
             <Link to="/create" className="btn-primary inline-flex items-center gap-2 text-sm px-6 py-3">
               <Plus className="w-4 h-4" />
               Create Auction
             </Link>
-          </div>
-
-          {/* Demo auction cards — shows judge what marketplace looks like */}
-          {auctions.length === 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="h-px flex-1 bg-surface-700/50" />
-                <span className="text-xs text-gray-600 font-medium uppercase tracking-wider">Demo Listings — Create Your Own Above</span>
-                <div className="h-px flex-1 bg-surface-700/50" />
-              </div>
-              <motion.div
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-                variants={staggerContainer}
-                initial="hidden"
-                animate="visible"
+            {auctions.length === 0 && (
+              <button
+                onClick={fetchAuctionsFromBackend}
+                disabled={loading}
+                className="btn-secondary inline-flex items-center gap-2 text-sm px-6 py-3"
               >
-                {demoAuctions.map((auction) => (
-                  <motion.div key={auction.auction_id} variants={fadeInUp}>
-                    <div className="relative">
-                      <div className="absolute top-3 right-3 z-10">
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-surface-700/80 text-gray-500 border border-surface-600/50">
-                          Demo
-                        </span>
-                      </div>
-                      <AuctionCard auction={auction} currentBlock={blockHeight || 15100000} />
-                    </div>
-                  </motion.div>
-                ))}
-              </motion.div>
-            </div>
-          )}
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                Retry
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         <motion.div
@@ -392,27 +370,14 @@ export default function Browse() {
 
 /* ── Activity Pulse Bar ─────────────────────── */
 
-function ActivityPulse({ auctions, demoMode }: { auctions: AuctionData[]; demoMode: boolean }) {
-  const source = demoMode ? demoAuctions : auctions
-  const activeCount = source.filter(a => a.status === STATUS.ACTIVE).length
-  const totalBids = source.reduce((sum, a) => sum + a.bid_count, 0)
+function ActivityPulse({ auctions }: { auctions: AuctionData[] }) {
+  const activeCount = auctions.filter(a => a.status === STATUS.ACTIVE).length
+  const totalBids = auctions.reduce((sum, a) => sum + a.bid_count, 0)
 
-  // Estimate TVL from bid counts * average bid size (rough heuristic when no on-chain data)
-  const estimatedTvl = demoMode
-    ? '4,850'
-    : source.reduce((sum, a) => sum + a.bid_count * 150, 0).toLocaleString()
+  const estimatedTvl = auctions.reduce((sum, a) => sum + a.bid_count * 150, 0).toLocaleString()
+  const lastActivity = auctions.length > 0 ? 'Just now' : 'No activity'
 
-  const lastActivity = demoMode ? '2m ago' : (source.length > 0 ? 'Just now' : 'No activity')
-
-  const recentEvents = demoMode
-    ? [
-        'Sealed bid on "Rare Aleo Genesis NFT"',
-        'New auction: "Beta Access Pass"',
-        'Bid revealed on "ZK Audit Package"',
-        'Auction settled: "Abstract ZK Art #7"',
-        'New sealed bid on "Leo Programming Book"',
-      ]
-    : source.slice(0, 5).map(a => `Activity on "${a.title || 'Auction'}"`)
+  const recentEvents = auctions.slice(0, 5).map(a => `Activity on "${a.title || 'Auction'}"`)
 
   return (
     <div className="card p-3 mb-4 overflow-hidden">

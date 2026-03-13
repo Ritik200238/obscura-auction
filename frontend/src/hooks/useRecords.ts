@@ -23,7 +23,7 @@ function stripSuffixNum(val: unknown): number {
 }
 
 /**
- * NullPay dual-format field extraction.
+ * Dual-format field extraction for wallet record parsing.
  * Shield Wallet records may arrive as either:
  *   1. `record.data.fieldName` — object with typed field values
  *   2. `record.plaintext` — Leo record string like "{ field: value, ... }"
@@ -97,7 +97,7 @@ export function useRecords() {
         const data = (record.data && typeof record.data === 'object' ? record.data : record) as Record<string, unknown>
         // Prefer explicit recordName from wallet adapter (most reliable)
         const recordName = String(record.recordName || record.record_name || record.type || '')
-        // Plaintext fallback for NullPay dual-format parsing
+        // Plaintext fallback for dual-format parsing
         const plaintext = typeof record.plaintext === 'string' ? record.plaintext : null
 
         // Use extractField for robust field access (data object → plaintext regex)

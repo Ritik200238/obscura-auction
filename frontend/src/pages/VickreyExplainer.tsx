@@ -25,7 +25,7 @@ const STEPS = ['The Problem', 'Vickrey Solution', 'Privacy Layer', 'Try It Yours
 
 const stepAnim = {
   enter: (d: number) => ({ opacity: 0, x: d > 0 ? 60 : -60 }),
-  center: { opacity: 1, x: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+  center: { opacity: 1, x: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] as const } },
   exit: (d: number) => ({ opacity: 0, x: d > 0 ? -60 : 60, transition: { duration: 0.2 } }),
 }
 

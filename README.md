@@ -4,11 +4,19 @@
 
 **[Live Demo](https://obscura-auction-95hm.vercel.app)** | **[Contract on Explorer](https://testnet.explorer.provable.com/program/obscura_v3.aleo)** | **[Deploy TX](https://testnet.explorer.provable.com/transaction/at1f3sxnlttr6spyvzgjhg7j9n40r088xuck04a9z5wxnuv9m09gc9suq928a)** | **Shield Wallet Required**
 
+![Obscura Hero](./frontend/public/screenshot-hero.png)
+
 ---
 
 ## What is Obscura?
 
 Obscura is a sealed-bid auction protocol on Aleo where bid amounts are cryptographically invisible during the bidding phase, bidder identities are never stored on-chain, and the winner self-identifies by proving ownership of a private record. It supports both first-price and Vickrey (second-price) auctions with full token escrow via `credits.aleo` and `test_usdcx_stablecoin.aleo`. The commit-reveal architecture ensures no party — not the seller, not the platform, not other bidders — can see bid amounts until the reveal phase, when disclosure is intentional and voluntary.
+
+---
+
+## Architecture
+
+![Obscura Architecture](./frontend/public/architecture.svg)
 
 ---
 
@@ -46,6 +54,8 @@ The seller calls `finalize_auction`, re-entering the reserve price (verified aga
 - **Winner** calls `claim_win` (first-price) or `claim_win_vickrey` (second-price). Seller receives private ALEO credits or public USDCx. Winner gets a `WinnerCertificate` record. In Vickrey mode, the winner is refunded the difference between their bid and the second-highest.
 - **Losers** call `claim_refund` to reclaim their escrowed tokens as private credits.
 - **Winner can prove ownership** later via `prove_won_auction` — a selective disclosure ZK proof that reveals nothing about the bid amount.
+
+![Obscura Features and Lifecycle](./frontend/public/screenshot-features.png)
 
 ---
 

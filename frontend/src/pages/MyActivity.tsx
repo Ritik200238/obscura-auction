@@ -68,19 +68,19 @@ export default function MyActivity() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Dashboard Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">My Activity</h1>
+            <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2">My Activity</h1>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <Wallet className="w-3.5 h-3.5 text-accent-400" />
-                <span className="font-mono text-sm text-accent-400">{shortenAddress(publicKey || '')}</span>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Wallet className="w-3.5 h-3.5 text-accent-400 shrink-0" />
+                <span className="font-mono text-sm text-accent-400 truncate">{shortenAddress(publicKey || '')}</span>
               </div>
               <span className="text-surface-600">·</span>
-              <span className="text-sm text-gray-500">{totalRecords} record{totalRecords !== 1 ? 's' : ''}</span>
+              <span className="text-sm text-gray-500 shrink-0">{totalRecords} record{totalRecords !== 1 ? 's' : ''}</span>
             </div>
           </div>
-          <button onClick={refresh} disabled={loading} className="btn-secondary text-sm flex items-center gap-2">
+          <button onClick={refresh} disabled={loading} className="btn-secondary text-sm flex items-center gap-2 w-full sm:w-auto justify-center">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
@@ -111,18 +111,18 @@ export default function MyActivity() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 p-1 bg-surface-900 rounded-xl border border-surface-800">
+      <div className="flex gap-1 mb-6 p-1 bg-surface-900 rounded-xl border border-surface-800 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex-1 justify-center ${
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex-1 justify-center whitespace-nowrap ${
               activeTab === tab.id
                 ? 'bg-surface-800 text-white shadow-sm'
                 : 'text-gray-500 hover:text-gray-300'
             }`}
           >
-            <tab.icon className="w-4 h-4" />
+            <tab.icon className="w-4 h-4 shrink-0" />
             <span className="hidden sm:inline">{tab.label}</span>
             {tab.count > 0 && (
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${

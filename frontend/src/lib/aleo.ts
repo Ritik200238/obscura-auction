@@ -95,8 +95,8 @@ export function parseAuctionData(raw: string, auctionId?: string): AuctionData {
 export function getPhase(status: number): AuctionPhase {
   const phases: Record<number, AuctionPhase> = {
     1: 'active',
-    2: 'revealing',
-    3: 'revealing',
+    2: 'revealing',  // CLOSED — bidding done, reveal phase pending/active
+    3: 'revealing',  // REVEALING — reveal phase active
     4: 'settled',
     5: 'cancelled',
     6: 'failed',

@@ -35,12 +35,12 @@ export default function RefundPanel({ auction }: RefundPanelProps) {
     }
 
     try {
-      // On-chain verification: check if escrow_balances decreased (refund processed)
+      // On-chain verification: check if auction_escrow decreased (refund processed)
       const auctionKey = auction.auction_id.endsWith('field')
         ? auction.auction_id
         : `${auction.auction_id}field`
       const onChainVerify = async () => {
-        const escrow = await fetchMapping('escrow_balances', auctionKey)
+        const escrow = await fetchMapping('auction_escrow', auctionKey)
         return escrow === null || escrow === '0u128'
       }
 

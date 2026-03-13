@@ -83,7 +83,7 @@ function dbRowToAuction(row: any): AuctionRecord {
     title: row.title ? safeDecrypt(row.title, 'auctions', 'title') : '',
     description: row.description ? safeDecrypt(row.description, 'auctions', 'description') : '',
     seller_address_encrypted: row.seller_hash || '',
-    tx_id: row.settlement_tx || '',
+    tx_id: row.create_tx || row.settlement_tx || '',
     created_at: row.created_at,
     status: STATUS_CODE_MAP[row.current_status] || 'active',
     bid_count: row.bid_count || 0,

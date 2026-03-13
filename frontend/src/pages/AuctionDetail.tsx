@@ -278,7 +278,7 @@ export default function AuctionDetail() {
               {/* Explorer QR for settled auctions */}
               <div className="mt-3 pt-3 border-t border-surface-700/30">
                 <AuctionQR
-                  value={`https://testnet.aleoscan.io/program?id=obscura_v3.aleo`}
+                  value={`https://testnet.explorer.provable.com/program/obscura_v3.aleo`}
                   label="Verify on Explorer"
                   sublabel="Scan to verify this auction's settlement on Aleo Explorer"
                   size={100}
@@ -573,7 +573,7 @@ function CloseBiddingCard({ auctionId, onSuccess }: { auctionId: string; onSucce
 
   return (
     <div className="card border-yellow-500/20">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center shrink-0">
             <Play className="w-5 h-5 text-yellow-400" />
@@ -583,7 +583,7 @@ function CloseBiddingCard({ auctionId, onSuccess }: { auctionId: string; onSucce
             <p className="text-xs text-gray-400">Close bidding to start the reveal phase.</p>
           </div>
         </div>
-        <button onClick={handleClose} disabled={loading || !connected} className="btn-primary text-xs py-2 px-4">
+        <button onClick={handleClose} disabled={loading || !connected} className="btn-primary text-xs py-2 px-4 w-full sm:w-auto">
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Close Bidding'}
         </button>
       </div>
@@ -624,15 +624,15 @@ function CancelAuctionCard({ auctionId, onSuccess }: { auctionId: string; onSucc
 
   return (
     <div className="card">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-start gap-3">
-          <XCircle className="w-5 h-5 text-gray-400 mt-0.5" />
+          <XCircle className="w-5 h-5 text-gray-400 mt-0.5 shrink-0" />
           <div>
             <p className="text-white font-semibold text-sm">Cancel Auction</p>
             <p className="text-xs text-gray-400">Only available before any bids are placed.</p>
           </div>
         </div>
-        <button onClick={handleCancel} disabled={loading || !connected} className="btn-secondary text-xs py-2 px-4 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30">
+        <button onClick={handleCancel} disabled={loading || !connected} className="btn-secondary text-xs py-2 px-4 w-full sm:w-auto hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30">
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Cancel'}
         </button>
       </div>

@@ -64,12 +64,12 @@ export default function RevealPanel({ auction }: RevealPanelProps) {
         return
       }
 
-      // On-chain verification: check escrow_balances mapping to confirm escrow was created
+      // On-chain verification: check auction_escrow mapping to confirm escrow was created
       const auctionKey = auction.auction_id.endsWith('field')
         ? auction.auction_id
         : `${auction.auction_id}field`
       const onChainVerify = async () => {
-        const escrow = await fetchMapping('escrow_balances', auctionKey)
+        const escrow = await fetchMapping('auction_escrow', auctionKey)
         return escrow !== null && escrow !== '0u128'
       }
 
