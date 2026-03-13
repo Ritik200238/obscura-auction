@@ -321,6 +321,13 @@ export async function updateAuction(
   if (useSupabase) {
     const sb = getSupabase();
     if (sb) {
+      // Fetch current state to detect actual changes (avoids spamming event log)
+      const { data: current } = await sb
+        .from('auctions')
+        .select('current_status, bid_count, deadline, winning_bid, second_price, token_type, reserve_price_hash')
+        .eq('auction_id', auctionId)
+        .maybeSingle();
+
       // Map AuctionRecord fields → DB columns
       const dbUpdates: Record<string, any> = { updated_at: new Date().toISOString() };
 
@@ -341,6 +348,22 @@ export async function updateAuction(
         dbUpdates.reserve_price_hash = updates.reserve_price_hash;
       }
 
+      // Detect if anything actually changed vs current DB state
+      let hasRealChange = !current; // always update if we can't read current
+      if (current) {
+        if (dbUpdates.current_status !== undefined && dbUpdates.current_status !== current.current_status) hasRealChange = true;
+        if (dbUpdates.bid_count !== undefined && dbUpdates.bid_count !== current.bid_count) hasRealChange = true;
+        if (dbUpdates.deadline !== undefined && dbUpdates.deadline !== Number(current.deadline)) hasRealChange = true;
+        if (dbUpdates.winning_bid !== undefined && dbUpdates.winning_bid !== Number(current.winning_bid)) hasRealChange = true;
+        if (dbUpdates.second_price !== undefined && dbUpdates.second_price !== Number(current.second_price)) hasRealChange = true;
+        if (dbUpdates.token_type !== undefined && dbUpdates.token_type !== current.token_type) hasRealChange = true;
+      }
+
+      // Skip DB write entirely if nothing changed (avoids unnecessary updated_at bumps)
+      if (!hasRealChange) {
+        return null;
+      }
+
       const { data, error } = await sb
         .from('auctions')
         .update(dbUpdates)
@@ -353,6 +376,7 @@ export async function updateAuction(
         return null;
       }
 
+      // Only log event when data actually changed — prevents activity feed spam
       await logEvent(auctionId, 'auction_updated', updates);
 
       return data ? dbRowToAuction(data) : null;
@@ -544,17 +568,34 @@ export async function getRecentActivity(limit = 50): Promise<any[]> {
   const sb = getSupabase();
   if (!sb) return [];
 
+  // Exclude test/debug auction events
   const { data, error } = await sb
     .from('auction_events')
     .select('*')
+    .not('auction_id', 'ilike', '%test%')
     .order('created_at', { ascending: false })
-    .limit(limit);
+    .limit(limit * 3); // Fetch extra to deduplicate
 
   if (error) {
     logger.error('getRecentActivity failed:', error.message);
     return [];
   }
-  return data || [];
+
+  if (!data) return [];
+
+  // Deduplicate: for auction_updated events, only keep the latest per auction.
+  // This prevents the activity feed from showing 200+ identical sync events.
+  const seen = new Set<string>();
+  const deduped = data.filter((event: any) => {
+    if (event.event_type === 'auction_updated') {
+      const key = `${event.auction_id}_updated`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+    }
+    return true;
+  });
+
+  return deduped.slice(0, limit);
 }
 
 export async function getOverviewStats(): Promise<{
@@ -580,16 +621,24 @@ export async function getOverviewStats(): Promise<{
     return { total_auctions: 0, total_bids: 0, active_auctions: 0, settled_auctions: 0 };
   }
 
-  const [auctionsRes, bidsRes, activeRes, settledRes] = await Promise.all([
-    sb.from('auctions').select('*', { count: 'exact', head: true }),
-    sb.from('bids').select('*', { count: 'exact', head: true }),
-    sb.from('auctions').select('*', { count: 'exact', head: true }).eq('current_status', 1),
-    sb.from('auctions').select('*', { count: 'exact', head: true }).eq('current_status', 4),
+  // Use bid_count from auctions table (synced from on-chain), NOT the bids table.
+  // Bids are placed on-chain via place_bid — the backend bids table only has
+  // bids registered via the API, which is a subset.
+  // Exclude test/debug auctions from stats.
+  const [auctionsRes, bidCountRes, activeRes, settledRes] = await Promise.all([
+    sb.from('auctions').select('*', { count: 'exact', head: true }).not('auction_id', 'ilike', '%test%'),
+    sb.from('auctions').select('bid_count').not('auction_id', 'ilike', '%test%'),
+    sb.from('auctions').select('*', { count: 'exact', head: true }).eq('current_status', 1).not('auction_id', 'ilike', '%test%'),
+    sb.from('auctions').select('*', { count: 'exact', head: true }).eq('current_status', 4).not('auction_id', 'ilike', '%test%'),
   ]);
+
+  const totalBids = (bidCountRes.data || []).reduce(
+    (sum: number, row: any) => sum + (row.bid_count || 0), 0
+  );
 
   return {
     total_auctions: auctionsRes.count || 0,
-    total_bids: bidsRes.count || 0,
+    total_bids: totalBids,
     active_auctions: activeRes.count || 0,
     settled_auctions: settledRes.count || 0,
   };
