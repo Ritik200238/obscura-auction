@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { config } from '@/lib/config'
+import { useWalletStore } from '@/stores/walletStore'
 
 interface ExecuteOptions {
   program?: string
@@ -27,6 +28,7 @@ interface TransactionResult {
  */
 export function useTransaction() {
   const { executeTransaction, transactionStatus, address: walletAddress } = useWallet()
+  const { walletType } = useWalletStore()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [txId, setTxId] = useState<string | null>(null)
@@ -181,33 +183,21 @@ export function useTransaction() {
         const feeInAleo = options.fee ?? config.defaultFee
         const feeInMicrocredits = Math.floor(feeInAleo * 1_000_000)
 
-        // Dual-format transaction payload for cross-wallet compatibility.
-        //
-        // Leo/Fox/Soter adapters read { program, function, inputs, fee, privateFee }
-        // and internally build the AleoTransaction format before passing to their extension.
-        // Puzzle reads { program, function, fee, inputs } and builds its own format.
-        // Shield does NO translation — it passes {...options, network} directly to
-        // window.shield.executeTransaction(), so it needs the AleoTransaction fields.
-        //
-        // Extra fields are harmless: Leo/Fox/Soter/Puzzle construct fresh objects.
-        const aleoTransaction = {
-          // TransactionOptions fields (for Leo, Fox, Soter, Puzzle adapters)
+        // Build a clean TransactionOptions payload.
+        // Shield adapter spreads this directly into window.shield.executeTransaction(),
+        // so extra fields (address, chainId, transitions, feePrivate) BREAK Shield —
+        // the extension either misparses them or silently drops the transaction.
+        // Leo/Fox/Soter/Puzzle adapters construct their own objects from these fields,
+        // so they also work fine with clean TransactionOptions.
+        const aleoTransaction: Record<string, unknown> = {
           program: programId,
           function: options.functionName,
           inputs: options.inputs,
           fee: feeInMicrocredits,
           privateFee: options.privateFee !== false,
-
-          // AleoTransaction fields (for Shield adapter pass-through)
-          address: walletAddress || '',
-          chainId: 'aleo:testnet',
-          transitions: [{
-            program: programId,
-            functionName: options.functionName,
-            inputs: options.inputs,
-          }],
-          feePrivate: options.privateFee !== false,
         }
+
+        console.log(`[useTransaction] Wallet type: ${walletType}, payload:`, JSON.stringify(aleoTransaction))
 
         const TX_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
         const response = await Promise.race([
@@ -260,7 +250,7 @@ export function useTransaction() {
         return { transactionId: null }
       }
     },
-    [executeTransaction, pollTransaction, stopPolling, walletAddress]
+    [executeTransaction, pollTransaction, stopPolling, walletAddress, walletType]
   )
 
   const retryCheck = useCallback(() => {
