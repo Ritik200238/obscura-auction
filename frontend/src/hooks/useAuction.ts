@@ -95,10 +95,10 @@ export function useAuction(auctionId: string | undefined): AuctionDetails {
     fetchAuctionData()
   }, [fetchAuctionData])
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh every 15 seconds for responsive updates
   useEffect(() => {
     if (!auctionId) return
-    const interval = setInterval(fetchAuctionData, 30_000)
+    const interval = setInterval(fetchAuctionData, 15_000)
     return () => clearInterval(interval)
   }, [auctionId, fetchAuctionData])
 
