@@ -2,6 +2,7 @@ import React, { Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { pageVariants } from '@/lib/animations'
+import { BlockHeightProvider } from '@/contexts/BlockHeightContext'
 import Layout from './components/layout/Layout'
 import Landing from './pages/Landing'
 import Browse from './pages/Browse'
@@ -96,12 +97,14 @@ function AnimatedRoutes() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <ScrollToTop />
-      <Layout>
-        <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="w-6 h-6 border-2 border-accent-500 border-t-transparent rounded-full animate-spin" /></div>}>
-          <AnimatedRoutes />
-        </Suspense>
-      </Layout>
+      <BlockHeightProvider>
+        <ScrollToTop />
+        <Layout>
+          <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="w-6 h-6 border-2 border-accent-500 border-t-transparent rounded-full animate-spin" /></div>}>
+            <AnimatedRoutes />
+          </Suspense>
+        </Layout>
+      </BlockHeightProvider>
     </ErrorBoundary>
   )
 }

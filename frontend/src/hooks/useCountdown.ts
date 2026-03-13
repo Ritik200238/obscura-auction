@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { fetchBlockHeight } from '@/lib/aleo'
+import { useBlockHeight } from '@/contexts/BlockHeightContext'
 import { config } from '@/lib/config'
 
 interface CountdownResult {
@@ -12,31 +12,12 @@ interface CountdownResult {
 
 /**
  * Block-based countdown hook.
- * Fetches current block height and estimates remaining time.
- * Auto-refreshes block height every 15 seconds, updates display every second.
+ * Uses the shared BlockHeightProvider instead of polling independently.
+ * Updates display every second for smooth countdown.
  */
 export function useCountdown(targetBlock: number, totalDuration?: number): CountdownResult {
-  const [currentHeight, setCurrentHeight] = useState(0)
+  const { blockHeight: currentHeight } = useBlockHeight()
   const [now, setNow] = useState(Date.now())
-
-  // Fetch block height on mount and every 15 seconds
-  useEffect(() => {
-    let mounted = true
-
-    const fetchHeight = async () => {
-      const height = await fetchBlockHeight()
-      if (mounted && height > 0) {
-        setCurrentHeight(height)
-      }
-    }
-
-    fetchHeight()
-    const interval = setInterval(fetchHeight, 15_000)
-    return () => {
-      mounted = false
-      clearInterval(interval)
-    }
-  }, [])
 
   // Tick every second for smooth countdown display
   useEffect(() => {

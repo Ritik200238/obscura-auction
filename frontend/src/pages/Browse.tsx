@@ -4,7 +4,8 @@ import { motion } from 'framer-motion'
 import { staggerContainer, fadeInUp } from '@/lib/animations'
 import { Search, Filter, PackageOpen, RefreshCw, AlertTriangle, Plus, Shield, Coins, Radio } from 'lucide-react'
 import { useAuctionStore } from '@/stores/auctionStore'
-import { fetchBlockHeight, fetchMapping, parseAuctionData } from '@/lib/aleo'
+import { useBlockHeight } from '@/contexts/BlockHeightContext'
+import { fetchMapping, parseAuctionData } from '@/lib/aleo'
 import { config } from '@/lib/config'
 import { AuctionCard } from '@/components/auction/AuctionCard'
 import { ShimmerCard } from '@/components/shared/Shimmer'
@@ -33,18 +34,11 @@ const modeFilters = [
 
 const CACHE_KEY = 'obscura_auction_ids'
 
-// Seed auctions: known on-chain auctions to show when backend is unavailable
-// and localStorage is empty. Fetched directly from on-chain mappings.
-const SEED_AUCTIONS = [
-  { auction_id: '6223434538539787594535945122381255264228369483369766618589871978473389600533', title: 'Obscura Demo Auction - ZK Privacy', description: 'First-price sealed-bid auction demonstrating Aleo privacy' },
-  { auction_id: '6882928631484950133624464808745388159395855736893406333215224960779053894498', title: 'Test Auction', description: 'First test auction on Obscura v3' },
-]
-
 export default function Browse() {
   const navigate = useNavigate()
   const { auctions, loading, filters, setFilters, filteredAuctions, setAuctions, setLoading } = useAuctionStore()
+  const { blockHeight } = useBlockHeight()
   const [searchId, setSearchId] = useState('')
-  const [blockHeight, setBlockHeight] = useState(0)
   const [lookupId, setLookupId] = useState('')
   const [lookupError, setLookupError] = useState<string | null>(null)
   const [backendDown, setBackendDown] = useState(false)
@@ -61,7 +55,7 @@ export default function Browse() {
     } catch { /* localStorage not available */ }
   }
 
-  /** Fallback: load cached auction IDs (or seed list) and fetch their on-chain data directly */
+  /** Fallback: load cached auction IDs and fetch their on-chain data directly */
   const fetchAuctionsOnChainFallback = useCallback(async () => {
     try {
       let ids: { auction_id: string; title?: string; description?: string }[] = []
@@ -70,8 +64,7 @@ export default function Browse() {
         const parsed = JSON.parse(cached)
         if (Array.isArray(parsed) && parsed.length > 0) ids = parsed
       }
-      // Fall back to seed auctions if cache is empty
-      if (ids.length === 0) ids = SEED_AUCTIONS
+      // No seed data — show empty state instead of fake auctions
       if (ids.length === 0) return
 
       const results = await Promise.allSettled(
@@ -165,12 +158,7 @@ export default function Browse() {
   }
 
   useEffect(() => {
-    fetchBlockHeight().then(setBlockHeight)
     fetchAuctionsFromBackend()
-    const interval = setInterval(() => {
-      fetchBlockHeight().then(setBlockHeight)
-    }, 15000)
-    return () => clearInterval(interval)
   }, [fetchAuctionsFromBackend])
 
   const displayed = filteredAuctions().filter((a) => {
