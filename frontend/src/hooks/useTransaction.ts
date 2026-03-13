@@ -85,6 +85,7 @@ export function useTransaction() {
             }
           }
           setStatus('unconfirmed')
+          setError('Confirmation timed out after ~5 minutes. The transaction may still confirm — check the explorer directly.')
           setLoading(false)
           return
         }
@@ -108,7 +109,7 @@ export function useTransaction() {
         if (transactionStatus) {
           try {
             const walletStatus: unknown = await transactionStatus(txId)
-            console.log('[useTransaction] transactionStatus response:', JSON.stringify(walletStatus))
+            if (import.meta.env.DEV) console.log('[useTransaction] transactionStatus response:', JSON.stringify(walletStatus))
 
             let statusStr: string | null = null
             let realTxId: string | null = null
@@ -147,7 +148,7 @@ export function useTransaction() {
           } catch (e) {
             // transactionStatus failed — DON'T rethrow, continue to explorer check
             // Only log occasionally to avoid console spam
-            if (attempts <= 3 || attempts % 10 === 0) {
+            if (import.meta.env.DEV && (attempts <= 3 || attempts % 10 === 0)) {
               console.log('[useTransaction] transactionStatus error (attempt ' + attempts + '):', e)
             }
           }
@@ -206,7 +207,7 @@ export function useTransaction() {
           privateFee: options.privateFee === true,
         }
 
-        console.log(`[useTransaction] Wallet: ${walletType}, fee: ${fee} microcredits, payload:`, JSON.stringify(aleoTransaction))
+        if (import.meta.env.DEV) console.log(`[useTransaction] Wallet: ${walletType}, fee: ${fee} microcredits, payload:`, JSON.stringify(aleoTransaction))
 
         const TX_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
         const response = await Promise.race([

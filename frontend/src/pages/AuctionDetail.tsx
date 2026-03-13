@@ -60,7 +60,7 @@ export default function AuctionDetail() {
   const { auction, highestBid, secondHighest, winner, blockHeight, loading, error, refresh } =
     useAuction(id)
   const { refresh: refreshRecords } = useRecords()
-  const { connected } = useWallet()
+  const { connected, address: publicKey } = useWallet()
   const [settlementProof, setSettlementProof] = useState<string | null>(null)
   const [paymentProof, setPaymentProof] = useState<string | null>(null)
   const [showReplay, setShowReplay] = useState(false)
@@ -506,6 +506,22 @@ export default function AuctionDetail() {
               </span>
             </div>
           </div>
+
+          {/* Seller address card — helps winners discover where to send payment */}
+          {isSettled && connected && publicKey && (
+            <div className="card border-green-500/20 bg-green-500/5">
+              <div className="flex items-start gap-2">
+                <Shield className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs text-green-300 font-medium mb-1">Your Wallet Address</p>
+                  <p className="text-[11px] text-gray-400 mb-2">
+                    If you are the seller, share this with the winner so they can complete the claim.
+                  </p>
+                  <p className="text-xs text-white font-mono break-all bg-surface-800 rounded p-2">{publicKey}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Faucet banner */}
           <FaucetBanner />

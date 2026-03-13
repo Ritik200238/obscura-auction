@@ -90,10 +90,14 @@ export default function SettlePanel({ auction }: SettlePanelProps) {
       {/* Info */}
       <div className="flex items-start gap-2 p-3 rounded-lg bg-accent-500/10 border border-accent-500/20 mb-4">
         <Info className="w-4 h-4 text-accent-400 mt-0.5 shrink-0" />
-        <p className="text-sm text-accent-300">
-          As the seller, you must finalize the auction after the reveal deadline passes.
-          This checks if the highest bid meets your reserve price and determines the winner.
-        </p>
+        <div>
+          <p className="text-sm text-accent-300 font-medium mb-1">Seller Action Required</p>
+          <p className="text-xs text-gray-400">
+            Only the auction creator can finalize — you must re-enter the exact reserve price
+            you set when creating this auction. The on-chain BHP256 hash will be verified.
+            If you are a bidder, wait for the seller to finalize.
+          </p>
+        </div>
       </div>
 
       {/* Reserve price input */}

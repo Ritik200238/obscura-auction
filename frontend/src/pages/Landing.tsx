@@ -783,7 +783,7 @@ export default function Landing() {
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
                 <Link to="/browse" className="btn-primary flex items-center gap-2 text-base px-8 py-3.5">
-                  Connect Wallet
+                  Enter the Auction House
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>

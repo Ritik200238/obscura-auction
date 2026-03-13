@@ -109,7 +109,8 @@ export default function BidPanel({ auction, onBidConfirmed }: BidPanelProps) {
             {txStatus === 'confirmed' && (
               <>
                 <p className="text-xs text-gray-500 mt-3 mb-3">
-                  Save your bid record — you will need it during the reveal phase.
+                  Your sealed bid record is stored in your wallet automatically.
+                  You'll need it during the reveal phase — keep your wallet connected.
                 </p>
                 <div className="bg-surface-800 rounded-lg p-3">
                   <AuctionQR
@@ -203,24 +204,29 @@ export default function BidPanel({ auction, onBidConfirmed }: BidPanelProps) {
           )}
 
           {/* Submit */}
-          <button
-            onClick={handleBid}
-            disabled={loading || !connected}
-            className="btn-primary w-full flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Submitting Bid...
-              </>
-            ) : !connected ? (
-              'Connect Wallet to Bid'
-            ) : existingBid ? (
-              'Place New Bid'
-            ) : (
-              'Place Sealed Bid'
-            )}
-          </button>
+          {!connected ? (
+            <div className="text-center p-4 rounded-lg bg-surface-800 border border-surface-700">
+              <p className="text-sm text-gray-400 mb-1">Wallet not connected</p>
+              <p className="text-xs text-gray-500">Use the wallet button in the top-right corner to connect, then return here to bid.</p>
+            </div>
+          ) : (
+            <button
+              onClick={handleBid}
+              disabled={loading}
+              className="btn-primary w-full flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Submitting Bid...
+                </>
+              ) : existingBid ? (
+                'Place New Bid'
+              ) : (
+                'Place Sealed Bid'
+              )}
+            </button>
+          )}
         </>
       )}
     </div>

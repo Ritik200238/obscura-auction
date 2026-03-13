@@ -3,8 +3,10 @@ import { motion } from 'framer-motion'
 import { fadeInUp } from '@/lib/animations'
 import StatsCards from '@/components/dashboard/StatsCards'
 import ActivityFeed from '@/components/dashboard/ActivityFeed'
-import { BarChart3, Loader2, AlertTriangle, RefreshCw } from 'lucide-react'
+import { BarChart3, Loader2, AlertTriangle, RefreshCw, Shield } from 'lucide-react'
 import { config } from '@/lib/config'
+import { useAuctionStore } from '@/stores/auctionStore'
+import { STATUS } from '@/types'
 
 interface OverviewStats {
   total_auctions: number
@@ -91,7 +93,7 @@ export default function Dashboard() {
       setStats(statsData)
       setEvents(Array.isArray(activityData.events) ? activityData.events : [])
     } catch {
-      setError('Could not reach backend. Analytics require the indexer to be running.')
+      setError('backend_down')
     } finally {
       setLoading(false)
     }
@@ -101,12 +103,22 @@ export default function Dashboard() {
     fetchData()
   }, [])
 
+  // Fallback: derive stats from cached auctions in Zustand store when backend is down
+  const { auctions: cachedAuctions } = useAuctionStore()
+
   const statsForCards = stats
     ? {
         totalAuctions: stats.total_auctions,
         activeBids: stats.total_bids,
         activeAuctions: stats.active_auctions,
         settledAuctions: stats.settled_auctions,
+      }
+    : error === 'backend_down' && cachedAuctions.length > 0
+    ? {
+        totalAuctions: cachedAuctions.length,
+        activeBids: cachedAuctions.reduce((sum, a) => sum + a.bid_count, 0),
+        activeAuctions: cachedAuctions.filter(a => a.status === STATUS.ACTIVE).length,
+        settledAuctions: cachedAuctions.filter(a => a.status === STATUS.SETTLED).length,
       }
     : { totalAuctions: 0, activeBids: 0, activeAuctions: 0, settledAuctions: 0 }
 
@@ -142,10 +154,41 @@ export default function Dashboard() {
           <Loader2 className="w-6 h-6 text-accent-400 animate-spin" />
           <span className="ml-3 text-gray-400">Loading analytics...</span>
         </div>
+      ) : error === 'backend_down' ? (
+        <>
+          {/* Show partial stats from cached on-chain data */}
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 mb-6">
+            <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm text-yellow-300">Indexer is unavailable — showing cached on-chain data.</p>
+              <p className="text-xs text-gray-500 mt-1">Activity feed requires the backend. Visit Browse to load auctions from chain first.</p>
+            </div>
+          </div>
+          {statsForCards.totalAuctions > 0 ? (
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Shield className="w-4 h-4 text-accent-400" />
+                <span className="text-xs text-gray-400">On-chain data (from Browse cache)</span>
+              </div>
+              <StatsCards data={statsForCards} />
+            </div>
+          ) : (
+            <div className="card text-center py-12">
+              <AlertTriangle className="w-10 h-10 text-yellow-400 mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-white mb-2">No Cached Data</h2>
+              <p className="text-gray-400 text-sm max-w-md mx-auto mb-6">
+                Visit the Browse page first to load auctions from chain, then return here to see stats.
+              </p>
+              <button onClick={fetchData} className="btn-primary text-sm">
+                Retry Backend
+              </button>
+            </div>
+          )}
+        </>
       ) : error ? (
         <div className="card text-center py-12">
           <AlertTriangle className="w-10 h-10 text-yellow-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">Backend Unavailable</h2>
+          <h2 className="text-xl font-bold text-white mb-2">Something went wrong</h2>
           <p className="text-gray-400 text-sm max-w-md mx-auto mb-6">{error}</p>
           <button onClick={fetchData} className="btn-primary text-sm">
             Retry
