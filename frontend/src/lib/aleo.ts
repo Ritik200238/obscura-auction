@@ -257,13 +257,55 @@ export function hashStringToField(input: string): string {
 }
 
 /**
+ * Extract auction_id from a transition's outputs.
+ * The future output contains finalize arguments — first field is auction_id.
+ * Handles both string and object formats for the future value.
+ */
+function extractAuctionIdFromOutputs(outputs: any[]): string | null {
+  for (const output of outputs) {
+    if ((output.type === 'public' || output.type === 'private') && typeof output.value === 'string') {
+      if (output.value.endsWith('field')) {
+        return output.value.replace(/field$/, '')
+      }
+    }
+    if (output.type === 'future') {
+      // String format: "{ program_id: ..., arguments: [ 123field, ... ] }"
+      if (typeof output.value === 'string') {
+        const fieldMatches = output.value.match(/(\d+)field/g)
+        if (fieldMatches && fieldMatches.length > 0) {
+          return fieldMatches[0].replace(/field$/, '')
+        }
+      }
+      // Object format: { program_id, function_name, arguments: ["123field", ...] }
+      if (output.value && typeof output.value === 'object') {
+        const args = output.value.arguments || []
+        if (Array.isArray(args) && args.length > 0) {
+          const firstArg = String(args[0])
+          const match = firstArg.match(/(\d+)field/)
+          if (match) return match[1]
+        }
+      }
+    }
+  }
+  return null
+}
+
+/** Extract auction_id from a ConfirmedTransaction's finalize mapping operations. */
+function extractAuctionIdFromFinalize(finalize: any): string | null {
+  if (!Array.isArray(finalize)) return null
+  for (const ops of finalize) {
+    const entries = Array.isArray(ops) ? ops : [ops]
+    for (const entry of entries) {
+      if (typeof entry?.key === 'string' && entry.key.endsWith('field')) {
+        return entry.key.replace(/field$/, '')
+      }
+    }
+  }
+  return null
+}
+
+/**
  * Extract the auction_id from a confirmed create_auction transaction.
- *
- * create_auction returns `then finalize(auction_id, ...)` — no public/private outputs,
- * only a `future` output. The explorer API represents the future's value as a string
- * containing the finalize arguments. We parse the first field argument from that string.
- *
- * Also checks the top-level `finalize` array for mapping update keys as a fallback.
  */
 export async function extractAuctionIdFromTx(txId: string): Promise<string | null> {
   const url = `${config.explorerApi}/${config.network}/transaction/${txId}`
@@ -272,50 +314,71 @@ export async function extractAuctionIdFromTx(txId: string): Promise<string | nul
     if (!res.ok) return null
     const data = await res.json()
 
-    // Navigate: execution.transitions
     const transitions = data?.execution?.transitions
     if (!Array.isArray(transitions) || transitions.length === 0) return null
 
-    // Find the create_auction transition
     const createTx = transitions.find(
-      (t: any) => t.program === config.programId && t.function === 'create_auction'
+      (t: any) => (t.program === config.programId || t.program_id === config.programId) &&
+                   (t.function === 'create_auction' || t.function_name === 'create_auction')
     ) || transitions[0]
 
-    const outputs = createTx?.outputs
-    if (Array.isArray(outputs)) {
-      for (const output of outputs) {
-        // Strategy 1: Direct public/private output (unlikely for create_auction, but safe)
-        if ((output.type === 'public' || output.type === 'private') && typeof output.value === 'string') {
-          if (output.value.endsWith('field')) {
-            return output.value.replace(/field$/, '')
-          }
-        }
+    const fromOutputs = extractAuctionIdFromOutputs(createTx?.outputs || [])
+    if (fromOutputs) return fromOutputs
 
-        // Strategy 2: Parse the future output's value for finalize arguments
-        // The future value contains: "{ program_id: ..., function_name: ..., arguments: [ auction_id_field, ... ] }"
-        if (output.type === 'future' && typeof output.value === 'string') {
-          // Extract all field values from the future string
-          const fieldMatches = output.value.match(/(\d+)field/g)
-          if (fieldMatches && fieldMatches.length > 0) {
-            // First field argument is auction_id
-            return fieldMatches[0].replace(/field$/, '')
-          }
-        }
-      }
-    }
+    return extractAuctionIdFromFinalize(data?.finalize || createTx?.finalize)
+  } catch {
+    return null
+  }
+}
 
-    // Strategy 3: Check finalize mapping operations for the auction_id key
-    // Confirmed transactions may include finalize results showing mapping updates
-    const finalize = data?.finalize || createTx?.finalize
-    if (Array.isArray(finalize)) {
-      for (const ops of finalize) {
-        const entries = Array.isArray(ops) ? ops : [ops]
-        for (const entry of entries) {
-          if (typeof entry?.key === 'string' && entry.key.endsWith('field')) {
-            return entry.key.replace(/field$/, '')
+/**
+ * Scan recent blocks for a create_auction transaction on our program.
+ * This is the nuclear fallback when Shield Wallet doesn't return the real TX ID —
+ * it finds the confirmed transaction by scanning blocks directly.
+ *
+ * Returns { txId, auctionId } if found, null otherwise.
+ * Scans from latest block backwards to fromHeight.
+ */
+export async function scanBlocksForCreateAuction(
+  fromHeight: number,
+  maxBlocks: number = 10
+): Promise<{ txId: string; auctionId: string } | null> {
+  try {
+    const latestHeight = await fetchBlockHeight()
+    if (latestHeight <= fromHeight) return null
+
+    const startHeight = Math.max(fromHeight + 1, latestHeight - maxBlocks + 1)
+
+    for (let h = latestHeight; h >= startHeight; h--) {
+      try {
+        const res = await fetch(`${config.explorerApi}/${config.network}/block/${h}`)
+        if (!res.ok) continue
+        const block = await res.json()
+
+        const transactions = block?.transactions
+        if (!Array.isArray(transactions)) continue
+
+        for (const confirmed of transactions) {
+          if (confirmed.status !== 'accepted') continue
+          const tx = confirmed.transaction
+          if (!tx?.execution?.transitions) continue
+
+          for (const transition of tx.execution.transitions) {
+            const prog = transition.program || transition.program_id
+            const func = transition.function || transition.function_name
+            if (prog === config.programId && func === 'create_auction') {
+              const txId = tx.id as string
+              const auctionId =
+                extractAuctionIdFromOutputs(transition.outputs || []) ||
+                extractAuctionIdFromFinalize(confirmed.finalize)
+
+              if (txId && auctionId) {
+                return { txId, auctionId }
+              }
+            }
           }
         }
-      }
+      } catch { continue }
     }
 
     return null
