@@ -7,7 +7,9 @@ interface ExecuteOptions {
   program?: string
   functionName: string
   inputs: string[]
+  /** Fee in microcredits (1 ALEO = 1,000,000 microcredits). Default: config.defaultFee (500,000) */
   fee?: number
+  /** Pay fee from private credits record? Default: false (public balance). */
   privateFee?: boolean
   /** Optional on-chain verification callback — the true source of truth.
    *  Checked every 3rd poll cycle. If it returns true, the TX is confirmed
@@ -180,20 +182,23 @@ export function useTransaction() {
 
       try {
         const programId = options.program || config.programId
-        // TransactionOptions.fee is in ALEO credits (NOT microcredits).
-        // Leo adapter defaults to 0.001, Shield passes as-is to delegated prover.
-        // Sending microcredits (e.g. 500000) would be interpreted as 500,000 ALEO.
-        const feeInAleo = options.fee ?? config.defaultFee
+        // TransactionOptions.fee is in MICROCREDITS (1 ALEO = 1,000,000 microcredits).
+        // NullPay uses 100,000. Official demo uses 100,000. We use 500,000 for our
+        // complex 18-transition program. Shield passes fee as-is to delegated prover.
+        const fee = options.fee ?? config.defaultFee
 
+        // privateFee: false = pay fee from PUBLIC balance (default, works with faucet ALEO).
+        // privateFee: true = pay from private credits record (requires transfer_public_to_private first).
+        // NullPay defaults to false. Most users have public balance from faucet.
         const aleoTransaction: Record<string, unknown> = {
           program: programId,
           function: options.functionName,
           inputs: options.inputs,
-          fee: feeInAleo,
-          privateFee: options.privateFee !== false,
+          fee,
+          privateFee: options.privateFee === true,
         }
 
-        console.log(`[useTransaction] Wallet: ${walletType}, fee: ${feeInAleo} ALEO, payload:`, JSON.stringify(aleoTransaction))
+        console.log(`[useTransaction] Wallet: ${walletType}, fee: ${fee} microcredits, payload:`, JSON.stringify(aleoTransaction))
 
         const TX_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
         const response = await Promise.race([
