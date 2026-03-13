@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { fetchMapping, fetchBlockHeight, parseAuctionData, parseU128, parseField } from '@/lib/aleo'
+import { fetchMapping, parseAuctionData, parseU128, parseField } from '@/lib/aleo'
+import { useBlockHeight } from '@/contexts/BlockHeightContext'
 import { useAuctionStore } from '@/stores/auctionStore'
 import type { AuctionData } from '@/types'
 
@@ -16,14 +17,15 @@ interface AuctionDetails {
 
 /**
  * Hook to fetch and track a single auction's on-chain data.
- * Auto-refreshes every 30 seconds.
+ * Uses shared BlockHeightProvider for block height (no independent polling).
+ * Auto-refreshes auction data every 15 seconds.
  */
 export function useAuction(auctionId: string | undefined): AuctionDetails {
   const { selectAuction, selectedAuction } = useAuctionStore()
+  const { blockHeight } = useBlockHeight()
   const [highestBid, setHighestBid] = useState<bigint>(0n)
   const [secondHighest, setSecondHighest] = useState<bigint>(0n)
   const [winner, setWinner] = useState<string | null>(null)
-  const [blockHeight, setBlockHeight] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const mountedRef = useRef(true)
@@ -45,18 +47,15 @@ export function useAuction(auctionId: string | undefined): AuctionDetails {
     try {
       const key = auctionId.endsWith('field') ? auctionId : `${auctionId}field`
 
-      const [auctionRaw, highestRaw, secondRaw, winnerRaw, currentHeight] = await Promise.all([
+      const [auctionRaw, highestRaw, secondRaw, winnerRaw] = await Promise.all([
         fetchMapping('auctions', key),
         fetchMapping('highest_bids', key),
         fetchMapping('second_highest_bids', key),
         fetchMapping('auction_winners', key),
-        fetchBlockHeight(),
       ])
 
       // Discard stale response if auctionId changed during fetch
       if (!mountedRef.current || fetchIdRef.current !== thisId) return
-
-      setBlockHeight(currentHeight)
 
       if (!auctionRaw) {
         setError('Auction not found on-chain')
@@ -95,7 +94,7 @@ export function useAuction(auctionId: string | undefined): AuctionDetails {
     fetchAuctionData()
   }, [fetchAuctionData])
 
-  // Auto-refresh every 15 seconds (also updates block height since fetchAuctionData calls fetchBlockHeight)
+  // Auto-refresh every 15 seconds
   useEffect(() => {
     if (!auctionId) return
     const interval = setInterval(fetchAuctionData, 15_000)
