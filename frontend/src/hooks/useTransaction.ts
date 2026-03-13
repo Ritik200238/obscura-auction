@@ -48,6 +48,10 @@ export function useTransaction() {
   const pollTransaction = useCallback(
     (txId: string, onChainVerify?: () => Promise<boolean>) => {
       let attempts = 0
+      // Track the best-known TX ID across poll iterations.
+      // Shield returns shield_* temp IDs initially; the real at1... ID arrives later
+      // via transactionStatus. This variable persists across iterations via closure.
+      let currentTxId = txId
       const maxAttempts = 100 // ~5 minutes at 3s intervals (Shield proving takes 1-3 min)
 
       setStatus('pending')
@@ -76,25 +80,26 @@ export function useTransaction() {
           return
         }
 
-        try {
-          // On-chain verification every 3rd cycle — this is the SOURCE OF TRUTH
-          // (Veiled Markets pattern: wallet status is secondary, mapping state is primary)
-          if (onChainVerify && attempts > 1 && attempts % 3 === 0) {
-            try {
-              const verified = await onChainVerify()
-              if (verified) {
-                stopPolling()
-                setStatus('confirmed')
-                setLoading(false)
-                return
-              }
-            } catch { /* continue to wallet check */ }
-          }
+        // Step 1: On-chain verification every 3rd cycle — SOURCE OF TRUTH
+        if (onChainVerify && attempts > 1 && attempts % 3 === 0) {
+          try {
+            const verified = await onChainVerify()
+            if (verified) {
+              stopPolling()
+              setStatus('confirmed')
+              setLoading(false)
+              return
+            }
+          } catch { /* continue to wallet check */ }
+        }
 
-          // Try wallet adapter's transactionStatus
-          if (transactionStatus) {
+        // Step 2: Try wallet adapter's transactionStatus
+        // IMPORTANT: wrapped in its own try/catch so failure doesn't skip explorer check
+        if (transactionStatus) {
+          try {
             const walletStatus: unknown = await transactionStatus(txId)
-            // Adapters return either a string or { status: string, transactionId?: string }
+            console.log('[useTransaction] transactionStatus response:', JSON.stringify(walletStatus))
+
             let statusStr: string | null = null
             let realTxId: string | null = null
             if (typeof walletStatus === 'string') {
@@ -104,19 +109,23 @@ export function useTransaction() {
               // Shield returns the real on-chain TX ID once proved/broadcast
               if ('transactionId' in walletStatus) realTxId = (walletStatus as any).transactionId
             }
-            // Update txId if we got the real on-chain ID (replaces shield_* temp ID)
+
+            // Update tracking ID if we got the real on-chain ID
             if (realTxId && realTxId.startsWith('at1')) {
+              currentTxId = realTxId
               setTxId(realTxId)
             }
+
             if (statusStr) {
               const s = statusStr.toLowerCase()
-              if (s === 'finalized' || s === 'confirmed' || s === 'accepted') {
+              // Confirmed — Shield may return 'completed', 'done', 'success' instead of 'finalized'
+              if (['finalized', 'confirmed', 'accepted', 'completed', 'done', 'success'].includes(s)) {
                 stopPolling()
                 setStatus('confirmed')
                 setLoading(false)
                 return
               }
-              if (s === 'rejected' || s === 'failed' || s === 'aborted') {
+              if (['rejected', 'failed', 'aborted'].includes(s)) {
                 stopPolling()
                 setStatus('failed')
                 setError('Transaction was rejected on-chain')
@@ -124,17 +133,24 @@ export function useTransaction() {
                 return
               }
             }
+          } catch (e) {
+            // transactionStatus failed — DON'T rethrow, continue to explorer check
+            console.log('[useTransaction] transactionStatus error (continuing):', e)
           }
+        }
 
-          // Fallback: check explorer API — skip for temporary shield_* IDs
-          const isRealTxId = txId.startsWith('at1') || txId.startsWith('au1')
+        // Step 3: Explorer fallback — uses currentTxId which may have been updated
+        // from shield_* to at1... by step 2 above
+        try {
+          const isRealTxId = currentTxId.startsWith('at1') || currentTxId.startsWith('au1')
           if (isRealTxId) {
-            const url = `${config.explorerApi}/${config.network}/transaction/${txId}`
+            const url = `${config.explorerApi}/${config.network}/transaction/${currentTxId}`
             const res = await fetch(url)
             if (res.ok) {
               const data = await res.json()
               if (data && data.type) {
                 stopPolling()
+                setTxId(currentTxId) // ensure state has the real ID
                 setStatus('confirmed')
                 setLoading(false)
                 return
