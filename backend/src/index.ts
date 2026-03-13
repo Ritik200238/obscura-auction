@@ -23,18 +23,21 @@ const PORT = parseInt(process.env.PORT || '3001', 10);
 
 // --- Middleware ---
 
-// CORS: explicit allowlist only
+// CORS: explicit allowlist + Vercel preview URLs
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL.trim()] : []),
 ].filter(url => url.length > 0);
 
+// Also allow any Vercel preview deployments for the project
+const VERCEL_PREVIEW_REGEX = /^https:\/\/obscura-auction[a-z0-9-]*\.vercel\.app$/;
+
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (server-to-server, curl, health checks)
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.includes(origin) || VERCEL_PREVIEW_REGEX.test(origin)) {
         callback(null, true);
       } else {
         logger.warn(`CORS blocked request from origin: ${origin}`);

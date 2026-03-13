@@ -4,7 +4,7 @@ export const config = {
   usdcxProgramId: 'test_usdcx_stablecoin.aleo',
   explorerApi: 'https://api.explorer.provable.com/v1',
   explorerUrl: 'https://explorer.provable.com',
-  backendApi: import.meta.env.VITE_BACKEND_URL || (import.meta.env.PROD ? 'https://obscura-auction.onrender.com' : 'http://localhost:3001'),
+  backendApi: import.meta.env.VITE_BACKEND_URL || (import.meta.env.PROD ? 'https://obscura-auction-api.onrender.com' : 'http://localhost:3001'),
   network: 'testnet' as const,
   defaultFee: 500_000, // microcredits (= 0.5 ALEO). TransactionOptions.fee is in microcredits.
   blockTime: 15, // seconds per block (approximate)

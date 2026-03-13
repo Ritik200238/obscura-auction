@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: obscura-auction-api
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: cd backend && npm install && npm run build
+    startCommand: cd backend && node dist/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        value: https://obscura-auction-95hm.vercel.app
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: EXPLORER_API
+        value: https://api.explorer.provable.com/v1
+      - key: PROGRAM_ID
+        value: obscura_v3.aleo

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { fetchMapping } from '@/lib/aleo'
 
 interface WalletState {
   address: string | null
@@ -11,6 +12,7 @@ interface WalletState {
   disconnect: () => void
   setBalance: (bal: bigint) => void
   setDemoMode: (demo: boolean) => void
+  refreshBalance: () => Promise<void>
 }
 
 export const useWalletStore = create<WalletState>((set) => ({
@@ -45,4 +47,16 @@ export const useWalletStore = create<WalletState>((set) => ({
   setBalance: (bal: bigint) => set({ balance: bal }),
 
   setDemoMode: (demo: boolean) => set({ isDemoMode: demo }),
+
+  refreshBalance: async () => {
+    const addr = useWalletStore.getState().address
+    if (!addr) return
+    try {
+      const raw = await fetchMapping('account', addr, 'credits.aleo')
+      if (raw) {
+        const cleaned = raw.replace(/u64\s*$/, '').replace(/"/g, '').trim()
+        set({ balance: BigInt(cleaned) })
+      }
+    } catch { /* explorer unavailable */ }
+  },
 }))

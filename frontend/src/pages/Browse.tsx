@@ -386,8 +386,15 @@ function ActivityPulse({ auctions }: { auctions: AuctionData[] }) {
   const activeCount = auctions.filter(a => a.status === STATUS.ACTIVE).length
   const totalBids = auctions.reduce((sum, a) => sum + a.bid_count, 0)
 
-  const estimatedTvl = auctions.reduce((sum, a) => sum + a.bid_count * 150, 0).toLocaleString()
-  const lastActivity = auctions.length > 0 ? 'Just now' : 'No activity'
+  const totalBidsLabel = totalBids > 0 ? `${totalBids} sealed` : 'None'
+  // Find most recent auction by created_at (if available from backend) or fallback
+  const mostRecent = auctions.reduce((latest, a) => {
+    const aTime = (a as any).created_at
+    const lTime = (latest as any)?.created_at
+    if (aTime && (!lTime || aTime > lTime)) return a
+    return latest
+  }, null as AuctionData | null)
+  const lastActivity = mostRecent ? 'Recent' : 'No activity'
 
   const recentEvents = auctions.slice(0, 5).map(a => `Activity on "${a.title || 'Auction'}"`)
 
@@ -420,7 +427,7 @@ function ActivityPulse({ auctions }: { auctions: AuctionData[] }) {
           </span>
           <span className="hidden md:flex items-center gap-1">
             <Coins className="w-3 h-3 text-accent-400" />
-            TVL: <span className="text-white font-medium">{estimatedTvl} ALEO</span>
+            Bids: <span className="text-white font-medium">{totalBidsLabel}</span>
           </span>
         </div>
 

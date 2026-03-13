@@ -65,8 +65,8 @@ function getActiveIndex(status: number): number {
   if (status === STATUS.ACTIVE) return 1
   if (status === STATUS.CLOSED) return 2
   if (status === STATUS.REVEALING) return 3
-  // SETTLED maps to index 6 (the Revealed+Settling phases are passed)
-  if (status === STATUS.SETTLED) return 7
+  // SETTLED maps to "Settled" (index 6) — Revealed+Settling phases are passed
+  if (status === STATUS.SETTLED) return 6
   // Terminal states — dim everything
   if (status === STATUS.CANCELLED || status === STATUS.FAILED || status === STATUS.EXPIRED) return -1
   return 0
