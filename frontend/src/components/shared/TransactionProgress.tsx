@@ -17,9 +17,9 @@ interface Step {
 }
 
 const steps: Step[] = [
-  { label: 'Generating proof', description: 'Building zero-knowledge proof via delegated prover...' },
+  { label: 'Generating proof', description: 'Building zero-knowledge proof via delegated prover (~1-2 min)...' },
   { label: 'Submitting to network', description: 'Broadcasting transaction to Aleo validators...' },
-  { label: 'Waiting for confirmation', description: 'Waiting for block finalization on-chain...' },
+  { label: 'Waiting for confirmation', description: 'Waiting for block finalization (~15-30 sec per block)...' },
   { label: 'Confirmed', description: 'Transaction finalized and verified on-chain.' },
 ]
 
@@ -151,15 +151,24 @@ export default function TransactionProgress({ status, txId, error, onRetry }: Tr
               Retry Check
             </button>
           )}
-          <a
-            href={`${config.explorerUrl}/${config.network}/transaction/${txId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-gray-500 hover:text-gray-400 flex items-center gap-1"
-          >
-            View on Explorer <ExternalLink className="w-3 h-3" />
-          </a>
+          {(txId.startsWith('at1') || txId.startsWith('au1')) && (
+            <a
+              href={`${config.explorerUrl}/${config.network}/transaction/${txId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-gray-500 hover:text-gray-400 flex items-center gap-1"
+            >
+              View on Explorer <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
         </div>
+      )}
+
+      {/* ZK proving time notice */}
+      {(status === 'submitting' || status === 'pending') && (
+        <p className="text-[10px] text-gray-600 mt-3 pt-3 border-t border-surface-700/30 text-center">
+          Aleo transactions require zero-knowledge proof generation — typically 1-3 minutes total.
+        </p>
       )}
     </motion.div>
   )

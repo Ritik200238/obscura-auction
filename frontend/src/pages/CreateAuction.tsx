@@ -182,13 +182,13 @@ export default function CreateAuction() {
               : txStatus === 'failed'
               ? 'Transaction was rejected by the network.'
               : txStatus === 'unconfirmed'
-              ? 'Transaction submitted but not yet confirmed on-chain. Check back later.'
-              : 'Your auction has been submitted to the Aleo network. Waiting for confirmation...'}
+              ? 'Transaction submitted but confirmation timed out. It may still confirm — check the explorer shortly.'
+              : 'Your auction has been submitted. ZK proof generation + block confirmation takes ~1-3 minutes.'}
           </p>
           {txStatus === 'pending' && (
             <div className="flex items-center justify-center gap-2 text-xs text-accent-400 mb-4">
               <Loader2 className="w-3 h-3 animate-spin" />
-              <span>Confirming on-chain...</span>
+              <span>Generating ZK proof & confirming on-chain...</span>
             </div>
           )}
 

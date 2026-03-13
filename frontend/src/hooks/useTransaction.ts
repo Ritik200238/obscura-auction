@@ -48,7 +48,7 @@ export function useTransaction() {
   const pollTransaction = useCallback(
     (txId: string, onChainVerify?: () => Promise<boolean>) => {
       let attempts = 0
-      const maxAttempts = 40 // ~2 minutes at 3s intervals
+      const maxAttempts = 100 // ~5 minutes at 3s intervals (Shield proving takes 1-3 min)
 
       setStatus('pending')
 
