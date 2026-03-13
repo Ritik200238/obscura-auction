@@ -180,24 +180,20 @@ export function useTransaction() {
 
       try {
         const programId = options.program || config.programId
+        // TransactionOptions.fee is in ALEO credits (NOT microcredits).
+        // Leo adapter defaults to 0.001, Shield passes as-is to delegated prover.
+        // Sending microcredits (e.g. 500000) would be interpreted as 500,000 ALEO.
         const feeInAleo = options.fee ?? config.defaultFee
-        const feeInMicrocredits = Math.floor(feeInAleo * 1_000_000)
 
-        // Build a clean TransactionOptions payload.
-        // Shield adapter spreads this directly into window.shield.executeTransaction(),
-        // so extra fields (address, chainId, transitions, feePrivate) BREAK Shield —
-        // the extension either misparses them or silently drops the transaction.
-        // Leo/Fox/Soter/Puzzle adapters construct their own objects from these fields,
-        // so they also work fine with clean TransactionOptions.
         const aleoTransaction: Record<string, unknown> = {
           program: programId,
           function: options.functionName,
           inputs: options.inputs,
-          fee: feeInMicrocredits,
+          fee: feeInAleo,
           privateFee: options.privateFee !== false,
         }
 
-        console.log(`[useTransaction] Wallet type: ${walletType}, payload:`, JSON.stringify(aleoTransaction))
+        console.log(`[useTransaction] Wallet: ${walletType}, fee: ${feeInAleo} ALEO, payload:`, JSON.stringify(aleoTransaction))
 
         const TX_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
         const response = await Promise.race([
