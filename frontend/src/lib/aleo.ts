@@ -348,6 +348,7 @@ export async function scanBlocksForCreateAuction(
     if (latestHeight <= fromHeight) return null
 
     const startHeight = Math.max(fromHeight + 1, latestHeight - maxBlocks + 1)
+    console.log(`[blockScan] Scanning blocks ${startHeight} to ${latestHeight} (from submission at ${fromHeight})`)
 
     for (let h = latestHeight; h >= startHeight; h--) {
       try {
