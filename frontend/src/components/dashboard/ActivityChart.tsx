@@ -13,13 +13,13 @@ export default function ActivityChart({ data }: { data: ActivityData[] }) {
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#2a2a55" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e3a5f" />
             <XAxis dataKey="day" stroke="#6b7280" fontSize={12} tickLine={false} />
             <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#13132b',
-                border: '1px solid #2a2a55',
+                backgroundColor: '#081320',
+                border: '1px solid #1e3a5f',
                 borderRadius: '12px',
                 color: '#fff',
                 fontSize: '12px',
@@ -28,10 +28,10 @@ export default function ActivityChart({ data }: { data: ActivityData[] }) {
             <Line
               type="monotone"
               dataKey="auctions"
-              stroke="#7c3aed"
+              stroke="#0891b2"
               strokeWidth={2}
-              dot={{ fill: '#7c3aed', r: 4, strokeWidth: 0 }}
-              activeDot={{ r: 6, stroke: '#7c3aed', strokeWidth: 2, fill: '#13132b' }}
+              dot={{ fill: '#0891b2', r: 4, strokeWidth: 0 }}
+              activeDot={{ r: 6, stroke: '#0891b2', strokeWidth: 2, fill: '#081320' }}
               name="Auctions Created"
             />
             <Line
@@ -40,7 +40,7 @@ export default function ActivityChart({ data }: { data: ActivityData[] }) {
               stroke="#06b6d4"
               strokeWidth={2}
               dot={{ fill: '#06b6d4', r: 4, strokeWidth: 0 }}
-              activeDot={{ r: 6, stroke: '#06b6d4', strokeWidth: 2, fill: '#13132b' }}
+              activeDot={{ r: 6, stroke: '#06b6d4', strokeWidth: 2, fill: '#081320' }}
               name="Bids Placed"
             />
           </LineChart>

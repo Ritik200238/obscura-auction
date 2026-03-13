@@ -5,18 +5,18 @@ export default {
     extend: {
       colors: {
         surface: {
-          950: '#06060b',
-          900: '#0c0c14',
-          800: '#14142a',
-          700: '#1e1e3f',
-          600: '#2a2a55',
+          950: '#03080f',
+          900: '#081320',
+          800: '#0d1f35',
+          700: '#152c4a',
+          600: '#1e3a5f',
         },
         accent: {
-          600: '#7c3aed',
-          500: '#8b5cf6',
-          400: '#a78bfa',
-          300: '#c4b5fd',
-          200: '#ddd6fe',
+          600: '#0891b2',
+          500: '#06b6d4',
+          400: '#22d3ee',
+          300: '#67e8f9',
+          200: '#a5f3fc',
         },
         brand: {
           cyan: '#06b6d4',
@@ -84,8 +84,8 @@ export default {
           '100%': { opacity: '1', transform: 'translateX(0)' },
         },
         glowPulse: {
-          '0%, 100%': { boxShadow: '0 0 20px rgba(139, 92, 246, 0.15)' },
-          '50%': { boxShadow: '0 0 40px rgba(139, 92, 246, 0.3)' },
+          '0%, 100%': { boxShadow: '0 0 20px rgba(6, 182, 212, 0.15)' },
+          '50%': { boxShadow: '0 0 40px rgba(6, 182, 212, 0.3)' },
         },
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
@@ -101,8 +101,8 @@ export default {
           '100%': { backgroundPosition: '0% 50%' },
         },
         walletPulse: {
-          '0%, 100%': { boxShadow: '0 0 0 0 rgba(139, 92, 246, 0.4)' },
-          '50%': { boxShadow: '0 0 0 6px rgba(139, 92, 246, 0)' },
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(6, 182, 212, 0.4)' },
+          '50%': { boxShadow: '0 0 0 6px rgba(6, 182, 212, 0)' },
         },
         meshDrift: {
           '0%, 100%': { backgroundPosition: '0% 50%' },

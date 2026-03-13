@@ -19,20 +19,20 @@ export default function VickreySavingsChart({ data, totalSavings }: { data: Savi
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#2a2a55" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e3a5f" />
             <XAxis dataKey="auction" stroke="#6b7280" fontSize={12} tickLine={false} />
             <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#13132b',
-                border: '1px solid #2a2a55',
+                backgroundColor: '#081320',
+                border: '1px solid #1e3a5f',
                 borderRadius: '12px',
                 color: '#fff',
                 fontSize: '12px',
               }}
               formatter={(value, name) => [`${value} ALEO`, name]}
             />
-            <Bar dataKey="secondPrice" stackId="price" fill="#7c3aed" name="Price Paid (2nd highest)" radius={[0, 0, 4, 4]} />
+            <Bar dataKey="secondPrice" stackId="price" fill="#0891b2" name="Price Paid (2nd highest)" radius={[0, 0, 4, 4]} />
             <Bar dataKey="savings" stackId="price" fill="#22c55e" name="Savings" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>

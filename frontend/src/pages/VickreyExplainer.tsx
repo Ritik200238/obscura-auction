@@ -31,7 +31,7 @@ const stepAnim = {
 
 function newGame(): GameState {
   const aiBidders: BidderInfo[] = [
-    { name: 'Alice', initial: 'A', color: '#7c3aed', trueValue: 0, bid: 0 },
+    { name: 'Alice', initial: 'A', color: '#0891b2', trueValue: 0, bid: 0 },
     { name: 'Bob', initial: 'B', color: '#06b6d4', trueValue: 0, bid: 0 },
   ].map(b => {
     const tv = Math.floor(Math.random() * 51) + 45
@@ -65,20 +65,20 @@ function EnvelopeSVG({ sealed, size = 56 }: { sealed: boolean; size?: number }) 
   return (
     <svg viewBox="0 0 64 48" width={size} height={size * 0.75} fill="none" className="mx-auto">
       <rect x="2" y="14" width="60" height="32" rx="4"
-        fill={s ? '#7c3aed11' : '#ef444411'}
-        stroke={s ? '#7c3aed' : '#ef4444'}
+        fill={s ? '#0891b211' : '#ef444411'}
+        stroke={s ? '#0891b2' : '#ef4444'}
         strokeWidth="2"
       />
       {s ? (
         <>
-          <path d="M2 18L32 34L62 18" stroke="#7c3aed" strokeWidth="2" fill="#7c3aed22" />
-          <circle cx="32" cy="30" r="7" fill="#7c3aed" stroke="#9333ea" strokeWidth="1.5" />
+          <path d="M2 18L32 34L62 18" stroke="#0891b2" strokeWidth="2" fill="#0891b222" />
+          <circle cx="32" cy="30" r="7" fill="#0891b2" stroke="#0e7490" strokeWidth="1.5" />
           <path d="M28.5 30L31 32.5L35.5 27" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </>
       ) : (
         <>
           <path d="M2 14L32 2L62 14" stroke="#ef4444" strokeWidth="2" fill="#ef444418" />
-          <rect x="14" y="5" width="36" height="22" rx="2" fill="#13132b" stroke="#6b7280" strokeWidth="1" />
+          <rect x="14" y="5" width="36" height="22" rx="2" fill="#081320" stroke="#6b7280" strokeWidth="1" />
           <line x1="20" y1="13" x2="44" y2="13" stroke="#9ca3af" strokeWidth="1.5" />
           <line x1="20" y1="19" x2="36" y2="19" stroke="#9ca3af" strokeWidth="1.5" />
         </>
@@ -91,7 +91,7 @@ function EnvelopeSVG({ sealed, size = 56 }: { sealed: boolean; size?: number }) 
 
 function Step1() {
   const bidders = [
-    { name: 'Alice', init: 'A', col: '#7c3aed', tv: 100, bid: 80, quote: "I'll bid 80 to leave room for profit..." },
+    { name: 'Alice', init: 'A', col: '#0891b2', tv: 100, bid: 80, quote: "I'll bid 80 to leave room for profit..." },
     { name: 'Bob', init: 'B', col: '#06b6d4', tv: 75, bid: 60, quote: "Don't want to overpay. 60 should win..." },
     { name: 'Charlie', init: 'C', col: '#f59e0b', tv: 50, bid: 40, quote: "I'll go low at 40, maybe get lucky..." },
   ]
@@ -168,7 +168,7 @@ function Step2() {
   }, [])
 
   const bidders = [
-    { name: 'Alice', init: 'A', col: '#7c3aed', bid: 100 },
+    { name: 'Alice', init: 'A', col: '#0891b2', bid: 100 },
     { name: 'Bob', init: 'B', col: '#06b6d4', bid: 75 },
     { name: 'Charlie', init: 'C', col: '#f59e0b', bid: 50 },
   ]

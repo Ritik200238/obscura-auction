@@ -87,7 +87,7 @@ export default function AuctionStateMachine({ currentStatus }: AuctionStateMachi
   return (
     <div className="card relative overflow-hidden mb-6">
       {/* Accent line */}
-      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 via-cyan-400 to-purple-500" />
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-accent-500 via-accent-400 to-accent-500" />
 
       <div className="flex items-center gap-2 mb-5">
         <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
@@ -118,7 +118,7 @@ export default function AuctionStateMachine({ currentStatus }: AuctionStateMachi
                     initial={false}
                     animate={{
                       backgroundColor: isCompleted
-                        ? 'rgb(168, 85, 247)'
+                        ? 'rgb(8, 145, 178)'
                         : isCurrent
                         ? 'rgb(34, 211, 238)'
                         : 'rgb(55, 55, 70)',
@@ -153,7 +153,7 @@ export default function AuctionStateMachine({ currentStatus }: AuctionStateMachi
                     isCurrent
                       ? 'text-cyan-400'
                       : isCompleted
-                      ? 'text-purple-300'
+                      ? 'text-accent-300'
                       : 'text-gray-600'
                   }`}
                 >
@@ -186,13 +186,13 @@ export default function AuctionStateMachine({ currentStatus }: AuctionStateMachi
               {i < stateNodes.length - 1 && (
                 <div className="flex-1 flex items-center pt-3.5 px-0.5">
                   {isCompleted ? (
-                    /* Solid purple for completed segments */
+                    /* Solid accent for completed segments */
                     <div className="w-full h-0.5 rounded-full relative overflow-hidden bg-surface-700">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: '100%' }}
                         transition={{ duration: 0.6, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
-                        className="absolute inset-y-0 left-0 rounded-full bg-purple-500/60"
+                        className="absolute inset-y-0 left-0 rounded-full bg-accent-500/60"
                       />
                     </div>
                   ) : isCurrent ? (

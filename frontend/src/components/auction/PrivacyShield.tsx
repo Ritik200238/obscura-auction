@@ -73,14 +73,14 @@ export default function PrivacyShield({ auctionMode, status, expanded: initialEx
       <button
         onClick={handleToggle}
         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg
-          bg-purple-500/10 border border-purple-500/20
-          hover:bg-purple-500/20 hover:border-purple-500/30
+          bg-accent-500/10 border border-accent-500/20
+          hover:bg-accent-500/20 hover:border-accent-500/30
           transition-all duration-200 group cursor-pointer"
-        style={{ boxShadow: '0 0 12px rgba(168, 85, 247, 0.15)' }}
+        style={{ boxShadow: '0 0 12px rgba(6, 182, 212, 0.15)' }}
       >
-        <Shield className="w-3.5 h-3.5 text-purple-400 group-hover:text-purple-300" />
-        <span className="text-xs font-medium text-purple-300">{SCORE}% Private</span>
-        <ChevronDown className="w-3 h-3 text-purple-500 group-hover:text-purple-400" />
+        <Shield className="w-3.5 h-3.5 text-accent-400 group-hover:text-accent-300" />
+        <span className="text-xs font-medium text-accent-300">{SCORE}% Private</span>
+        <ChevronDown className="w-3 h-3 text-accent-500 group-hover:text-accent-400" />
       </button>
     )
   }
@@ -93,8 +93,8 @@ export default function PrivacyShield({ auctionMode, status, expanded: initialEx
         animate={{ opacity: 1, height: 'auto' }}
         exit={{ opacity: 0, height: 0 }}
         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        className="rounded-xl border border-purple-500/20 bg-surface-900/80 overflow-hidden"
-        style={{ boxShadow: '0 0 24px rgba(168, 85, 247, 0.1)' }}
+        className="rounded-xl border border-accent-500/20 bg-surface-900/80 overflow-hidden"
+        style={{ boxShadow: '0 0 24px rgba(6, 182, 212, 0.1)' }}
       >
         <div className="p-4">
           {/* Header */}
@@ -104,10 +104,10 @@ export default function PrivacyShield({ auctionMode, status, expanded: initialEx
           >
             <div className="flex items-center gap-2">
               <div
-                className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center"
-                style={{ boxShadow: '0 0 16px rgba(168, 85, 247, 0.25)' }}
+                className="w-8 h-8 rounded-lg bg-accent-500/20 flex items-center justify-center"
+                style={{ boxShadow: '0 0 16px rgba(6, 182, 212, 0.25)' }}
               >
-                <Shield className="w-4 h-4 text-purple-400" />
+                <Shield className="w-4 h-4 text-accent-400" />
               </div>
               <div className="text-left">
                 <p className="text-sm font-semibold text-white">Privacy Shield</p>
@@ -115,7 +115,7 @@ export default function PrivacyShield({ auctionMode, status, expanded: initialEx
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-lg font-bold text-purple-300">{SCORE}%</span>
+              <span className="text-lg font-bold text-accent-300">{SCORE}%</span>
               <ChevronDown className="w-4 h-4 text-gray-500 rotate-180" />
             </div>
           </button>
