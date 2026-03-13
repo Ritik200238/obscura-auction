@@ -4,7 +4,7 @@ import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
 import { TOKEN_TYPE, AUCTION_MODE } from '@/types'
-import { hashStringToField, generateNonce, toMicrocredits, durationToBlocks, fetchBlockHeight, pollForAuctionId } from '@/lib/aleo'
+import { hashStringToField, generateNonce, toMicrocredits, durationToBlocks, fetchBlockHeight, pollForAuctionId, scanBlocksForCreateAuction } from '@/lib/aleo'
 import { config } from '@/lib/config'
 import {
   Gavel,
@@ -59,6 +59,7 @@ export default function CreateAuction() {
   const [formError, setFormError] = useState<string | null>(null)
   const [createdAuctionId, setCreatedAuctionId] = useState<string | null>(null)
   const [onChainAuctionId, setOnChainAuctionId] = useState<string | null>(null)
+  const [confirmedTxId, setConfirmedTxId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const pollCleanupRef = useRef<(() => void) | null>(null)
   // Store form data at submit time for use in the txId-watching useEffect
@@ -165,6 +166,10 @@ export default function CreateAuction() {
       // Add 20-block buffer to account for TX confirmation delay
       const deadlineHeight = currentHeight + deadlineBlocks + 20
 
+      // Record block height BEFORE submitting — used by onChainVerify to know
+      // which blocks to scan for our create_auction transaction.
+      const startHeight = currentHeight
+
       const result = await execute({
         functionName: 'create_auction',
         inputs: [
@@ -176,15 +181,25 @@ export default function CreateAuction() {
           nonce,
           `${deadlineHeight}u64`,
         ],
+        // Nuclear fallback for Shield Wallet: scan recent blocks to find our TX.
+        // Shield returns shield_* temp IDs and its transactionStatus() may never
+        // return the real at1... ID. This scans blocks directly to confirm.
+        onChainVerify: async () => {
+          const found = await scanBlocksForCreateAuction(startHeight, 15)
+          if (found) {
+            console.log('[CreateAuction] Block scan found TX:', found.txId, 'Auction:', found.auctionId)
+            setOnChainAuctionId(found.auctionId)
+            setConfirmedTxId(found.txId)
+            registerAuctionWithBackend(found.auctionId, found.txId)
+            return true
+          }
+          return false
+        },
       })
 
       if (result.transactionId) {
         setCreatedAuctionId(result.transactionId)
 
-        // Store form data for the txId-watching useEffect below.
-        // We DON'T start pollForAuctionId here because Shield Wallet returns
-        // a temp shield_* ID that always 404s on the explorer. Instead, a
-        // useEffect watches txId and starts polling when it resolves to a real at1... ID.
         submitDataRef.current = {
           title: title.trim(),
           description: description.trim(),
@@ -204,7 +219,6 @@ export default function CreateAuction() {
             }
           )
         }
-        // For shield_* temp IDs, the useEffect below handles polling once the real ID arrives
       }
     } catch {
       setFormError('Failed to create auction. Check your wallet and try again.')
@@ -239,7 +253,7 @@ export default function CreateAuction() {
           <div className="space-y-3 mb-6">
             <div className="bg-surface-800 rounded-lg p-4">
               <p className="text-xs text-gray-500 mb-1">Transaction</p>
-              <TransactionLink txId={txId} className="text-sm break-all" />
+              <TransactionLink txId={confirmedTxId || txId} className="text-sm break-all" />
             </div>
 
             {onChainAuctionId ? (
@@ -299,6 +313,7 @@ export default function CreateAuction() {
                 pollCleanupRef.current?.()
                 setCreatedAuctionId(null)
                 setOnChainAuctionId(null)
+                setConfirmedTxId(null)
                 setTitle('')
                 setDescription('')
                 setReservePrice('')
