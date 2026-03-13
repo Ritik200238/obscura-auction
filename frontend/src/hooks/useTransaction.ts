@@ -22,11 +22,11 @@ interface TransactionResult {
 
 /**
  * Hook that wraps the wallet adaptor's executeTransaction.
- * Converts fee from ALEO to microcredits, normalizes the response,
- * and polls for transaction confirmation.
+ * Passes fee in both ALEO and microcredits to support all wallet adapters,
+ * normalizes the response, and polls for transaction confirmation.
  */
 export function useTransaction() {
-  const { executeTransaction, transactionStatus } = useWallet()
+  const { executeTransaction, transactionStatus, address: walletAddress } = useWallet()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [txId, setTxId] = useState<string | null>(null)
@@ -94,8 +94,15 @@ export function useTransaction() {
           // Try wallet adapter's transactionStatus
           if (transactionStatus) {
             const walletStatus: unknown = await transactionStatus(txId)
-            if (walletStatus && typeof walletStatus === 'string') {
-              const s = walletStatus.toLowerCase()
+            // Adapters return either a string or { status: string }
+            let statusStr: string | null = null
+            if (typeof walletStatus === 'string') {
+              statusStr = walletStatus
+            } else if (walletStatus && typeof walletStatus === 'object' && 'status' in walletStatus) {
+              statusStr = String((walletStatus as any).status)
+            }
+            if (statusStr) {
+              const s = statusStr.toLowerCase()
               if (s === 'finalized' || s === 'confirmed' || s === 'accepted') {
                 stopPolling()
                 setStatus('confirmed')
@@ -145,12 +152,31 @@ export function useTransaction() {
         const feeInAleo = options.fee ?? config.defaultFee
         const feeInMicrocredits = Math.floor(feeInAleo * 1_000_000)
 
+        // Dual-format transaction payload for cross-wallet compatibility.
+        //
+        // Leo/Fox/Soter adapters read { program, function, inputs, fee, privateFee }
+        // and internally build the AleoTransaction format before passing to their extension.
+        // Puzzle reads { program, function, fee, inputs } and builds its own format.
+        // Shield does NO translation — it passes {...options, network} directly to
+        // window.shield.executeTransaction(), so it needs the AleoTransaction fields.
+        //
+        // Extra fields are harmless: Leo/Fox/Soter/Puzzle construct fresh objects.
         const aleoTransaction = {
-          type: 'execute' as const,
-          programId,
-          functionName: options.functionName,
+          // TransactionOptions fields (for Leo, Fox, Soter, Puzzle adapters)
+          program: programId,
+          function: options.functionName,
           inputs: options.inputs,
           fee: feeInMicrocredits,
+          privateFee: options.privateFee !== false,
+
+          // AleoTransaction fields (for Shield adapter pass-through)
+          address: walletAddress || '',
+          chainId: 'aleo:testnet',
+          transitions: [{
+            program: programId,
+            functionName: options.functionName,
+            inputs: options.inputs,
+          }],
           feePrivate: options.privateFee !== false,
         }
 
@@ -182,14 +208,26 @@ export function useTransaction() {
 
         return { transactionId }
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Transaction failed'
+        console.error('[useTransaction] Full error:', err)
+        let msg = 'Transaction failed'
+        if (err instanceof Error) {
+          msg = err.message
+        } else if (typeof err === 'string') {
+          msg = err
+        } else if (err && typeof err === 'object' && 'message' in err) {
+          msg = String((err as any).message)
+        }
+        // Leo Wallet can't prove complex programs locally — suggest Shield
+        if (msg.includes('Failed to execute') || msg.includes('Could not create')) {
+          msg += '. Leo Wallet may not support local proving for this program — try Shield Wallet (shield.app) which uses delegated proving.'
+        }
         setError(msg)
         setLoading(false)
         setStatus('failed')
         return { transactionId: null }
       }
     },
-    [executeTransaction, pollTransaction, stopPolling]
+    [executeTransaction, pollTransaction, stopPolling, walletAddress]
   )
 
   const retryCheck = useCallback(() => {
