@@ -2,10 +2,11 @@ import { Link, useLocation } from 'react-router-dom'
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { WalletMultiButton } from '@provablehq/aleo-wallet-adaptor-react-ui'
 import { Shield, Search, Plus, Activity, BookOpen, Menu, X, BarChart3, Lightbulb } from 'lucide-react'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useWalletStore } from '@/stores/walletStore'
+import { fetchMapping } from '@/lib/aleo'
 
 const navLinks = [
   { to: '/browse', label: 'Browse', icon: Search },
@@ -19,13 +20,25 @@ const navLinks = [
 export default function Header() {
   const location = useLocation()
   const { address: publicKey, wallet, connected } = useWallet()
-  const { setWallet, disconnect: clearStore } = useWalletStore()
+  const { setWallet, disconnect: clearStore, setBalance } = useWalletStore()
   const [mobileOpen, setMobileOpen] = useState(false)
   const prevConnected = useRef(connected)
+
+  // Fetch public ALEO balance from credits.aleo/account mapping
+  const refreshBalance = useCallback(async (address: string) => {
+    try {
+      const raw = await fetchMapping('account', address, 'credits.aleo')
+      if (raw) {
+        const cleaned = raw.replace(/u64\s*$/, '').replace(/"/g, '').trim()
+        setBalance(BigInt(cleaned))
+      }
+    } catch { /* explorer unavailable */ }
+  }, [setBalance])
 
   useEffect(() => {
     if (connected && publicKey) {
       setWallet(publicKey, wallet?.adapter?.name || 'unknown')
+      refreshBalance(publicKey)
       if (!prevConnected.current) {
         toast.success('Wallet connected')
       }
@@ -36,7 +49,7 @@ export default function Header() {
       clearStore()
     }
     prevConnected.current = connected
-  }, [connected, publicKey, wallet, setWallet, clearStore])
+  }, [connected, publicKey, wallet, setWallet, clearStore, refreshBalance])
 
   // Close mobile nav on route change
   useEffect(() => {
