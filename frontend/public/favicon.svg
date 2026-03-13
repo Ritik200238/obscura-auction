@@ -1,25 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="s" x1="15%" y1="10%" x2="85%" y2="90%">
+    <linearGradient id="s" x1="10%" y1="5%" x2="90%" y2="95%">
       <stop offset="0%" stop-color="#7c3aed"/>
-      <stop offset="30%" stop-color="#a855f7"/>
       <stop offset="50%" stop-color="#d946ef"/>
-      <stop offset="72%" stop-color="#ec4899"/>
       <stop offset="100%" stop-color="#f97316"/>
     </linearGradient>
-    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#1a0e2e"/>
-      <stop offset="100%" stop-color="#0c0615"/>
-    </radialGradient>
-    <filter id="gl">
-      <feGaussianBlur stdDeviation="10" result="b"/>
-      <feComposite in="SourceGraphic" in2="b" operator="over"/>
-    </filter>
+    <clipPath id="c">
+      <circle cx="256" cy="256" r="256"/>
+    </clipPath>
   </defs>
-  <circle cx="256" cy="256" r="250" fill="url(#bg)"/>
-  <path d="M 175 150 C 330 75, 420 210, 262 258 C 104 306, 90 430, 335 368"
-        fill="none" stroke="url(#s)" stroke-width="48" stroke-linecap="round"
-        opacity="0.35" filter="url(#gl)"/>
-  <path d="M 175 150 C 330 75, 420 210, 262 258 C 104 306, 90 430, 335 368"
-        fill="none" stroke="url(#s)" stroke-width="42" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="256" fill="#110a1f"/>
+  <g clip-path="url(#c)">
+    <path d="M 170 148 C 340 68, 428 215, 260 260 C 92 305, 80 440, 342 370"
+          fill="none" stroke="url(#s)" stroke-width="50" stroke-linecap="round"/>
+  </g>
 </svg>
