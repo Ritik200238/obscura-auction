@@ -31,6 +31,15 @@ const modeFilters = [
   { label: 'Vickrey', value: AUCTION_MODE.VICKREY },
 ]
 
+const CACHE_KEY = 'obscura_auction_ids'
+
+// Seed auctions: known on-chain auctions to show when backend is unavailable
+// and localStorage is empty. Fetched directly from on-chain mappings.
+const SEED_AUCTIONS = [
+  { auction_id: '6223434538539787594535945122381255264228369483369766618589871978473389600533', title: 'Obscura Demo Auction - ZK Privacy', description: 'First-price sealed-bid auction demonstrating Aleo privacy' },
+  { auction_id: '6882928631484950133624464808745388159395855736893406333215224960779053894498', title: 'Test Auction', description: 'First test auction on Obscura v3' },
+]
+
 export default function Browse() {
   const navigate = useNavigate()
   const { auctions, loading, filters, setFilters, filteredAuctions, setAuctions, setLoading } = useAuctionStore()
@@ -39,15 +48,6 @@ export default function Browse() {
   const [lookupId, setLookupId] = useState('')
   const [lookupError, setLookupError] = useState<string | null>(null)
   const [backendDown, setBackendDown] = useState(false)
-
-  const CACHE_KEY = 'obscura_auction_ids'
-
-  // Seed auctions: known on-chain auctions to show when backend is unavailable
-  // and localStorage is empty. Fetched directly from on-chain mappings.
-  const SEED_AUCTIONS = [
-    { auction_id: '6223434538539787594535945122381255264228369483369766618589871978473389600533', title: 'Obscura Demo Auction - ZK Privacy', description: 'First-price sealed-bid auction demonstrating Aleo privacy' },
-    { auction_id: '6882928631484950133624464808745388159395855736893406333215224960779053894498', title: 'Test Auction', description: 'First test auction on Obscura v3' },
-  ]
 
   /** Save known auction IDs to localStorage for fallback when backend is down */
   const cacheAuctionIds = (auctionList: AuctionData[]) => {

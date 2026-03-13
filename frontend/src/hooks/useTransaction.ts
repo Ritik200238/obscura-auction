@@ -251,7 +251,7 @@ export function useTransaction() {
         return { transactionId: null }
       }
     },
-    [executeTransaction, pollTransaction, stopPolling, walletAddress, walletType]
+    [executeTransaction, pollTransaction, stopPolling, walletType]
   )
 
   const retryCheck = useCallback(() => {
