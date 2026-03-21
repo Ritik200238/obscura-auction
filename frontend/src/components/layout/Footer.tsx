@@ -12,7 +12,7 @@ export default function Footer() {
             <div className="flex items-center gap-2">
               <ObscuraLogo size={24} />
               <span className="text-sm font-medium text-gray-400">Obscura</span>
-              <span className="text-xs text-gray-600">Privacy-first sealed-bid auctions</span>
+              <span className="text-xs text-gray-600">Privacy-first multi-format auctions</span>
             </div>
 
             <div className="flex items-center gap-5">
@@ -47,11 +47,11 @@ export default function Footer() {
             <div className="flex items-center gap-2 text-xs text-gray-600">
               <span className="font-mono text-gray-500">obscura_v4.aleo</span>
               <span className="text-surface-700">·</span>
-              <span>17 transitions</span>
+              <span>28 transitions</span>
               <span className="text-surface-700">·</span>
-              <span>4 records</span>
+              <span>5 records</span>
               <span className="text-surface-700">·</span>
-              <span>13 mappings</span>
+              <span>16 mappings</span>
             </div>
             <div className="flex items-center gap-3 text-xs text-gray-600">
               <span className="flex items-center gap-1">

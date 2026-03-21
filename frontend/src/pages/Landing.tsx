@@ -754,7 +754,7 @@ export default function Landing() {
             >
               obscura_v4.aleo
             </a>{' '}
-            on Aleo Testnet · 31 transitions · 4 auction formats · Full escrow
+            on Aleo Testnet · 28 transitions · 4 auction formats · Full escrow
           </motion.p>
         </AnimatedSection>
       </section>

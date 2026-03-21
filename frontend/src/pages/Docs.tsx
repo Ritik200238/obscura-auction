@@ -90,7 +90,7 @@ export default function Docs() {
       {/* Architecture */}
       <Section id="architecture" title="Architecture" icon={Layers}>
         <p className="text-gray-400 text-sm mb-4">
-          The protocol is a single Leo program (obscura_v4.aleo) with 31 transitions,
+          The protocol is a single Leo program (obscura_v4.aleo) with 28 transitions,
           forming an 8-state machine with 4 auction formats. All sensitive operations happen off-chain in ZK circuits.
         </p>
 

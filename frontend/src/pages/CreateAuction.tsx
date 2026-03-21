@@ -95,7 +95,13 @@ export default function CreateAuction() {
         setCategory(t.cat)
         setDuration(t.dur)
         setAuctionMode(t.mode)
-        setReservePrice(t.reserve)
+        if (t.mode === AUCTION_MODE.DUTCH) {
+          setStartPrice(String(parseFloat(t.reserve) * 10))
+          setEndPrice(t.reserve)
+          setReservePrice('')
+        } else {
+          setReservePrice(t.reserve)
+        }
         setTokenType(t.token)
       }
     }
@@ -485,7 +491,7 @@ export default function CreateAuction() {
       <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
         {[
           { num: 1, label: 'Item Details', icon: Gavel, done: !!title.trim() },
-          { num: 2, label: 'Auction Settings', icon: Info, done: !!reservePrice && parseFloat(reservePrice) > 0 },
+          { num: 2, label: 'Auction Settings', icon: Info, done: auctionMode === AUCTION_MODE.DUTCH ? (!!startPrice && !!endPrice && parseFloat(startPrice) > 0 && parseFloat(endPrice) > 0) : (!!reservePrice && parseFloat(reservePrice) > 0) },
           { num: 3, label: 'Review & Create', icon: CheckCircle, done: false },
         ].map((step, i) => (
           <div key={step.num} className="flex items-center gap-2 shrink-0">
@@ -559,7 +565,15 @@ export default function CreateAuction() {
                   setCategory(t.cat)
                   setDuration(t.dur)
                   setAuctionMode(t.mode)
-                  if (t.reserve) setReservePrice(t.reserve)
+                  if (t.mode === AUCTION_MODE.DUTCH) {
+                    setStartPrice(t.reserve ? String(parseFloat(t.reserve) * 10) : '5')
+                    setEndPrice(t.reserve || '0.5')
+                    setReservePrice('')
+                  } else {
+                    if (t.reserve) setReservePrice(t.reserve)
+                    setStartPrice('')
+                    setEndPrice('')
+                  }
                   setTokenType(t.token)
                 }}
                 className={`p-3 rounded-xl border bg-surface-800/50 text-left transition-all ${
