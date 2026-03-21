@@ -391,7 +391,7 @@ export default function AuctionDetail() {
               {auction.auction_mode === AUCTION_MODE.DUTCH ? (
                 <DutchBidPanel auction={auction} onBidConfirmed={handleTxConfirmed} />
               ) : auction.auction_mode === AUCTION_MODE.ENGLISH ? (
-                <EnglishBidPanel auction={auction} highestBid={highestBid} onBidConfirmed={handleTxConfirmed} />
+                <EnglishBidPanel auction={auction} highestBid={Number(highestBid)} onBidConfirmed={handleTxConfirmed} />
               ) : (
                 <BidPanel auction={auction} onBidConfirmed={handleTxConfirmed} />
               )}
