@@ -109,7 +109,7 @@ export function useTransaction() {
         if (transactionStatus) {
           try {
             const walletStatus: unknown = await transactionStatus(txId)
-            if (import.meta.env.DEV) console.log('[useTransaction] transactionStatus response:', JSON.stringify(walletStatus))
+            // Transaction status logged only in development — no private data in status response
 
             let statusStr: string | null = null
             let realTxId: string | null = null
@@ -148,9 +148,7 @@ export function useTransaction() {
           } catch (e) {
             // transactionStatus failed — DON'T rethrow, continue to explorer check
             // Only log occasionally to avoid console spam
-            if (import.meta.env.DEV && (attempts <= 3 || attempts % 10 === 0)) {
-              console.log('[useTransaction] transactionStatus error (attempt ' + attempts + '):', e)
-            }
+            // Silently continue polling — errors are expected during proof generation
           }
         }
 
@@ -207,7 +205,7 @@ export function useTransaction() {
           privateFee: options.privateFee === true,
         }
 
-        if (import.meta.env.DEV) console.log(`[useTransaction] Wallet: ${walletType}, fee: ${fee} microcredits, payload:`, JSON.stringify(aleoTransaction))
+        // PRIVACY: Never log transaction payload — contains bid amounts, nonces, and addresses
 
         const TX_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
         const response = await Promise.race([
@@ -237,7 +235,7 @@ export function useTransaction() {
 
         return { transactionId }
       } catch (err) {
-        console.error('[useTransaction] Full error:', err)
+        // Log error type only — never log full error object (may contain private inputs)
         let msg = 'Transaction failed'
         if (err instanceof Error) {
           msg = err.message

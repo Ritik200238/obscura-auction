@@ -5,6 +5,7 @@ interface AuctionFilters {
   status: number | null
   tokenType: number | null
   mode: number | null
+  category: number | null
 }
 
 interface AuctionState {
@@ -29,7 +30,7 @@ export const useAuctionStore = create<AuctionState>((set, get) => ({
   selectedAuction: null,
   loading: false,
   error: null,
-  filters: { status: null, tokenType: null, mode: null },
+  filters: { status: null, tokenType: null, mode: null, category: null },
 
   setAuctions: (auctions) => set({ auctions }),
 
@@ -65,6 +66,7 @@ export const useAuctionStore = create<AuctionState>((set, get) => ({
       if (filters.status !== null && a.status !== filters.status) return false
       if (filters.tokenType !== null && a.token_type !== filters.tokenType) return false
       if (filters.mode !== null && a.auction_mode !== filters.mode) return false
+      if (filters.category !== null && a.category !== filters.category) return false
       return true
     })
   },

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { Eye, Loader2, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Eye, Loader2, CheckCircle, AlertTriangle } from 'lucide-react'
+import ErrorBanner from '@/components/shared/ErrorBanner'
 import toast from 'react-hot-toast'
 import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
@@ -241,12 +242,7 @@ export default function RevealPanel({ auction, onRevealConfirmed }: RevealPanelP
         </div>
       )}
 
-      {(txError || revealError || balanceError) && (
-        <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 mt-4">
-          <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-          <p className="text-sm text-red-400">{balanceError || revealError || txError}</p>
-        </div>
-      )}
+      <ErrorBanner error={balanceError || revealError || txError} />
     </div>
   )
 }

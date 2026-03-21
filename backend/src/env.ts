@@ -42,5 +42,5 @@ export function validateEnv(): void {
   logger.info(`  REDIS (legacy): ${redisUrl ? 'configured' : 'not configured'}`);
   logger.info(`  LOG_LEVEL:      ${process.env.LOG_LEVEL || 'info (default)'}`);
   logger.info(`  EXPLORER_API:   ${process.env.EXPLORER_API || 'https://api.explorer.provable.com/v1 (default)'}`);
-  logger.info(`  PROGRAM_ID:     ${process.env.PROGRAM_ID || 'obscura_v3.aleo (default)'}`);
+  logger.info(`  PROGRAM_ID:     ${process.env.PROGRAM_ID || 'obscura_v4.aleo (default)'}`);
 }

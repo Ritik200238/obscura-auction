@@ -196,23 +196,23 @@
   <text x="364" y="310" class="section-label" fill="#8b5cf6">SMART CONTRACTS</text>
   <text x="500" y="310" class="box-sub">On-Chain Programs (Aleo Testnet)</text>
 
-  <!-- Main contract: obscura_v3.aleo -->
+  <!-- Main contract: obscura_v4.aleo -->
   <rect x="360" y="322" width="280" height="120" rx="8" fill="#111827" stroke="#8b5cf6" stroke-width="0.8" stroke-opacity="0.5"/>
   <rect x="360" y="322" width="280" height="2" rx="1" fill="#8b5cf6" opacity="0.4"/>
-  <text x="380" y="344" class="box-title" fill="#c4b5fd" font-size="13">obscura_v3.aleo</text>
+  <text x="380" y="344" class="box-title" fill="#c4b5fd" font-size="13">obscura_v4.aleo</text>
 
   <!-- Stats grid -->
   <g transform="translate(380, 355)">
     <rect x="0" y="0" width="56" height="32" rx="4" fill="#1e1b4b" opacity="0.5"/>
-    <text x="28" y="14" text-anchor="middle" class="stat" fill="#c4b5fd">17</text>
+    <text x="28" y="14" text-anchor="middle" class="stat" fill="#c4b5fd">28</text>
     <text x="28" y="26" text-anchor="middle" class="stat-label">Transitions</text>
 
     <rect x="64" y="0" width="56" height="32" rx="4" fill="#1e1b4b" opacity="0.5"/>
-    <text x="92" y="14" text-anchor="middle" class="stat" fill="#c4b5fd">4</text>
+    <text x="92" y="14" text-anchor="middle" class="stat" fill="#c4b5fd">5</text>
     <text x="92" y="26" text-anchor="middle" class="stat-label">Records</text>
 
     <rect x="128" y="0" width="56" height="32" rx="4" fill="#1e1b4b" opacity="0.5"/>
-    <text x="156" y="14" text-anchor="middle" class="stat" fill="#c4b5fd">13</text>
+    <text x="156" y="14" text-anchor="middle" class="stat" fill="#c4b5fd">16</text>
     <text x="156" y="26" text-anchor="middle" class="stat-label">Mappings</text>
 
     <rect x="192" y="0" width="56" height="32" rx="4" fill="#1e1b4b" opacity="0.5"/>
@@ -221,7 +221,7 @@
   </g>
 
   <!-- Contract features -->
-  <text x="380" y="410" class="box-detail" fill="#94a3b8">Commit-Reveal -- Vickrey (2nd-Price) -- Anti-Sniping -- Settlement Proofs</text>
+  <text x="380" y="410" class="box-detail" fill="#94a3b8">4 Formats -- Commit-Reveal -- Vickrey -- Dutch -- English -- Dispute Resolution</text>
   <text x="380" y="424" class="box-detail" fill="#94a3b8">UTXO Record Model -- BHP256 Commitments -- Selective Disclosure</text>
 
   <!-- Dependency: credits.aleo -->

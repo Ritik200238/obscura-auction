@@ -227,7 +227,7 @@ Vickrey auctions are used everywhere high-value, private bidding matters:
 ## Obscura's Implementation
 
 ```
-Contract: obscura_v3.aleo
+Contract: obscura_v4.aleo
 Mode:     auction_mode = 2u8 (MODE_VICKREY)
 
 Key mappings:

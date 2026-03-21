@@ -17,6 +17,7 @@ import {
   Trophy,
   Shield,
   Zap,
+  Copy,
 } from 'lucide-react'
 import { useAuction } from '@/hooks/useAuction'
 import { useRecords } from '@/hooks/useRecords'
@@ -24,7 +25,9 @@ import { useTransaction } from '@/hooks/useTransaction'
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import {
   STATUS,
+  AUCTION_MODE,
   CATEGORY_LABELS,
+  MODE_LABELS,
 } from '@/types'
 import {
   getPhase,
@@ -42,6 +45,8 @@ import ModeBadge from '@/components/shared/ModeBadge'
 import CountdownTimer from '@/components/shared/CountdownTimer'
 import { ShimmerDetail } from '@/components/shared/Shimmer'
 import BidPanel from '@/components/auction/BidPanel'
+import DutchBidPanel from '@/components/auction/DutchBidPanel'
+import EnglishBidPanel from '@/components/auction/EnglishBidPanel'
 import RevealPanel from '@/components/auction/RevealPanel'
 import ClaimPanel from '@/components/auction/ClaimPanel'
 import RefundPanel from '@/components/auction/RefundPanel'
@@ -268,7 +273,7 @@ export default function AuctionDetail() {
                 {settlementProof && (
                   <div className="bg-surface-800 rounded-lg p-3">
                     <p className="text-[10px] text-gray-500 mb-1">
-                      Settlement Proof · BHP256(auction_id, highest_bid, 2nd_bid, winner_hash, block)
+                      Settlement Proof — verifiable record of the auction outcome
                     </p>
                     <p className="text-xs text-green-400 font-mono break-all">{settlementProof}field</p>
                   </div>
@@ -276,7 +281,7 @@ export default function AuctionDetail() {
                 {paymentProof && (
                   <div className="bg-surface-800 rounded-lg p-3">
                     <p className="text-[10px] text-gray-500 mb-1">
-                      Payment Commitment · commit.bhp256(amount, nonce_scalar) — hiding + binding
+                      Payment Commitment — encrypted proof that the winner paid
                     </p>
                     <p className="text-xs text-accent-400 font-mono break-all">{paymentProof}field</p>
                   </div>
@@ -286,7 +291,7 @@ export default function AuctionDetail() {
               {/* Explorer QR for settled auctions */}
               <div className="mt-3 pt-3 border-t border-surface-700/30">
                 <AuctionQR
-                  value={`https://testnet.explorer.provable.com/program/obscura_v3.aleo`}
+                  value={`https://testnet.explorer.provable.com/program/obscura_v4.aleo`}
                   label="Verify on Explorer"
                   sublabel="Scan to verify this auction's settlement on Aleo Explorer"
                   size={100}
@@ -295,35 +300,101 @@ export default function AuctionDetail() {
             </div>
           )}
 
-          {/* Phase transition controls */}
+          {/* Share Your Win — ZK Social Proof */}
+          {isSettled && connected && winner && (
+            <div className="card border-accent-500/20 bg-accent-500/5 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-accent-500 via-cyan-400 to-accent-500" />
+              <div className="flex items-start gap-3 mb-4">
+                <Trophy className="w-5 h-5 text-accent-400 mt-0.5 shrink-0" />
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Share Your Win</h3>
+                  <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
+                    Prove you won this auction without revealing your bid amount. Zero-knowledge social proof — powered by Aleo.
+                  </p>
+                </div>
+              </div>
+              <div className="bg-surface-800 rounded-xl p-4 mb-3">
+                <p className="text-sm text-gray-300 leading-relaxed">
+                  {'\u{1F3C6}'} I won Auction #{truncateId(auction.auction_id, 6)} on <span className="text-accent-400 font-semibold">Obscura</span>.
+                </p>
+                <p className="text-sm text-gray-400 mt-1">
+                  My bid amount? <span className="text-accent-400">That's private.</span> Verified on Aleo with zero-knowledge proofs.
+                </p>
+                <p className="text-xs text-gray-600 mt-2 font-mono">
+                  Contract: obscura_v4.aleo · Transition: prove_won_auction
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const text = `\u{1F3C6} I won Auction #${truncateId(auction.auction_id, 6)} on Obscura — the private auction protocol on Aleo.\n\nMy bid amount? That's private. Verified with zero-knowledge proofs.\n\n${window.location.href}`
+                    navigator.clipboard.writeText(text).catch(() => {})
+                  }}
+                  className="btn-secondary text-xs py-2 px-4 flex items-center gap-2"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  Copy to Share
+                </button>
+                <a
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`\u{1F3C6} I won a private auction on Obscura!\n\nMy bid amount? That's private. Verified with zero-knowledge proofs on Aleo.\n\n${window.location.href}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary text-xs py-2 px-4 flex items-center gap-2"
+                >
+                  Post on X
+                </a>
+              </div>
+              <p className="text-[10px] text-gray-600 mt-3">
+                Tip: Call <code className="text-accent-400">prove_won_auction</code> with your WinnerCertificate record to generate a verifiable on-chain proof.
+              </p>
+            </div>
+          )}
+
+          {/* Phase transition controls — mode-aware */}
           {isActive && blockHeight > auction.deadline && (
-            <CloseBiddingCard auctionId={auction.auction_id} onSuccess={refresh} />
+            auction.auction_mode === AUCTION_MODE.ENGLISH ? (
+              <SettleEnglishCard auctionId={auction.auction_id} onSuccess={refresh} />
+            ) : auction.auction_mode === AUCTION_MODE.DUTCH ? (
+              <div className="card text-center">
+                <XCircle className="w-8 h-8 text-gray-500 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">This Dutch auction expired with no buyer.</p>
+              </div>
+            ) : (
+              <CloseBiddingCard auctionId={auction.auction_id} onSuccess={refresh} />
+            )
           )}
 
           {isActive && auction.bid_count === 0 && blockHeight <= auction.deadline && (
             <CancelAuctionCard auctionId={auction.auction_id} onSuccess={refresh} />
           )}
 
-          {/* Bidder notice: deadline passed but bidding not yet closed */}
-          {isActive && blockHeight > auction.deadline && auction.bid_count > 0 && (
+          {/* Bidder notice: deadline passed — mode-aware (not shown for Dutch) */}
+          {isActive && blockHeight > auction.deadline && auction.bid_count > 0 && auction.auction_mode !== AUCTION_MODE.DUTCH && (
             <div className="card border-amber-500/20 bg-amber-500/5">
               <div className="flex items-start gap-3">
                 <Clock className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-amber-300 font-semibold text-sm">Bidding Deadline Passed</p>
                   <p className="text-xs text-gray-400 mt-1">
-                    The seller needs to close bidding to start the reveal phase.
-                    Prepare your bid record — you will need it to reveal.
+                    {auction.auction_mode === AUCTION_MODE.ENGLISH
+                      ? 'The bidding deadline has passed. Anyone can call Settle to finalize this auction.'
+                      : 'The seller needs to close bidding to start the reveal phase. Prepare your bid record — you will need it to reveal.'}
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Phase-based action panels */}
+          {/* Phase-based action panels — mode-aware */}
           {isActive && blockHeight <= auction.deadline && (
             <motion.div variants={scaleIn}>
-              <BidPanel auction={auction} onBidConfirmed={handleTxConfirmed} />
+              {auction.auction_mode === AUCTION_MODE.DUTCH ? (
+                <DutchBidPanel auction={auction} onBidConfirmed={handleTxConfirmed} />
+              ) : auction.auction_mode === AUCTION_MODE.ENGLISH ? (
+                <EnglishBidPanel auction={auction} highestBid={highestBid} onBidConfirmed={handleTxConfirmed} />
+              ) : (
+                <BidPanel auction={auction} onBidConfirmed={handleTxConfirmed} />
+              )}
             </motion.div>
           )}
 
@@ -450,12 +521,12 @@ export default function AuctionDetail() {
               {auction.reveal_deadline > 0 && (
                 <InfoRow label="Reveal Deadline" value={`#${auction.reveal_deadline.toLocaleString()}`} />
               )}
-              <InfoRow label="Mode" value={auction.auction_mode === 2 ? 'Vickrey (2nd-Price)' : 'First-Price'} />
+              <InfoRow label="Mode" value={MODE_LABELS[auction.auction_mode] || 'Unknown'} />
             </div>
           </div>
 
-          {/* Anti-snipe info card */}
-          {isActive && (
+          {/* Anti-snipe info card — not relevant for Dutch (first bid wins instantly) */}
+          {isActive && auction.auction_mode !== AUCTION_MODE.DUTCH && (
             <div className="card border-orange-500/10 bg-orange-500/5">
               <div className="flex items-start gap-2">
                 <Zap className="w-4 h-4 text-orange-400 mt-0.5 shrink-0" />
@@ -478,22 +549,24 @@ export default function AuctionDetail() {
             </h3>
             <div className="space-y-0">
               <TimelineStep label="Created" completed />
-              <TimelineStep
-                label="Bidding"
-                completed={phase !== 'active'}
-                active={phase === 'active'}
-              />
-              <TimelineStep
-                label="Revealing"
-                completed={phase === 'settled' || phase === 'failed'}
-                active={phase === 'revealing'}
-              />
-              <TimelineStep
-                label="Settled"
-                completed={phase === 'settled'}
-                active={false}
-                last
-              />
+              {auction.auction_mode === AUCTION_MODE.DUTCH ? (
+                <>
+                  <TimelineStep label="Live (Price Descending)" completed={phase === 'settled' || auction.status === STATUS.EXPIRED} active={phase === 'active'} />
+                  <TimelineStep label={auction.status === STATUS.EXPIRED ? 'Expired' : 'Sold'} completed={phase === 'settled' || auction.status === STATUS.EXPIRED} active={false} last />
+                </>
+              ) : auction.auction_mode === AUCTION_MODE.ENGLISH ? (
+                <>
+                  <TimelineStep label="Bidding (Ascending)" completed={phase !== 'active'} active={phase === 'active'} />
+                  <TimelineStep label="Settlement" completed={phase === 'settled' || phase === 'failed'} active={false} />
+                  <TimelineStep label="Settled" completed={phase === 'settled'} active={false} last />
+                </>
+              ) : (
+                <>
+                  <TimelineStep label="Bidding" completed={phase !== 'active'} active={phase === 'active'} />
+                  <TimelineStep label="Revealing" completed={phase === 'settled' || phase === 'failed'} active={phase === 'revealing'} />
+                  <TimelineStep label="Settled" completed={phase === 'settled'} active={false} last />
+                </>
+              )}
             </div>
           </div>
 
@@ -635,6 +708,67 @@ function CloseBiddingCard({ auctionId, onSuccess }: { auctionId: string; onSucce
         </div>
         <button onClick={handleClose} disabled={loading || !connected} className="btn-primary text-xs py-2 px-4 w-full sm:w-auto">
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Close Bidding'}
+        </button>
+      </div>
+      {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+    </div>
+  )
+}
+
+function SettleEnglishCard({ auctionId, onSuccess }: { auctionId: string; onSuccess: () => void }) {
+  const { execute, loading, error, txId } = useTransaction()
+  const { connected } = useWallet()
+  const [reservePrice, setReservePrice] = useState('')
+
+  const handleSettle = async () => {
+    if (!reservePrice) return
+    try {
+      const key = auctionId.endsWith('field') ? auctionId : `${auctionId}field`
+      const result = await execute({
+        functionName: 'settle_english',
+        inputs: [key, `${Math.floor(parseFloat(reservePrice) * 1_000_000)}u128`],
+        onChainVerify: async () => {
+          const raw = await (await import('@/lib/aleo')).fetchMapping('auctions', key)
+          if (!raw) return false
+          const statusMatch = raw.match(/status:\s*(\d+)u8/)
+          return statusMatch ? parseInt(statusMatch[1]) >= 4 : false
+        },
+      })
+      if (result.transactionId) setTimeout(onSuccess, 8000)
+    } catch { /* error surfaced via hook */ }
+  }
+
+  if (txId) {
+    return (
+      <div className="card">
+        <p className="text-sm text-green-400 font-medium">English auction settlement submitted.</p>
+        <TransactionLink txId={txId} className="text-xs mt-2" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="card border-purple-500/20">
+      <div className="flex items-start gap-3 mb-3">
+        <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center shrink-0">
+          <Trophy className="w-5 h-5 text-purple-400" />
+        </div>
+        <div>
+          <p className="text-white font-semibold text-sm">Bidding Ended — Settle Auction</p>
+          <p className="text-xs text-gray-400">Enter your reserve price to finalize the English auction.</p>
+        </div>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <input
+          type="number"
+          value={reservePrice}
+          onChange={(e) => setReservePrice(e.target.value)}
+          placeholder="Reserve price (ALEO)"
+          className="input-field text-sm flex-1"
+          step="0.001"
+        />
+        <button onClick={handleSettle} disabled={loading || !connected || !reservePrice} className="btn-primary text-xs py-2 px-4">
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Settle'}
         </button>
       </div>
       {error && <p className="text-xs text-red-400 mt-2">{error}</p>}

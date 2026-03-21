@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Scale, Loader2, AlertCircle, CheckCircle, Info } from 'lucide-react'
+import { Scale, Loader2, CheckCircle, Info } from 'lucide-react'
+import ErrorBanner from '@/components/shared/ErrorBanner'
 import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
 import { toMicrocredits, fetchMapping, parseAuctionData } from '@/lib/aleo'
@@ -93,8 +94,8 @@ export default function SettlePanel({ auction }: SettlePanelProps) {
         <div>
           <p className="text-sm text-accent-300 font-medium mb-1">Seller Action Required</p>
           <p className="text-xs text-gray-400">
-            Only the auction creator can finalize — you must re-enter the exact reserve price
-            you set when creating this auction. The on-chain BHP256 hash will be verified.
+            Only the auction creator can finalize. Re-enter the exact reserve price you set when
+            creating this auction — the contract verifies it matches the encrypted on-chain record.
             If you are a bidder, wait for the seller to finalize.
           </p>
         </div>
@@ -120,12 +121,7 @@ export default function SettlePanel({ auction }: SettlePanelProps) {
       </div>
 
       {/* Errors */}
-      {(formError || txError) && (
-        <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-4">
-          <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-          <p className="text-sm text-red-400">{formError || txError}</p>
-        </div>
-      )}
+      <ErrorBanner error={formError || txError} onDismiss={() => setFormError(null)} />
 
       <button
         onClick={handleSettle}

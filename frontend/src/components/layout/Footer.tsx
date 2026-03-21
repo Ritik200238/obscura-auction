@@ -32,7 +32,7 @@ export default function Footer() {
                 GitHub
               </a>
               <a
-                href="https://testnet.aleoscan.io/program?id=obscura_v3.aleo"
+                href="https://testnet.aleoscan.io/program?id=obscura_v4.aleo"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-sm text-gray-500 hover:text-accent-400 transition-colors"
@@ -45,7 +45,7 @@ export default function Footer() {
           {/* Bottom row */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-surface-800/50">
             <div className="flex items-center gap-2 text-xs text-gray-600">
-              <span className="font-mono text-gray-500">obscura_v3.aleo</span>
+              <span className="font-mono text-gray-500">obscura_v4.aleo</span>
               <span className="text-surface-700">·</span>
               <span>17 transitions</span>
               <span className="text-surface-700">·</span>

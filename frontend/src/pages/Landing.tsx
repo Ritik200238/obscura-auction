@@ -262,11 +262,11 @@ function SettleVisual() {
    ───────────────────────────────────────────── */
 
 const stats = [
-  { label: 'Transitions', value: 17, detail: 'On-chain functions' },
-  { label: 'Record Types', value: 4, detail: 'Private UTXO records' },
-  { label: 'Private Mappings', value: 13, detail: 'Encrypted state' },
-  { label: 'State Machine', value: 8, detail: 'Auction phases' },
-  { label: 'Token Types', value: 2, detail: 'ALEO + USDCx' },
+  { label: 'Transitions', value: 31, detail: 'On-chain functions' },
+  { label: 'Records', value: 5, detail: 'Private UTXO records' },
+  { label: 'Mappings', value: 19, detail: 'On-chain state' },
+  { label: 'Auction Formats', value: 4, detail: 'Sealed · Vickrey · Dutch · English' },
+  { label: 'Token Types', value: 3, detail: 'ALEO + USDCx + USAD' },
 ]
 
 /* ─────────────────────────────────────────────
@@ -415,14 +415,28 @@ export default function Landing() {
             transition={{ delay: 2.2, duration: 0.5 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10"
           >
-            <Link to="/browse" className="btn-primary flex items-center gap-2 text-base px-8 py-3.5">
-              Enter the Auction House
+            <Link to="/create" className="btn-primary flex items-center gap-2 text-lg px-10 py-4 font-semibold">
+              Start Your First Auction
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+            <Link to="/browse" className="btn-secondary flex items-center gap-2 text-base px-8 py-3.5">
+              Browse Auctions
               <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link to="/docs" className="btn-secondary flex items-center gap-2 text-base px-8 py-3.5">
-              Watch How It Works
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+          </motion.div>
+
+          {/* 3-step quick guide */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 2.5, duration: 0.5 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 mt-8 text-xs text-gray-500"
+          >
+            <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-accent-500/20 text-accent-400 flex items-center justify-center text-[10px] font-bold">1</span> Connect Wallet</span>
+            <span className="hidden sm:block text-surface-600">→</span>
+            <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-accent-500/20 text-accent-400 flex items-center justify-center text-[10px] font-bold">2</span> Get Test Tokens</span>
+            <span className="hidden sm:block text-surface-600">→</span>
+            <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-accent-500/20 text-accent-400 flex items-center justify-center text-[10px] font-bold">3</span> Create or Browse</span>
           </motion.div>
 
           <motion.div
@@ -433,11 +447,11 @@ export default function Landing() {
           >
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-green-400 font-medium font-mono text-xs">obscura_v3.aleo</span>
+              <span className="text-green-400 font-medium font-mono text-xs">obscura_v4.aleo</span>
             </span>
             <span className="text-surface-600">|</span>
             <a
-              href="https://testnet.aleoscan.io/program?id=obscura_v3.aleo"
+              href="https://testnet.aleoscan.io/program?id=obscura_v4.aleo"
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent-400 hover:text-accent-300 transition-colors flex items-center gap-1 text-xs"
@@ -478,7 +492,7 @@ export default function Landing() {
               <SealVisual />
               <h3 className="text-lg font-bold text-white mb-3 mt-5 tracking-tight">SEALED BIDS</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Every bid encrypted with BHP256 commitments. No one sees amounts until reveal.
+                Every bid is encrypted. No one sees amounts until the reveal phase.
               </p>
             </div>
           </motion.div>
@@ -598,6 +612,64 @@ export default function Landing() {
       </section>
 
       {/* ═══════════════════════════════════════
+          USE CASES — Who needs private auctions?
+          ═══════════════════════════════════════ */}
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
+        <AnimatedSection>
+          <motion.div variants={fadeInUp} className="text-center mb-14">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">Built for Real Use Cases</h2>
+            <p className="text-gray-400 max-w-lg mx-auto">Four auction formats. Three tokens. One privacy-first platform.</p>
+          </motion.div>
+        </AnimatedSection>
+
+        <AnimatedSection className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            {
+              emoji: '🖼️',
+              title: 'NFT Launches',
+              description: 'Sell digital art and collectibles with private bidding. Losing bidders never see the winning price — fair for everyone.',
+              mode: 'Vickrey (2nd-Price)',
+              link: '/create?template=nft',
+              color: 'from-cyan-500/10 to-transparent border-cyan-500/20',
+            },
+            {
+              emoji: '🪙',
+              title: 'Token Sales',
+              description: 'Fair price discovery without whale front-running. The price drops until someone buys — no insider advantages.',
+              mode: 'Dutch (Descending)',
+              link: '/create?template=token_sale',
+              color: 'from-orange-500/10 to-transparent border-orange-500/20',
+            },
+            {
+              emoji: '📋',
+              title: 'Procurement',
+              description: 'Suppliers bid privately for contracts. No bid rigging, no information leakage — the best price wins.',
+              mode: 'Sealed Bid (1st-Price)',
+              link: '/create?template=procurement',
+              color: 'from-green-500/10 to-transparent border-green-500/20',
+            },
+          ].map((uc) => (
+            <motion.div key={uc.title} variants={fadeInUp}>
+              <Link
+                to={uc.link}
+                className={`block h-full rounded-2xl p-6 bg-gradient-to-b ${uc.color} border hover:border-white/20 transition-all duration-300 group`}
+              >
+                <span className="text-3xl mb-4 block">{uc.emoji}</span>
+                <h3 className="text-lg font-bold text-white mb-2">{uc.title}</h3>
+                <p className="text-sm text-gray-400 leading-relaxed mb-4">{uc.description}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-gray-500 font-mono">{uc.mode}</span>
+                  <span className="text-xs text-accent-400 group-hover:text-accent-300 flex items-center gap-1">
+                    Try it <ArrowRight className="w-3 h-3" />
+                  </span>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </AnimatedSection>
+      </section>
+
+      {/* ═══════════════════════════════════════
           TECHNICAL DEPTH — 3 detailed cards
           ═══════════════════════════════════════ */}
       <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
@@ -615,11 +687,11 @@ export default function Landing() {
               <h3 className="text-white font-semibold text-sm">Smart Contract</h3>
             </div>
             <div className="space-y-2.5 text-xs text-gray-400">
-              <div className="flex justify-between"><span>Transitions</span><span className="text-white font-mono">17</span></div>
-              <div className="flex justify-between"><span>Private Records</span><span className="text-white font-mono">4</span></div>
-              <div className="flex justify-between"><span>Mappings</span><span className="text-white font-mono">13</span></div>
-              <div className="flex justify-between"><span>State Machine</span><span className="text-white font-mono">8 states</span></div>
-              <div className="flex justify-between"><span>ZK Primitives</span><span className="text-white font-mono">commit.bhp256</span></div>
+              <div className="flex justify-between"><span>Transitions</span><span className="text-white font-mono">31</span></div>
+              <div className="flex justify-between"><span>Private Records</span><span className="text-white font-mono">5</span></div>
+              <div className="flex justify-between"><span>Mappings</span><span className="text-white font-mono">16</span></div>
+              <div className="flex justify-between"><span>Auction Formats</span><span className="text-white font-mono">4 modes</span></div>
+              <div className="flex justify-between"><span>Dispute Resolution</span><span className="text-white font-mono">Bond + Admin</span></div>
             </div>
           </motion.div>
 
@@ -629,7 +701,7 @@ export default function Landing() {
               <h3 className="text-white font-semibold text-sm">Security</h3>
             </div>
             <div className="space-y-2.5 text-xs text-gray-400">
-              <div className="flex justify-between"><span>Bid Replay Protection</span><span className="text-green-400">BHP256</span></div>
+              <div className="flex justify-between"><span>Bid Replay Protection</span><span className="text-green-400">Encrypted</span></div>
               <div className="flex justify-between"><span>Double-Settlement Guard</span><span className="text-green-400">Mapping</span></div>
               <div className="flex justify-between"><span>Anti-Sniping</span><span className="text-green-400">40 blocks</span></div>
               <div className="flex justify-between"><span>Escrow Model</span><span className="text-green-400">Full UTXO</span></div>
@@ -645,7 +717,7 @@ export default function Landing() {
               <div className="flex justify-between"><span>Deposit</span><span className="text-white font-mono text-[10px]">private_to_public</span></div>
               <div className="flex justify-between"><span>Payout</span><span className="text-white font-mono text-[10px]">public_to_private</span></div>
               <div className="flex justify-between"><span>Fee</span><span className="text-white font-mono">1% (100 BPS)</span></div>
-              <div className="flex justify-between"><span>Tokens</span><span className="text-white">ALEO + USDCx</span></div>
+              <div className="flex justify-between"><span>Tokens</span><span className="text-white">ALEO + USDCx + USAD</span></div>
             </div>
           </motion.div>
         </AnimatedSection>
@@ -675,14 +747,14 @@ export default function Landing() {
           <motion.p variants={fadeInUp} className="text-center text-xs text-gray-600 font-mono">
             Deployed as{' '}
             <a
-              href="https://testnet.aleoscan.io/program?id=obscura_v3.aleo"
+              href="https://testnet.aleoscan.io/program?id=obscura_v4.aleo"
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent-400/70 hover:text-accent-400 transition-colors"
             >
-              obscura_v3.aleo
+              obscura_v4.aleo
             </a>{' '}
-            on Aleo Testnet · 17 transitions · commit.bhp256 · Full UTXO escrow
+            on Aleo Testnet · 31 transitions · 4 auction formats · Full escrow
           </motion.p>
         </AnimatedSection>
       </section>
@@ -713,7 +785,7 @@ export default function Landing() {
                   {[
                     'Connect your Aleo wallet (get testnet ALEO from faucet if needed)',
                     'Go to Create Auction → enter a title, reserve price 0.001, pick Vickrey mode, 1h duration',
-                    'Submit — your auction is created on-chain with a BHP256-hashed reserve',
+                    'Submit — your auction is created on-chain with an encrypted reserve price',
                     'After bidding closes, go to your auction → Finalize (re-enter your reserve price)',
                   ].map((step, i) => (
                     <li key={i} className="flex items-start gap-2">
@@ -746,7 +818,7 @@ export default function Landing() {
 
             <div className="mt-5 pt-5 border-t border-surface-800 flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-xs text-gray-600">
-                Contract: <span className="font-mono text-accent-400/70">obscura_v3.aleo</span> ·
+                Contract: <span className="font-mono text-accent-400/70">obscura_v4.aleo</span> ·
                 Deploy TX: <span className="font-mono text-gray-500">at1f3sxnl...928a</span>
               </p>
               <Link to="/create" className="btn-primary text-sm flex items-center gap-2">
@@ -800,7 +872,7 @@ export default function Landing() {
                   <ExternalLink className="w-3 h-3" />
                 </a>
                 <a
-                  href="https://testnet.aleoscan.io/program?id=obscura_v3.aleo"
+                  href="https://testnet.aleoscan.io/program?id=obscura_v4.aleo"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-gray-300 transition-colors flex items-center gap-1"

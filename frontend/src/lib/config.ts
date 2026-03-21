@@ -1,7 +1,8 @@
 export const config = {
-  programId: 'obscura_v3.aleo',
+  programId: 'obscura_v4.aleo',
   creditsProgram: 'credits.aleo',
   usdcxProgramId: 'test_usdcx_stablecoin.aleo',
+  usadProgramId: 'test_usad_stablecoin.aleo',
   explorerApi: 'https://api.explorer.provable.com/v1',
   explorerUrl: 'https://explorer.provable.com',
   backendApi: import.meta.env.VITE_BACKEND_URL || (import.meta.env.PROD ? 'https://obscura-auction.onrender.com' : 'http://localhost:3001'),

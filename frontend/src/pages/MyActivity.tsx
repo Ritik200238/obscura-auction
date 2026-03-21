@@ -7,6 +7,7 @@ import { Loader2, RefreshCw, Wallet, Lock, Receipt, Award, AlertCircle, ArrowUpR
 import { formatAleoAmount, truncateId, shortenAddress, formatTokenAmount } from '@/lib/aleo'
 import { TOKEN_TYPE } from '@/types'
 import { ShimmerRow } from '@/components/shared/Shimmer'
+import FaucetBanner from '@/components/shared/FaucetBanner'
 import { Link } from 'react-router-dom'
 
 export default function MyActivity() {
@@ -66,6 +67,7 @@ export default function MyActivity() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <FaucetBanner />
       {/* Dashboard Header */}
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">

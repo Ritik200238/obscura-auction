@@ -1,0 +1,26 @@
+{
+  "program": "obscura_v4.aleo",
+  "version": "0.1.0",
+  "description": "Multi-format privacy auction protocol: Sealed First-Price, Vickrey, Dutch, English — with triple token (ALEO + USDCx + USAD), dispute resolution, and settlement proofs",
+  "license": "MIT",
+  "dependencies": [
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    },
+    {
+      "name": "test_usdcx_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    },
+    {
+      "name": "test_usad_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    }
+  ]
+}

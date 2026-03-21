@@ -51,6 +51,7 @@ export default function Docs() {
         <NavCard href="#architecture" icon={Layers} label="Architecture" />
         <NavCard href="#how-to-use" icon={BookOpen} label="How to Use" />
         <NavCard href="#faq" icon={AlertTriangle} label="FAQ" />
+        <NavCard href="#developers" icon={Zap} label="SDK" />
       </div>
 
       {/* Privacy Model */}
@@ -89,13 +90,14 @@ export default function Docs() {
       {/* Architecture */}
       <Section id="architecture" title="Architecture" icon={Layers}>
         <p className="text-gray-400 text-sm mb-4">
-          The protocol is a single Leo program (obscura_v3.aleo) with 17 transitions including constructor,
-          forming an 8-state machine. All sensitive operations happen off-chain in ZK circuits.
+          The protocol is a single Leo program (obscura_v4.aleo) with 31 transitions,
+          forming an 8-state machine with 4 auction formats. All sensitive operations happen off-chain in ZK circuits.
         </p>
 
         {/* Visual State Machine */}
         <div className="bg-surface-800/60 rounded-xl p-5 mb-6 border border-surface-700 overflow-x-auto">
           <div className="min-w-[500px]">
+            <p className="text-xs text-accent-400 font-semibold mb-2">Sealed-Bid / Vickrey Flow</p>
             {/* Main flow */}
             <div className="flex items-center gap-3 mb-4">
               <StateNode label="ACTIVE" color="green" active />
@@ -130,6 +132,31 @@ export default function Docs() {
                 </div>
               </div>
             </div>
+
+            <p className="text-xs text-orange-400 font-semibold mb-2 mt-4">Dutch (Descending Price) Flow</p>
+            <div className="flex items-center gap-3 mb-4">
+              <StateNode label="ACTIVE" color="green" active />
+              <StateArrow label="bid_dutch (first buyer)" />
+              <StateNode label="SETTLED" color="blue" />
+            </div>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-[10px] text-gray-600 w-32 text-right">deadline passes, no buyer →</span>
+              <StateNode label="EXPIRED" color="gray" small />
+            </div>
+
+            <p className="text-xs text-purple-400 font-semibold mb-2 mt-4">English (Ascending) Flow</p>
+            <div className="flex items-center gap-3 mb-4">
+              <StateNode label="ACTIVE" color="green" active />
+              <StateArrow label="settle_english" />
+              <div className="flex flex-col gap-2">
+                <StateNode label="SETTLED" color="blue" />
+                <StateNode label="FAILED" color="red" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-gray-600 w-32 text-right">no bids at deadline →</span>
+              <StateNode label="EXPIRED" color="gray" small />
+            </div>
           </div>
         </div>
 
@@ -158,6 +185,11 @@ export default function Docs() {
             desc="Created during claim_win. Proves the seller received payment minus fees."
             color="cyan"
           />
+          <RecordDoc
+            name="DisputeBond"
+            desc="Created when a participant disputes a settled auction. Holds the bond amount. Returned if dispute is upheld, forfeited if rejected."
+            color="orange"
+          />
         </div>
       </Section>
 
@@ -170,10 +202,16 @@ export default function Docs() {
               For Sellers
             </h4>
             <div className="space-y-3 text-sm text-gray-400">
-              <Step n={1} icon={Scale} text="Navigate to Create Auction. Set item title, category, reserve price, auction mode (First-Price or Vickrey), and duration." />
+              <Step n={1} icon={Scale} text="Navigate to Create Auction. Set item title, category, reserve price (or start/floor price for Dutch), auction mode (Sealed, Vickrey, Dutch, or English), and duration." />
               <Step n={2} icon={Eye} text="Wait for the bidding period to end. The auction automatically moves to the reveal phase." />
               <Step n={3} icon={Lock} text="After reveal deadline passes, call Finalize Auction. Re-enter your reserve price to prove you know it." />
               <Step n={4} icon={Award} text="If the highest bid meets your reserve, the auction settles. The winner will claim and you receive a SellerReceipt with payment." />
+            </div>
+            <div className="mt-4 p-3 rounded-lg bg-surface-800/40 border border-surface-700/30 space-y-2">
+              <p className="text-xs text-accent-400 font-medium">Mode-Specific Notes</p>
+              <p className="text-xs text-gray-500"><span className="text-orange-400">Dutch:</span> Set a starting price and floor price. Price drops automatically over time. First buyer wins instantly — no reveal phase needed.</p>
+              <p className="text-xs text-gray-500"><span className="text-purple-400">English:</span> Set a reserve price. Bidders compete openly with ascending bids (5% minimum increment). Anti-sniping extends the deadline for late bids.</p>
+              <p className="text-xs text-gray-500"><span className="text-accent-400">Sealed/Vickrey:</span> Traditional commit-reveal flow. Bids are encrypted until the reveal phase.</p>
             </div>
           </div>
 
@@ -187,6 +225,12 @@ export default function Docs() {
               <Step n={2} icon={Eye} text="When the reveal phase starts, reveal your bid by submitting your SealedBid record. Unrevealed bids cannot win." />
               <Step n={3} icon={Award} text="If you win: call Claim Win with the seller's address. You receive a WinnerCertificate and the seller receives payment (minus 1% platform fee)." />
               <Step n={4} icon={ArrowDownLeft} text="If you lose: claim your escrowed tokens back via Claim Refund. If you never revealed, no tokens were escrowed — nothing to reclaim." />
+            </div>
+            <div className="mt-4 p-3 rounded-lg bg-surface-800/40 border border-surface-700/30 space-y-2">
+              <p className="text-xs text-accent-400 font-medium">Mode-Specific Notes</p>
+              <p className="text-xs text-gray-500"><span className="text-orange-400">Dutch:</span> Watch the price drop in real-time. Click "Buy Now" when the price reaches your target. Settlement is instant.</p>
+              <p className="text-xs text-gray-500"><span className="text-purple-400">English:</span> Place ascending bids. Each bid must beat the current highest by at least 5%. Anti-sniping protects against last-second manipulation.</p>
+              <p className="text-xs text-gray-500"><span className="text-accent-400">Sealed/Vickrey:</span> Place encrypted bids during bidding. Reveal your bid in the reveal phase. Unrevealed bids cannot win.</p>
             </div>
           </div>
         </div>
@@ -209,7 +253,7 @@ export default function Docs() {
           />
           <FAQ
             q="What tokens can I use?"
-            a="The protocol supports both ALEO Credits (credits.aleo) and USDCx stablecoin (test_usdcx_stablecoin.aleo). ALEO uses private record transfers for maximum privacy. USDCx uses public balance transfers (transfer_public_as_signer for deposit, transfer_public for payouts). The token type is chosen at auction creation time."
+            a="The protocol supports ALEO Credits (credits.aleo), USDCx stablecoin (test_usdcx_stablecoin.aleo), and USAD stablecoin (test_usad_stablecoin.aleo). ALEO uses private record transfers for maximum privacy. USDCx and USAD use public balance transfers. All 4 auction formats support all 3 tokens."
           />
           <FAQ
             q="What is the platform fee?"
@@ -235,7 +279,45 @@ export default function Docs() {
             q="Which wallet should I use?"
             a="Obscura supports Shield, Leo, Puzzle, Fox, and Soter wallets. Shield Wallet (recommended) supports delegated proving for faster transactions. All wallets support auto-decryption of records on Aleo Testnet."
           />
+          <FAQ
+            q="How does a Dutch auction work?"
+            a="The seller sets a starting price and floor price. The price drops linearly over the auction duration from start to floor. The first buyer to accept the current price wins instantly — no reveal phase, no competing bids. If no one buys before the deadline, the auction expires."
+          />
+          <FAQ
+            q="How does an English auction work?"
+            a="Buyers place ascending bids openly. Each bid must be at least 5% higher than the current highest. An anti-sniping timer extends the deadline by ~10 minutes (40 blocks) if a bid arrives in the final 40 blocks. After the deadline, anyone can call settle to finalize."
+          />
+          <FAQ
+            q="How many auction formats does Obscura support?"
+            a="Four: First-Price Sealed-Bid, Vickrey (2nd-price sealed-bid), Dutch (descending price, instant settlement), and English (ascending open bids, anti-sniping). Each serves different use cases — from private NFT sales to fair token launches."
+          />
+          <FAQ
+            q="What is dispute resolution?"
+            a="After settlement, any participant can open a dispute within the challenge window by posting a bond of 10% of the highest bid. An admin reviews and resolves the dispute, returning the bond to the rightful party."
+          />
         </div>
+      </Section>
+
+      {/* Developers / SDK */}
+      <Section id="developers" title="Build on Obscura" icon={Layers}>
+        <p className="text-gray-400 text-sm mb-4">
+          Integrate Obscura into your dApp with the TypeScript SDK. Create auctions, place bids, and read on-chain state programmatically.
+        </p>
+        <div className="bg-surface-800/60 rounded-xl p-4 border border-surface-700 font-mono text-sm">
+          <p className="text-gray-500 mb-2"># Install</p>
+          <p className="text-accent-400 mb-4">npm install @obscura/sdk</p>
+          <p className="text-gray-500 mb-2"># Usage</p>
+          <div className="text-gray-300 space-y-1">
+            <p>{'import { ObscuraClient } from "@obscura/sdk";'}</p>
+            <p>&nbsp;</p>
+            <p>{'const client = new ObscuraClient("https://api.explorer.provable.com/v1");'}</p>
+            <p>{'const auction = await client.getAuction("your-auction-id");'}</p>
+            <p>{'const price = await client.getDutchCurrentPrice("auction-id");'}</p>
+          </div>
+        </div>
+        <p className="text-xs text-gray-500 mt-3">
+          See the full SDK documentation in <code className="text-accent-400">sdk/README.md</code> for all available methods including createAuction, placeBid, bidDutch, bidEnglish, and more.
+        </p>
       </Section>
     </div>
   )

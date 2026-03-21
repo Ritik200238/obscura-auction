@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Lock, Loader2, AlertCircle, CheckCircle, Info } from 'lucide-react'
+import { Lock, Loader2, CheckCircle, Info } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
@@ -10,6 +10,7 @@ import { generateNonce, toMicrocredits, formatTokenAmount, fetchMapping, parseAu
 import { config } from '@/lib/config'
 import TransactionLink from '@/components/shared/TransactionLink'
 import TransactionProgress from '@/components/shared/TransactionProgress'
+import ErrorBanner from '@/components/shared/ErrorBanner'
 import AuctionQR from '@/components/shared/AuctionQR'
 
 interface BidPanelProps {
@@ -184,24 +185,20 @@ export default function BidPanel({ auction, onBidConfirmed }: BidPanelProps) {
           {/* Privacy notice */}
           <div className="bg-surface-800 rounded-lg p-3 mb-4">
             <p className="text-xs text-gray-400 leading-relaxed">
-              <span className="text-green-400 font-medium">Zero amount leakage during bidding.</span>{' '}
-              No tokens are transferred when placing a bid. Only a cryptographic commitment
-              (BHP256 hash) is stored on-chain. Your {tokenSymbol} is only locked when you{' '}
-              <span className="text-white">reveal</span> — at which point your bid amount is
-              intentionally public.{' '}
-              {auction.token_type === TOKEN_TYPE.USDCX
-                ? 'USDCx uses public balance transfers during reveal (transfer_public_as_signer).'
-                : 'ALEO uses private record transfers during reveal (transfer_private_to_public).'}
+              <span className="text-green-400 font-medium">Bid amounts stay private.</span>{' '}
+              No tokens move when you place a bid — only an encrypted commitment is stored on-chain.
+              Your {tokenSymbol} is locked later when you{' '}
+              <span className="text-white">reveal</span> your bid, which is when the amount
+              becomes visible (this is by design for fair settlement).
             </p>
           </div>
 
           {/* Errors */}
-          {(formError || txError) && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-4">
-              <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-              <p className="text-sm text-red-400">{formError || txError}</p>
-            </div>
-          )}
+          <ErrorBanner
+            error={formError || txError}
+            onRetry={formError ? undefined : () => handleBid()}
+            onDismiss={() => { setFormError(null); reset() }}
+          />
 
           {/* Submit */}
           {!connected ? (

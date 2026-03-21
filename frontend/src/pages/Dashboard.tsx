@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { fadeInUp } from '@/lib/animations'
 import StatsCards from '@/components/dashboard/StatsCards'
@@ -7,6 +8,7 @@ import { BarChart3, Loader2, AlertTriangle, RefreshCw, Shield } from 'lucide-rea
 import { config } from '@/lib/config'
 import { useAuctionStore } from '@/stores/auctionStore'
 import { STATUS } from '@/types'
+import FaucetBanner from '@/components/shared/FaucetBanner'
 
 interface OverviewStats {
   total_auctions: number
@@ -126,6 +128,7 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <FaucetBanner />
       {/* Header */}
       <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -156,32 +159,15 @@ export default function Dashboard() {
         </div>
       ) : error === 'backend_down' ? (
         <>
-          {/* Show partial stats from cached on-chain data */}
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 mb-6">
-            <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-sm text-yellow-300">Indexer is unavailable — showing cached on-chain data.</p>
-              <p className="text-xs text-gray-500 mt-1">Activity feed requires the backend. Visit Browse to load auctions from chain first.</p>
-            </div>
+          {/* Silent fallback to cached on-chain data — no yellow warning */}
+          <div className="mb-6">
+            <StatsCards data={statsForCards} />
           </div>
-          {statsForCards.totalAuctions > 0 ? (
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <Shield className="w-4 h-4 text-accent-400" />
-                <span className="text-xs text-gray-400">On-chain data (from Browse cache)</span>
-              </div>
-              <StatsCards data={statsForCards} />
-            </div>
-          ) : (
-            <div className="card text-center py-12">
-              <AlertTriangle className="w-10 h-10 text-yellow-400 mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-white mb-2">No Cached Data</h2>
-              <p className="text-gray-400 text-sm max-w-md mx-auto mb-6">
-                Visit the Browse page first to load auctions from chain, then return here to see stats.
+          {statsForCards.totalAuctions === 0 && (
+            <div className="card text-center py-8">
+              <p className="text-gray-400 text-sm">
+                No auction data loaded yet. <Link to="/browse" className="text-accent-400 hover:text-accent-300">Browse auctions</Link> to load on-chain data, or <Link to="/create" className="text-accent-400 hover:text-accent-300">create your first auction</Link>.
               </p>
-              <button onClick={fetchData} className="btn-primary text-sm">
-                Retry Backend
-              </button>
             </div>
           )}
         </>

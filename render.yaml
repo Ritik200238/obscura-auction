@@ -20,4 +20,4 @@ services:
       - key: EXPLORER_API
         value: https://api.explorer.provable.com/v1
       - key: PROGRAM_ID
-        value: obscura_v3.aleo
+        value: obscura_v4.aleo

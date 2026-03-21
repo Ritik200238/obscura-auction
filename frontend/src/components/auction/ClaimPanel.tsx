@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Award, Loader2, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Award, Loader2, CheckCircle, AlertTriangle } from 'lucide-react'
+import ErrorBanner from '@/components/shared/ErrorBanner'
 import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
 import { useRecordStore } from '@/stores/recordStore'
@@ -244,24 +245,18 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
         <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 mb-4">
           <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm text-yellow-300 font-medium">On-chain hash verification active</p>
+            <p className="text-sm text-yellow-300 font-medium">Seller address verification</p>
             <p className="text-xs text-gray-400 mt-0.5">
-              The contract stores a BHP256 hash of the seller's address (
+              The contract will verify this address matches the auction's encrypted seller record (
               <span className="font-mono text-gray-500">{auction.seller_hash.slice(0, 12)}...</span>).
-              If the address you enter doesn't match this hash, the transaction will be rejected on-chain.
-              Verify the seller's address through a trusted channel before proceeding.
+              If it doesn't match, the transaction will be rejected. Confirm the seller's address before proceeding.
             </p>
           </div>
         </div>
       )}
 
       {/* Errors */}
-      {(formError || txError) && (
-        <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-4">
-          <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-          <p className="text-sm text-red-400">{formError || txError}</p>
-        </div>
-      )}
+      <ErrorBanner error={formError || txError} onDismiss={() => setFormError(null)} />
 
       <button
         onClick={handleClaim}

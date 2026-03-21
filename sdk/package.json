@@ -1,0 +1,20 @@
+{
+  "name": "@obscura/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the Obscura multi-format privacy auction protocol on Aleo",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": ["aleo", "auction", "privacy", "zero-knowledge", "sdk"],
+  "license": "MIT",
+  "dependencies": {
+    "@provablehq/sdk": "^0.9.17"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}

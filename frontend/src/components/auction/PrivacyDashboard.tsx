@@ -18,59 +18,60 @@ const privacyItems: PrivacyItem[] = [
     icon: Lock,
     getState: (s) => {
       if (s === STATUS.ACTIVE || s === STATUS.CLOSED)
-        return { level: 'private', text: 'SEALED — encrypted in Aleo records' }
+        return { level: 'private', text: 'Hidden — only you can see your bid' }
       if (s === STATUS.REVEALING)
-        return { level: 'public', text: 'REVEALING — amounts disclosed on reveal' }
-      return { level: 'public', text: 'PUBLIC — revealed during settlement' }
+        return { level: 'public', text: 'Revealing — amounts shown when you choose to reveal' }
+      return { level: 'public', text: 'Visible — shown after auction ends' }
     },
   },
   {
     label: 'Bidder Identity',
     icon: EyeOff,
-    getState: () => ({ level: 'private', text: 'HIDDEN — never stored on-chain' }),
+    getState: () => ({ level: 'private', text: 'Hidden — your address is never stored on-chain' }),
   },
   {
     label: 'Reserve Price',
     icon: Hash,
     getState: (s) => {
       if (s === STATUS.SETTLED)
-        return { level: 'public', text: 'DISCLOSED — revealed at settlement' }
-      return { level: 'hashed', text: 'BHP256 HASH — plaintext never on-chain' }
+        return { level: 'public', text: 'Shown — revealed when auction settles' }
+      return { level: 'hashed', text: 'Encrypted — stored as a secure hash on-chain' }
     },
   },
   {
     label: 'Seller Address',
     icon: EyeOff,
-    getState: () => ({ level: 'hashed', text: 'BHP256 HASH — only hash stored' }),
+    getState: () => ({ level: 'hashed', text: 'Encrypted — only a hash is stored publicly' }),
   },
   {
     label: 'Winner',
     icon: Eye,
     getState: (s) => {
       if (s === STATUS.SETTLED)
-        return { level: 'public', text: 'REVEALED — winner hash published' }
-      return { level: 'private', text: 'HIDDEN — unknown until settlement' }
+        return { level: 'public', text: 'Known — winner can prove they won privately' }
+      return { level: 'private', text: 'Hidden — unknown until auction settles' }
     },
   },
   {
-    label: 'Escrow Balance',
+    label: 'Token Escrow',
     icon: Globe,
     getState: (s) => {
       if (s === STATUS.ACTIVE || s === STATUS.CLOSED)
-        return { level: 'private', text: 'NONE — no tokens locked during bidding' }
-      return { level: 'public', text: 'PUBLIC — required for on-chain settlement' }
+        return { level: 'private', text: 'No tokens locked — bid amounts stay private' }
+      return { level: 'public', text: 'Locked — required for fair settlement' }
     },
   },
 ]
 
 const phaseExplainers: Record<number, string> = {
-  [STATUS.ACTIVE]: 'All bid amounts are encrypted in Aleo records. Zero information leakage during sealed bidding phase.',
-  [STATUS.CLOSED]: 'Bidding is closed. Bids remain sealed until the reveal phase begins.',
-  [STATUS.REVEALING]: 'Bidders are revealing their bids. Amounts become public when revealed — this is intentional and required for fair settlement.',
-  [STATUS.SETTLED]: 'Auction settled. Winner determined. Settlement and payment proofs are verifiable on-chain.',
-  [STATUS.FAILED]: 'Auction failed — insufficient revealed bids or reserve not met. All escrowed funds are refundable.',
-  [STATUS.CANCELLED]: 'Auction was cancelled before settlement.',
-  [STATUS.EXPIRED]: 'Auction expired with no valid bids.',
+  [STATUS.ACTIVE]: 'Bid amounts are private. No one can see how much you bid until you choose to reveal.',
+  [STATUS.CLOSED]: 'Bidding is closed. Bids remain private until the reveal phase begins.',
+  [STATUS.REVEALING]: 'Bidders are revealing their bids. This is intentional — fair settlement requires it.',
+  [STATUS.SETTLED]: 'Auction settled. Winner determined. Results are verifiable on-chain.',
+  [STATUS.FAILED]: 'Auction ended without a valid winner. All locked tokens can be refunded.',
+  [STATUS.CANCELLED]: 'Auction was cancelled by the seller.',
+  [STATUS.EXPIRED]: 'Auction expired — no bids were placed.',
+  [STATUS.DISPUTED]: 'A dispute has been filed. An administrator is reviewing the auction outcome.',
 }
 
 export default function PrivacyDashboard({ status, auctionMode }: PrivacyDashboardProps) {

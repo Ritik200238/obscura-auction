@@ -24,12 +24,23 @@ const tokenFilters = [
   { label: 'All Tokens', value: null },
   { label: 'ALEO', value: TOKEN_TYPE.ALEO },
   { label: 'USDCx', value: TOKEN_TYPE.USDCX },
+  { label: 'USAD', value: TOKEN_TYPE.USAD },
 ]
 
 const modeFilters = [
   { label: 'All Modes', value: null },
-  { label: 'First-Price', value: AUCTION_MODE.FIRST_PRICE },
+  { label: 'Sealed', value: AUCTION_MODE.FIRST_PRICE },
   { label: 'Vickrey', value: AUCTION_MODE.VICKREY },
+  { label: 'Dutch', value: AUCTION_MODE.DUTCH },
+  { label: 'English', value: AUCTION_MODE.ENGLISH },
+]
+
+const categoryFilters = [
+  { label: 'All', value: null },
+  { label: 'NFT', value: 1 },
+  { label: 'Collectible', value: 2 },
+  { label: 'Service', value: 3 },
+  { label: 'Other', value: 4 },
 ]
 
 const CACHE_KEY = 'obscura_auction_ids'
@@ -286,6 +297,21 @@ export default function Browse() {
                 </option>
               ))}
             </select>
+
+            {/* Category filter */}
+            <select
+              value={filters.category ?? ''}
+              onChange={(e) =>
+                setFilters({ category: e.target.value ? Number(e.target.value) : null })
+              }
+              className="bg-surface-800 border border-surface-700 text-gray-300 text-xs rounded-lg px-3 py-2 sm:py-1.5 min-h-[36px] focus:outline-none focus:border-accent-500"
+            >
+              {categoryFilters.map((f) => (
+                <option key={f.label} value={f.value ?? ''}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
@@ -307,7 +333,7 @@ export default function Browse() {
           </h3>
           <p className="text-gray-400 text-sm max-w-md mx-auto mb-6">
             {auctions.length === 0
-              ? 'The marketplace is ready. Create a sealed-bid auction and your listing will appear here — fully private on Aleo.'
+              ? 'The marketplace is ready. Create an auction — sealed-bid, Dutch, English, or Vickrey — and your listing will appear here. Fully private on Aleo.'
               : 'No auctions match your current filters. Try adjusting your search or create a new auction.'}
           </p>
           <div className="flex items-center justify-center gap-3">

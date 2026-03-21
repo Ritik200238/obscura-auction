@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
-import { TOKEN_TYPE, AUCTION_MODE } from '@/types'
+import { TOKEN_TYPE, AUCTION_MODE, MODE_LABELS, MODE_DESCRIPTIONS, TOKEN_LABELS } from '@/types'
 import { hashStringToField, generateNonce, toMicrocredits, durationToBlocks, fetchBlockHeight, pollForAuctionId, scanBlocksForCreateAuction } from '@/lib/aleo'
 import { config } from '@/lib/config'
 import {
@@ -56,6 +56,9 @@ export default function CreateAuction() {
   const [tokenType, setTokenType] = useState<number>(TOKEN_TYPE.ALEO)
   const [auctionMode, setAuctionMode] = useState<number>(AUCTION_MODE.FIRST_PRICE)
   const [duration, setDuration] = useState('24h')
+  const [activeTemplate, setActiveTemplate] = useState<string | null>(null)
+  const [startPrice, setStartPrice] = useState('')
+  const [endPrice, setEndPrice] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const [createdAuctionId, setCreatedAuctionId] = useState<string | null>(null)
   const [onChainAuctionId, setOnChainAuctionId] = useState<string | null>(null)
@@ -73,6 +76,30 @@ export default function CreateAuction() {
     tokenType: number
     deadlineHeight: number
   } | null>(null)
+
+  // Auto-select template from URL params (e.g., /create?template=nft)
+  const [searchParams] = useSearchParams()
+  useEffect(() => {
+    const tpl = searchParams.get('template')
+    if (tpl && !activeTemplate) {
+      const templates: Record<string, { cat: number; dur: string; mode: number; reserve: string; token: number }> = {
+        digital_assets: { cat: 1, dur: '24h', mode: AUCTION_MODE.VICKREY, reserve: '1', token: TOKEN_TYPE.ALEO },
+        nft: { cat: 1, dur: '24h', mode: AUCTION_MODE.VICKREY, reserve: '1', token: TOKEN_TYPE.ALEO },
+        token_sale: { cat: 4, dur: '12h', mode: AUCTION_MODE.DUTCH, reserve: '0.5', token: TOKEN_TYPE.ALEO },
+        services: { cat: 3, dur: '3d', mode: AUCTION_MODE.FIRST_PRICE, reserve: '0.1', token: TOKEN_TYPE.ALEO },
+        procurement: { cat: 3, dur: '3d', mode: AUCTION_MODE.FIRST_PRICE, reserve: '0.1', token: TOKEN_TYPE.ALEO },
+      }
+      const t = templates[tpl]
+      if (t) {
+        setActiveTemplate(tpl)
+        setCategory(t.cat)
+        setDuration(t.dur)
+        setAuctionMode(t.mode)
+        setReservePrice(t.reserve)
+        setTokenType(t.token)
+      }
+    }
+  }, [searchParams])
 
   const handleCopy = useCallback((text: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -183,14 +210,29 @@ export default function CreateAuction() {
       setFormError('Item title is required')
       return false
     }
-    if (!reservePrice || parseFloat(reservePrice) <= 0) {
-      setFormError('Reserve price must be greater than 0')
-      return false
-    }
-    const micros = Math.floor(parseFloat(reservePrice) * 1_000_000)
-    if (micros < 1000) {
-      setFormError('Minimum reserve price is 0.001 (1000 microcredits)')
-      return false
+    if (auctionMode === AUCTION_MODE.DUTCH) {
+      if (!startPrice || parseFloat(startPrice) <= 0) {
+        setFormError('Starting price must be greater than 0')
+        return false
+      }
+      if (!endPrice || parseFloat(endPrice) <= 0) {
+        setFormError('Floor price must be greater than 0')
+        return false
+      }
+      if (parseFloat(startPrice) <= parseFloat(endPrice)) {
+        setFormError('Starting price must be higher than floor price')
+        return false
+      }
+    } else {
+      if (!reservePrice || parseFloat(reservePrice) <= 0) {
+        setFormError('Reserve price must be greater than 0')
+        return false
+      }
+      const micros = Math.floor(parseFloat(reservePrice) * 1_000_000)
+      if (micros < 1000) {
+        setFormError('Minimum reserve price is 0.001 (1000 microcredits)')
+        return false
+      }
     }
     const blocks = durationToBlocks(duration)
     if (blocks < config.minAuctionDuration) {
@@ -211,45 +253,56 @@ export default function CreateAuction() {
 
     try {
       const itemHash = hashStringToField(title.trim())
-      const reserveMicros = toMicrocredits(parseFloat(reservePrice))
       const nonce = generateNonce()
       const currentHeight = await fetchBlockHeight()
       const deadlineBlocks = durationToBlocks(duration)
-      // Add 20-block buffer to account for TX confirmation delay
       const deadlineHeight = currentHeight + deadlineBlocks + 20
-
-      // Record block height BEFORE submitting — used by onChainVerify to know
-      // which blocks to scan for our create_auction transaction.
       const startHeight = currentHeight
 
-      const result = await execute({
-        functionName: 'create_auction',
-        inputs: [
-          itemHash,
-          `${category}u8`,
-          `${reserveMicros}u128`,
-          `${auctionMode}u8`,
-          `${tokenType}u8`,
-          nonce,
-          `${deadlineHeight}u64`,
-        ],
-        // Nuclear fallback for Shield Wallet: scan recent blocks to find our TX.
-        // Shield returns shield_* temp IDs and its transactionStatus() may never
-        // return the real at1... ID. This scans blocks directly to confirm.
-        onChainVerify: async () => {
-          if (import.meta.env.DEV) console.log('[CreateAuction] Block scan: checking from height', startHeight)
-          const found = await scanBlocksForCreateAuction(startHeight, 20)
-          if (found) {
-            if (import.meta.env.DEV) console.log('[CreateAuction] Block scan FOUND TX:', found.txId, 'Auction:', found.auctionId)
-            setOnChainAuctionId(found.auctionId)
-            setConfirmedTxId(found.txId)
-            registerAuctionWithBackend(found.auctionId, found.txId)
-            return true
-          }
-          if (import.meta.env.DEV) console.log('[CreateAuction] Block scan: not found yet')
-          return false
-        },
-      })
+      const onChainVerify = async () => {
+        const found = await scanBlocksForCreateAuction(startHeight, 20)
+        if (found) {
+          setOnChainAuctionId(found.auctionId)
+          setConfirmedTxId(found.txId)
+          registerAuctionWithBackend(found.auctionId, found.txId)
+          return true
+        }
+        return false
+      }
+
+      let result
+      if (auctionMode === AUCTION_MODE.DUTCH) {
+        const startMicros = Math.floor(parseFloat(startPrice) * 1_000_000)
+        const endMicros = Math.floor(parseFloat(endPrice) * 1_000_000)
+        result = await execute({
+          functionName: 'create_dutch_auction',
+          inputs: [
+            itemHash,
+            `${category}u8`,
+            `${startMicros}u128`,
+            `${endMicros}u128`,
+            `${tokenType}u8`,
+            nonce,
+            `${deadlineHeight}u64`,
+          ],
+          onChainVerify,
+        })
+      } else {
+        const reserveMicros = toMicrocredits(parseFloat(reservePrice))
+        result = await execute({
+          functionName: 'create_auction',
+          inputs: [
+            itemHash,
+            `${category}u8`,
+            `${reserveMicros}u128`,
+            `${auctionMode}u8`,
+            `${tokenType}u8`,
+            nonce,
+            `${deadlineHeight}u64`,
+          ],
+          onChainVerify,
+        })
+      }
 
       if (result.transactionId) {
         setCreatedAuctionId(result.transactionId)
@@ -404,8 +457,8 @@ export default function CreateAuction() {
   }
 
   const categoryLabel = categories.find(c => c.value === category)?.label || 'Other'
-  const modeLabel = auctionMode === AUCTION_MODE.VICKREY ? 'Vickrey' : 'First-Price'
-  const tokenLabel = tokenType === TOKEN_TYPE.USDCX ? 'USDCx' : 'ALEO'
+  const modeLabel = MODE_LABELS[auctionMode] || 'Unknown'
+  const tokenLabel = TOKEN_LABELS[tokenType] || 'ALEO'
   const durationLabel = durations.find(d => d.value === duration)?.label || duration
 
   return (
@@ -416,8 +469,11 @@ export default function CreateAuction() {
           Create Auction
         </h1>
         <p className="text-gray-400">
-          List an item for private sealed-bid auction. All bid amounts remain hidden until
-          the reveal phase.
+          {auctionMode === AUCTION_MODE.DUTCH
+            ? 'Price descends from your starting price. The first buyer to accept wins instantly.'
+            : auctionMode === AUCTION_MODE.ENGLISH
+            ? 'Open ascending bids. Each bid must beat the current highest. Anti-sniping protection included.'
+            : 'All bid amounts remain encrypted until the reveal phase.'}
         </p>
       </div>
 
@@ -449,34 +505,101 @@ export default function CreateAuction() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr,340px] gap-6 items-start">
       {/* Left: Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Quick Templates */}
+        {/* Use Case Templates */}
         <div className="card">
-          <h3 className="text-white font-semibold mb-3 text-sm flex items-center gap-2">
+          <h3 className="text-white font-semibold mb-1 text-sm flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-accent-400" />
-            Quick Templates
+            What are you auctioning?
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {[
-              { label: 'Digital Art', cat: 1, dur: '24h', mode: AUCTION_MODE.VICKREY, reserve: '1' },
-              { label: 'Collectible', cat: 2, dur: '3d', mode: AUCTION_MODE.FIRST_PRICE, reserve: '0.5' },
-              { label: 'Service', cat: 3, dur: '12h', mode: AUCTION_MODE.FIRST_PRICE, reserve: '0.1' },
-            ].map((t) => (
+          <p className="text-[10px] text-gray-600 mb-3">Pick a template to pre-fill the form, or choose Custom for full control.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {([
+              {
+                id: 'digital_assets',
+                label: 'Digital Assets',
+                emoji: '🖼️',
+                desc: 'NFTs, collectibles, domain names, rare digital items — sealed bids ensure true price discovery',
+                cat: 1, dur: '24h', mode: AUCTION_MODE.VICKREY, reserve: '1', token: TOKEN_TYPE.ALEO,
+                color: 'border-cyan-500/30',
+                activeColor: 'border-cyan-400 bg-cyan-500/10 ring-1 ring-cyan-500/30',
+              },
+              {
+                id: 'token_sale',
+                label: 'Token Sales',
+                emoji: '🪙',
+                desc: 'IDOs, batch clearing, fair distribution — Dutch pricing finds market clearing price with no front-running',
+                cat: 4, dur: '12h', mode: AUCTION_MODE.DUTCH, reserve: '0.5', token: TOKEN_TYPE.ALEO,
+                color: 'border-orange-500/30',
+                activeColor: 'border-orange-400 bg-orange-500/10 ring-1 ring-orange-500/30',
+              },
+              {
+                id: 'services',
+                label: 'Services & Contracts',
+                emoji: '📋',
+                desc: 'Procurement, freelance, DAO proposals, audit bids — suppliers compete privately without collusion',
+                cat: 3, dur: '3d', mode: AUCTION_MODE.FIRST_PRICE, reserve: '0.1', token: TOKEN_TYPE.ALEO,
+                color: 'border-green-500/30',
+                activeColor: 'border-green-400 bg-green-500/10 ring-1 ring-green-500/30',
+              },
+              {
+                id: 'custom',
+                label: 'Custom',
+                emoji: '⚙️',
+                desc: 'Full control — choose any format, token, and duration for your use case',
+                cat: 4, dur: '24h', mode: AUCTION_MODE.FIRST_PRICE, reserve: '', token: TOKEN_TYPE.ALEO,
+                color: 'border-surface-600',
+                activeColor: 'border-accent-400 bg-accent-500/10 ring-1 ring-accent-500/30',
+              },
+            ] as const).map((t) => (
               <button
-                key={t.label}
+                key={t.id}
                 type="button"
                 onClick={() => {
+                  setActiveTemplate(t.id)
                   setCategory(t.cat)
                   setDuration(t.dur)
                   setAuctionMode(t.mode)
-                  setReservePrice(t.reserve)
+                  if (t.reserve) setReservePrice(t.reserve)
+                  setTokenType(t.token)
                 }}
-                className="p-2.5 rounded-lg border border-surface-700 bg-surface-800 hover:border-accent-500/50 hover:bg-accent-500/5 text-left transition-all"
+                className={`p-3 rounded-xl border bg-surface-800/50 text-left transition-all ${
+                  activeTemplate === t.id ? t.activeColor : `${t.color} hover:border-white/20 hover:bg-white/[0.02]`
+                }`}
               >
-                <p className="text-xs font-medium text-gray-300">{t.label}</p>
-                <p className="text-[10px] text-gray-600 mt-0.5">{t.dur} · {t.mode === AUCTION_MODE.VICKREY ? 'Vickrey' : 'First-Price'}</p>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-base">{t.emoji}</span>
+                  <p className="text-sm font-medium text-white">{t.label}</p>
+                </div>
+                <p className="text-[10px] text-gray-500 leading-relaxed">{t.desc}</p>
+                <p className="text-[9px] text-gray-600 mt-1.5 font-mono">
+                  {MODE_LABELS[t.mode]?.split('(')[0]?.trim()} · {t.dur}
+                </p>
               </button>
             ))}
           </div>
+
+          {/* Template-specific extra fields */}
+          {activeTemplate === 'digital_assets' && (
+            <div className="mt-4 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/10 space-y-3">
+              <p className="text-xs text-cyan-300 font-medium">Asset Details (optional — stored off-chain)</p>
+              <input type="text" placeholder="Image URL (e.g., IPFS link)" className="input-field text-sm" onChange={(e) => setDescription(prev => `IMG:${e.target.value}|${prev.replace(/^IMG:[^|]*\|/, '')}`)} />
+              <input type="text" placeholder="Asset / Collection Name" className="input-field text-sm" onChange={(e) => setTitle(e.target.value)} />
+            </div>
+          )}
+          {activeTemplate === 'token_sale' && (
+            <div className="mt-4 p-3 rounded-lg bg-orange-500/5 border border-orange-500/10 space-y-3">
+              <p className="text-xs text-orange-300 font-medium">Token Sale Details</p>
+              <input type="text" placeholder="Token Name (e.g., MyDAO Token)" className="input-field text-sm" onChange={(e) => setTitle(e.target.value)} />
+              <p className="text-[10px] text-gray-500">Dutch mode: price starts at your reserve and drops over time. First buyer wins.</p>
+            </div>
+          )}
+          {activeTemplate === 'services' && (
+            <div className="mt-4 p-3 rounded-lg bg-green-500/5 border border-green-500/10 space-y-3">
+              <p className="text-xs text-green-300 font-medium">Procurement Details</p>
+              <input type="text" placeholder="What do you need? (e.g., Smart contract audit)" className="input-field text-sm" onChange={(e) => setTitle(e.target.value)} />
+              <textarea placeholder="Describe requirements for suppliers..." className="input-field text-sm min-h-[60px] resize-y" onChange={(e) => setDescription(e.target.value)} maxLength={500} />
+            </div>
+          )}
         </div>
 
         {/* Item Details */}
@@ -498,7 +621,7 @@ export default function CreateAuction() {
                 maxLength={100}
               />
               <p className="text-xs text-gray-600 mt-1">
-                Hashed to a field element on-chain via BHP256. Original title stored encrypted off-chain.
+                Stored as an encrypted hash on-chain. The original title is kept off-chain for privacy.
               </p>
             </div>
 
@@ -538,140 +661,123 @@ export default function CreateAuction() {
           </h3>
 
           <div className="space-y-4">
-            {/* Reserve Price */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-1.5 font-medium">Reserve Price</label>
-              <div className="relative">
-                <input
-                  type="number"
-                  value={reservePrice}
-                  onChange={(e) => setReservePrice(e.target.value)}
-                  placeholder="0.00"
-                  min="0.001"
-                  step="0.001"
-                  className="input-field pr-20"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-                  {tokenType === TOKEN_TYPE.USDCX ? 'USDCx' : 'ALEO'}
-                </span>
+            {/* Price fields — mode-aware */}
+            {auctionMode === AUCTION_MODE.DUTCH ? (
+              <>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1.5 font-medium">Starting Price</label>
+                  <div className="relative">
+                    <input type="number" value={startPrice} onChange={(e) => setStartPrice(e.target.value)}
+                      placeholder="0.00" min="0.001" step="0.001" className="input-field pr-20" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">{tokenLabel}</span>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">The highest price — auction starts here.</p>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1.5 font-medium">Floor Price</label>
+                  <div className="relative">
+                    <input type="number" value={endPrice} onChange={(e) => setEndPrice(e.target.value)}
+                      placeholder="0.00" min="0.001" step="0.001" className="input-field pr-20" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">{tokenLabel}</span>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    The lowest price. Price drops linearly from starting to floor over the auction duration. First buyer to accept wins instantly.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div>
+                <label className="block text-sm text-gray-400 mb-1.5 font-medium">Reserve Price</label>
+                <div className="relative">
+                  <input type="number" value={reservePrice} onChange={(e) => setReservePrice(e.target.value)}
+                    placeholder="0.00" min="0.001" step="0.001" className="input-field pr-20" />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">{tokenLabel}</span>
+                </div>
+                <p className="text-xs text-gray-600 mt-1">
+                  Stored encrypted on-chain. Disclosed only after all bids are revealed.
+                </p>
               </div>
-              <p className="text-xs text-gray-600 mt-1">
-                Stored as <span className="font-mono text-gray-500">BHP256(reserve_price)</span> on-chain.
-                You re-enter it at settlement to prove you know it — disclosed only after all bids are revealed.
-                This is a deliberate privacy trade-off: seller protection during bidding, transparency at resolution.
-              </p>
-            </div>
+            )}
 
-            {/* Token Type */}
+            {/* Token Type — options adapt to auction mode */}
             <div>
               <label className="block text-sm text-gray-400 mb-2 font-medium">Token</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setTokenType(TOKEN_TYPE.ALEO)}
-                  className={`p-3 rounded-lg border text-left transition-all ${
-                    tokenType === TOKEN_TYPE.ALEO
-                      ? 'border-accent-500 bg-accent-500/10'
-                      : 'border-surface-700 bg-surface-800 hover:border-surface-600'
-                  }`}
-                >
-                  <p className={`text-sm font-medium ${
-                    tokenType === TOKEN_TYPE.ALEO ? 'text-accent-400' : 'text-gray-300'
-                  }`}>
-                    ALEO Credits
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Private via credits.aleo records
-                  </p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTokenType(TOKEN_TYPE.USDCX)}
-                  className={`p-3 rounded-lg border text-left transition-all ${
-                    tokenType === TOKEN_TYPE.USDCX
-                      ? 'border-accent-500 bg-accent-500/10'
-                      : 'border-surface-700 bg-surface-800 hover:border-surface-600'
-                  }`}
-                >
-                  <p className={`text-sm font-medium ${
-                    tokenType === TOKEN_TYPE.USDCX ? 'text-accent-400' : 'text-gray-300'
-                  }`}>
-                    USDCx Stablecoin
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Public balance via test_usdcx_stablecoin.aleo
-                  </p>
-                </button>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {([
+                  { type: TOKEN_TYPE.ALEO, label: 'ALEO Credits', desc: 'Private via credits.aleo records', always: true },
+                  { type: TOKEN_TYPE.USDCX, label: 'USDCx Stablecoin', desc: 'Public balance stablecoin', always: true },
+                  { type: TOKEN_TYPE.USAD, label: 'USAD Stablecoin', desc: 'Public balance stablecoin', always: false },
+                ] as const).map((tok) => {
+                  // USAD only available for sealed-bid modes (First-Price, Vickrey)
+                  const usadAllowed = auctionMode === AUCTION_MODE.FIRST_PRICE || auctionMode === AUCTION_MODE.VICKREY
+                  const available = tok.always || usadAllowed
+                  if (!available) return null
+                  return (
+                    <button
+                      key={tok.type}
+                      type="button"
+                      onClick={() => setTokenType(tok.type)}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        tokenType === tok.type
+                          ? 'border-accent-500 bg-accent-500/10'
+                          : 'border-surface-700 bg-surface-800 hover:border-surface-600'
+                      }`}
+                    >
+                      <p className={`text-sm font-medium ${
+                        tokenType === tok.type ? 'text-accent-400' : 'text-gray-300'
+                      }`}>{tok.label}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{tok.desc}</p>
+                    </button>
+                  )
+                })}
               </div>
+              {(auctionMode === AUCTION_MODE.DUTCH || auctionMode === AUCTION_MODE.ENGLISH) && (
+                <p className="text-[10px] text-gray-600 mt-1.5">USAD is available for Sealed Bid and Vickrey modes only.</p>
+              )}
             </div>
 
-            {/* Auction Mode */}
+            {/* Auction Mode — 4 formats */}
             <div>
-              <label className="block text-sm text-gray-400 mb-2 font-medium">Auction Mode</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setAuctionMode(AUCTION_MODE.FIRST_PRICE)}
-                  className={`p-3 rounded-lg border text-left transition-all ${
-                    auctionMode === AUCTION_MODE.FIRST_PRICE
-                      ? 'border-accent-500 bg-accent-500/10'
-                      : 'border-surface-700 bg-surface-800 hover:border-surface-600'
-                  }`}
-                >
-                  <p className={`text-sm font-medium ${
-                    auctionMode === AUCTION_MODE.FIRST_PRICE ? 'text-accent-400' : 'text-gray-300'
-                  }`}>
-                    First-Price
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Highest bidder wins and pays their exact bid
-                  </p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAuctionMode(AUCTION_MODE.VICKREY)}
-                  className={`p-3 rounded-lg border text-left transition-all relative ${
-                    auctionMode === AUCTION_MODE.VICKREY
-                      ? 'border-accent-500 bg-accent-500/10'
-                      : 'border-surface-700 bg-surface-800 hover:border-surface-600'
-                  }`}
-                >
-                  <span className="absolute top-1.5 right-1.5 text-[9px] font-bold text-accent-400 bg-accent-500/20 px-1.5 py-0.5 rounded-full tracking-wide">
-                    FIRST ON ALEO
-                  </span>
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <Sparkles className={`w-3.5 h-3.5 ${auctionMode === AUCTION_MODE.VICKREY ? 'text-accent-400' : 'text-gray-500'}`} />
-                    <p className={`text-sm font-medium ${
-                      auctionMode === AUCTION_MODE.VICKREY ? 'text-accent-400' : 'text-gray-300'
-                    }`}>
-                      Vickrey (2nd-Price)
-                    </p>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Winner pays 2nd-highest bid. Encourages honest bidding.
-                  </p>
-                </button>
+              <label className="block text-sm text-gray-400 mb-2 font-medium">Auction Format</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {([
+                  { mode: AUCTION_MODE.FIRST_PRICE, label: 'Sealed Bid', icon: '🔒', badge: null },
+                  { mode: AUCTION_MODE.VICKREY, label: 'Vickrey', icon: '💡', badge: 'FIRST ON ALEO' },
+                  { mode: AUCTION_MODE.DUTCH, label: 'Dutch', icon: '📉', badge: 'NEW' },
+                  { mode: AUCTION_MODE.ENGLISH, label: 'English', icon: '📈', badge: 'NEW' },
+                ] as const).map((m) => (
+                  <button
+                    key={m.mode}
+                    type="button"
+                    onClick={() => setAuctionMode(m.mode)}
+                    className={`p-2.5 rounded-lg border text-left transition-all relative ${
+                      auctionMode === m.mode
+                        ? 'border-accent-500 bg-accent-500/10'
+                        : 'border-surface-700 bg-surface-800 hover:border-surface-600'
+                    }`}
+                  >
+                    {m.badge && (
+                      <span className="absolute -top-1.5 right-1.5 text-[8px] font-bold text-accent-400 bg-accent-500/20 px-1.5 py-0.5 rounded-full">
+                        {m.badge}
+                      </span>
+                    )}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm">{m.icon}</span>
+                      <p className={`text-xs font-medium ${
+                        auctionMode === m.mode ? 'text-accent-400' : 'text-gray-300'
+                      }`}>{m.label}</p>
+                    </div>
+                  </button>
+                ))}
               </div>
 
-              {/* Vickrey explainer — shown when selected */}
-              {auctionMode === AUCTION_MODE.VICKREY && (
-                <div className="mt-3 p-3 rounded-lg bg-accent-500/5 border border-accent-500/20">
-                  <div className="flex items-start gap-2">
-                    <TrendingUp className="w-4 h-4 text-accent-400 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-xs text-accent-300 font-medium mb-1">Why Vickrey?</p>
-                      <p className="text-xs text-gray-400 leading-relaxed">
-                        In a Vickrey auction the winner pays the <span className="text-white">second-highest bid</span>, not their own.
-                        This is game-theoretically optimal — bidders are incentivized to bid their true valuation
-                        since overbidding never helps and underbidding risks losing.
-                        The second-highest bid is tracked on-chain via Aleo's
-                        <span className="font-mono text-accent-400"> second_highest_bids</span> mapping.
-                        Requires ≥2 revealed bids to settle.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Mode description */}
+              <div className="mt-2 p-2.5 rounded-lg bg-surface-800/60 border border-surface-700/50">
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  <span className="text-white font-medium">{MODE_LABELS[auctionMode]}: </span>
+                  {MODE_DESCRIPTIONS[auctionMode]}
+                </p>
+              </div>
             </div>
 
             {/* Duration */}
@@ -699,9 +805,25 @@ export default function CreateAuction() {
         <div className="bg-accent-500/5 border border-accent-500/20 rounded-xl p-4">
           <p className="text-accent-400 text-sm font-medium mb-1">Privacy Guarantees</p>
           <ul className="text-xs text-gray-400 space-y-1">
-            <li>- Reserve price is hashed on-chain (only you know the exact amount)</li>
-            <li>- All bid amounts are sealed in encrypted records</li>
-            <li>- Bidder identities are never revealed to other participants</li>
+            {auctionMode === AUCTION_MODE.DUTCH ? (
+              <>
+                <li>- Starting and floor prices set by you — buyer identity stays private</li>
+                <li>- Settlement is instant and atomic — no reveal phase needed</li>
+                <li>- Bidder identities are protected through hashed commitments</li>
+              </>
+            ) : auctionMode === AUCTION_MODE.ENGLISH ? (
+              <>
+                <li>- Bid amounts are visible (ascending auction format)</li>
+                <li>- Bidder identities remain private through hashed commitments</li>
+                <li>- Anti-sniping timer prevents last-second manipulation</li>
+              </>
+            ) : (
+              <>
+                <li>- Reserve price is hashed on-chain (only you know the exact amount)</li>
+                <li>- All bid amounts are sealed in encrypted records</li>
+                <li>- Bidder identities are never revealed to other participants</li>
+              </>
+            )}
             <li>- Item details are stored encrypted off-chain</li>
           </ul>
         </div>

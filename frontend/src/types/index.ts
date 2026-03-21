@@ -1,4 +1,4 @@
-export const PROGRAM_ID = 'obscura_v3.aleo'
+export const PROGRAM_ID = 'obscura_v4.aleo'
 
 export const STATUS = {
   ACTIVE: 1,
@@ -11,14 +11,34 @@ export const STATUS = {
   EXPIRED: 8,
 } as const
 
-export const TOKEN_TYPE = { ALEO: 1, USDCX: 2 } as const
-export const AUCTION_MODE = { FIRST_PRICE: 1, VICKREY: 2 } as const
+export const TOKEN_TYPE = { ALEO: 1, USDCX: 2, USAD: 3 } as const
+export const AUCTION_MODE = { FIRST_PRICE: 1, VICKREY: 2, DUTCH: 3, ENGLISH: 4 } as const
 
 export const CATEGORY_LABELS: Record<number, string> = {
   1: 'Art',
   2: 'Collectible',
   3: 'Service',
   4: 'Other',
+}
+
+export const MODE_LABELS: Record<number, string> = {
+  [AUCTION_MODE.FIRST_PRICE]: 'Sealed Bid (Highest Wins)',
+  [AUCTION_MODE.VICKREY]: 'Vickrey (Winner Pays 2nd Price)',
+  [AUCTION_MODE.DUTCH]: 'Dutch (Price Drops Until Someone Bids)',
+  [AUCTION_MODE.ENGLISH]: 'English (Open Ascending Bids)',
+}
+
+export const MODE_DESCRIPTIONS: Record<number, string> = {
+  [AUCTION_MODE.FIRST_PRICE]: 'Bids are private until reveal. Highest bidder wins and pays their bid.',
+  [AUCTION_MODE.VICKREY]: 'Bids are private until reveal. Highest bidder wins but pays the second-highest bid — encourages honest bidding.',
+  [AUCTION_MODE.DUTCH]: 'Price starts high and drops every block. First buyer to accept wins instantly at the current price.',
+  [AUCTION_MODE.ENGLISH]: 'Open ascending bids. Each bid must beat the previous. Highest bidder at deadline wins.',
+}
+
+export const TOKEN_LABELS: Record<number, string> = {
+  [TOKEN_TYPE.ALEO]: 'ALEO',
+  [TOKEN_TYPE.USDCX]: 'USDCx',
+  [TOKEN_TYPE.USAD]: 'USAD',
 }
 
 export const STATUS_LABELS: Record<number, string> = {

@@ -4,7 +4,7 @@
 
 ## Project Identity
 - **Name:** Obscura
-- **Program ID:** `obscura_v3.aleo`
+- **Program ID:** `obscura_v4.aleo`
 - **Tagline:** Bids enter the dark chamber. Only at reveal does the picture become clear.
 - **Use Cases:** Private procurement, sealed tenders, NFT auctions, anonymous bidding, government contracts
 
@@ -15,7 +15,7 @@
 | Criteria (Weight) | NullPay | Veiled Markets | **Obscura** | Our Edge |
 |---|---|---|---|---|
 | **Privacy (40%)** | Invoice hash public, amounts leak via API | 18 public mappings, resolver exposed | Sealed bids, hashed seller, zero-transfer bidding, winner self-identifies | Commit-reveal with no token transfer at bid = strictest privacy |
-| **Tech (20%)** | ~8 transitions, 2 records, 4 mappings | 30 transitions, 4 records, 18+ mappings | **17 transitions, 4 records, 13 mappings** | Vickrey + anti-sniping + settlement proofs + payment proofs = never done on Aleo |
+| **Tech (20%)** | ~8 transitions, 2 records, 4 mappings | 30 transitions, 4 records, 18+ mappings | **28 transitions, 5 records, 16 mappings** | 4 auction formats + Vickrey + anti-sniping + dispute resolution + settlement proofs = never done on Aleo |
 | **UX (20%)** | Glassmorphism, mobile via Shield browser | Cluttered market UI with AMM math | Clean 6-page dashboard, phase-based panels, 5-step flow | Phase-aware UI adapts to auction state; quick templates |
 | **Practicality (10%)** | Invoice payments | Prediction markets (FPMM) | Private procurement/auctions | Real-world sealed tenders, private art sales, government contracts |
 | **Novelty (10%)** | Multi-pay invoices, donation invoices | FPMM AMM, dispute mechanism | **Vickrey + anti-sniping + commit-reveal + selective disclosure** | First second-price ZK auction on any blockchain |
@@ -25,14 +25,14 @@
 
 ---
 
-## Smart Contract: obscura_v3.aleo
+## Smart Contract: obscura_v4.aleo
 
 ### Final Metrics
 ```
-Transitions:  17 (+ constructor = 18 total)
-Records:      4  (all private, proper UTXO)
-Mappings:     13
-Structs:      7
+Transitions:  28
+Records:      5  (all private, proper UTXO)
+Mappings:     16
+Structs:      8
 State Machine: 8 states
 Tokens:       credits.aleo (fully private ALEO credits) + test_usdcx_stablecoin.aleo (USDCx)
 Novel:        Vickrey (second-price) + anti-sniping + settlement proofs + payment proofs + selective disclosure
@@ -476,7 +476,7 @@ Backend:    Vercel Serverless (Express as serverless function)
             Upstash Redis for persistent storage
             Environment: ENCRYPTION_KEY, KV_REST_API_URL, KV_REST_API_TOKEN
 
-Contract:   Aleo Testnet (obscura_v3.aleo)
+Contract:   Aleo Testnet (obscura_v4.aleo)
             Deployed via snarkos developer deploy
             Explorer API for read-only state queries
 ```
