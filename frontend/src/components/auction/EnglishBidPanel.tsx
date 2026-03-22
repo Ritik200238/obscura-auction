@@ -5,7 +5,8 @@ import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
 import { useCountdown } from '@/hooks/useCountdown'
 import { type AuctionData, AUCTION_MODE } from '@/types'
-import { generateNonce, toMicrocredits, formatTokenAmount, fetchMapping, parseAuctionData } from '@/lib/aleo'
+import { generateNonce, toMicrocredits, formatTokenAmount, fetchMapping, parseAuctionData, fetchCreditsRecord } from '@/lib/aleo'
+import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { config } from '@/lib/config'
 import TransactionProgress from '@/components/shared/TransactionProgress'
 import TransactionLink from '@/components/shared/TransactionLink'
@@ -19,6 +20,7 @@ interface EnglishBidPanelProps {
 export default function EnglishBidPanel({ auction, highestBid, onBidConfirmed }: EnglishBidPanelProps) {
   const { execute, loading, error: txError, txId, status: txStatus, reset, retryCheck } = useTransaction()
   const { connected } = useWalletStore()
+  const { requestRecords } = useWallet()
   const { timeRemaining, isExpired } = useCountdown(auction.deadline)
 
   const [bidAmount, setBidAmount] = useState('')
@@ -57,14 +59,26 @@ export default function EnglishBidPanel({ auction, highestBid, onBidConfirmed }:
     const microsStr = toMicrocredits(amount)
     const auctionKey = auction.auction_id.endsWith('field') ? auction.auction_id : `${auction.auction_id}field`
 
-    // Token-aware: ALEO uses bid_english, USDCx uses bid_english_usdcx
     const tokenType = auction.token_type
-    const funcName = tokenType === 2 ? 'bid_english_usdcx' : tokenType === 3 ? 'bid_english_usad' : 'bid_english'
 
-    await execute({
-      functionName: funcName,
-      inputs: [auctionKey, `${micros}u128`, nonce],
-    })
+    if (tokenType === 1) {
+      // ALEO path — needs a private credits record
+      const creditsRecord = await fetchCreditsRecord(requestRecords, micros)
+      if (!creditsRecord) {
+        setFormError('No ALEO credits record found with sufficient balance. Get tokens from the faucet.')
+        return
+      }
+      await execute({
+        functionName: 'bid_english',
+        inputs: [auctionKey, `${micros}u128`, nonce, creditsRecord],
+      })
+    } else {
+      const funcName = tokenType === 2 ? 'bid_english_usdcx' : 'bid_english_usad'
+      await execute({
+        functionName: funcName,
+        inputs: [auctionKey, `${micros}u128`, nonce],
+      })
+    }
   }
 
   if (txId) {

@@ -5,7 +5,8 @@ import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
 import { useBlockHeight } from '@/contexts/BlockHeightContext'
 import { type AuctionData } from '@/types'
-import { generateNonce, toMicrocredits, formatTokenAmount, fetchMapping } from '@/lib/aleo'
+import { generateNonce, toMicrocredits, formatTokenAmount, fetchMapping, fetchCreditsRecord } from '@/lib/aleo'
+import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { config } from '@/lib/config'
 import TransactionProgress from '@/components/shared/TransactionProgress'
 import TransactionLink from '@/components/shared/TransactionLink'
@@ -18,6 +19,7 @@ interface DutchBidPanelProps {
 export default function DutchBidPanel({ auction, onBidConfirmed }: DutchBidPanelProps) {
   const { execute, loading, error: txError, txId, status: txStatus, reset, retryCheck } = useTransaction()
   const { connected } = useWalletStore()
+  const { requestRecords } = useWallet()
   const { blockHeight } = useBlockHeight()
   const [currentPrice, setCurrentPrice] = useState<number | null>(null)
   const [startPrice, setStartPrice] = useState<number | null>(null)
@@ -66,15 +68,27 @@ export default function DutchBidPanel({ auction, onBidConfirmed }: DutchBidPanel
     const nonce = generateNonce()
     const auctionKey = auction.auction_id.endsWith('field') ? auction.auction_id : `${auction.auction_id}field`
 
-    // Token-aware: ALEO uses bid_dutch (needs credits record auto-resolved by Shield),
-    // USDCx uses bid_dutch_usdcx, USAD uses bid_dutch_usad
     const tokenType = auction.token_type
-    const funcName = tokenType === 2 ? 'bid_dutch_usdcx' : tokenType === 3 ? 'bid_dutch_usad' : 'bid_dutch'
 
-    await execute({
-      functionName: funcName,
-      inputs: [auctionKey, `${bidAmount}u128`, nonce],
-    })
+    if (tokenType === 1) {
+      // ALEO path — needs a private credits record as 4th input
+      const creditsRecord = await fetchCreditsRecord(requestRecords, bidAmount)
+      if (!creditsRecord) {
+        setFormError('No ALEO credits record found with sufficient balance. Get tokens from the faucet.')
+        return
+      }
+      await execute({
+        functionName: 'bid_dutch',
+        inputs: [auctionKey, `${bidAmount}u128`, nonce, creditsRecord],
+      })
+    } else {
+      // USDCx/USAD path — no record needed (public balance transfer)
+      const funcName = tokenType === 2 ? 'bid_dutch_usdcx' : 'bid_dutch_usad'
+      await execute({
+        functionName: funcName,
+        inputs: [auctionKey, `${bidAmount}u128`, nonce],
+      })
+    }
   }
 
   useEffect(() => {
