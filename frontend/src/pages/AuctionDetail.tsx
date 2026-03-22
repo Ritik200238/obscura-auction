@@ -300,53 +300,73 @@ export default function AuctionDetail() {
             </div>
           )}
 
-          {/* Share Your Win — ZK Social Proof */}
+          {/* Share Your Win — ZK Social Proof (First on Aleo) */}
           {isSettled && connected && winner && (
-            <div className="card border-accent-500/20 bg-accent-500/5 relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-accent-500 via-cyan-400 to-accent-500" />
-              <div className="flex items-start gap-3 mb-4">
-                <Trophy className="w-5 h-5 text-accent-400 mt-0.5 shrink-0" />
-                <div>
-                  <h3 className="text-sm font-semibold text-white">Share Your Win</h3>
-                  <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
-                    Prove you won this auction without revealing your bid amount. Zero-knowledge social proof — powered by Aleo.
+            <div className="relative overflow-hidden rounded-2xl border border-accent-500/30">
+              {/* Animated gradient border top */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 via-accent-500 to-cyan-400" />
+              {/* Background glow */}
+              <div className="absolute inset-0 bg-gradient-to-br from-accent-500/10 via-transparent to-cyan-500/5" />
+              <div className="absolute top-4 right-4 w-32 h-32 bg-accent-500/10 rounded-full blur-3xl" />
+
+              <div className="relative p-6">
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-500/30 to-cyan-500/20 flex items-center justify-center">
+                    <Trophy className="w-5 h-5 text-accent-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">You Won This Auction</h3>
+                    <p className="text-xs text-accent-400">First ZK social proof on Aleo</p>
+                  </div>
+                  <span className="ml-auto px-2.5 py-1 rounded-full bg-green-500/15 border border-green-500/30 text-[10px] text-green-400 font-semibold uppercase tracking-wider">
+                    Verified
+                  </span>
+                </div>
+
+                {/* Proof card */}
+                <div className="bg-black/30 backdrop-blur-sm rounded-xl p-5 mb-5 border border-white/5">
+                  <p className="text-lg text-white font-semibold leading-relaxed mb-2">
+                    {'\u{1F3C6}'} I won a private auction on <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-400 to-cyan-400">Obscura</span>
                   </p>
+                  <p className="text-sm text-gray-300">
+                    My bid amount? <span className="text-accent-400 font-semibold">That's private.</span>
+                  </p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Verified with zero-knowledge proofs on Aleo.
+                  </p>
+                  <div className="flex items-center gap-3 mt-4 pt-3 border-t border-white/5">
+                    <span className="text-[10px] text-gray-600 font-mono">obscura_v4.aleo</span>
+                    <span className="text-[10px] text-gray-700">·</span>
+                    <span className="text-[10px] text-accent-400/60 font-mono">prove_won_auction</span>
+                    <span className="text-[10px] text-gray-700">·</span>
+                    <span className="text-[10px] text-gray-600 font-mono">#{truncateId(auction.auction_id, 4)}</span>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <a
+                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`\u{1F3C6} I won a private auction on @Obscura_Aleo!\n\nMy bid amount? That's private. Verified with zero-knowledge proofs.\n\nThe first ZK social proof on Aleo \u{1F510}\n\n${window.location.href}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white text-black font-semibold text-sm hover:bg-gray-100 transition-colors"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    Post on X
+                  </a>
+                  <button
+                    onClick={() => {
+                      const text = `\u{1F3C6} I won a private auction on Obscura — the first ZK auction protocol on Aleo.\n\nMy bid amount? That's private. Verified with zero-knowledge proofs.\n\n${window.location.href}`
+                      navigator.clipboard.writeText(text).catch(() => {})
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-surface-600 text-sm text-gray-300 hover:border-accent-500/50 hover:text-white transition-colors"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copy Proof Text
+                  </button>
                 </div>
               </div>
-              <div className="bg-surface-800 rounded-xl p-4 mb-3">
-                <p className="text-sm text-gray-300 leading-relaxed">
-                  {'\u{1F3C6}'} I won Auction #{truncateId(auction.auction_id, 6)} on <span className="text-accent-400 font-semibold">Obscura</span>.
-                </p>
-                <p className="text-sm text-gray-400 mt-1">
-                  My bid amount? <span className="text-accent-400">That's private.</span> Verified on Aleo with zero-knowledge proofs.
-                </p>
-                <p className="text-xs text-gray-600 mt-2 font-mono">
-                  Contract: obscura_v4.aleo · Transition: prove_won_auction
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    const text = `\u{1F3C6} I won Auction #${truncateId(auction.auction_id, 6)} on Obscura — the private auction protocol on Aleo.\n\nMy bid amount? That's private. Verified with zero-knowledge proofs.\n\n${window.location.href}`
-                    navigator.clipboard.writeText(text).catch(() => {})
-                  }}
-                  className="btn-secondary text-xs py-2 px-4 flex items-center gap-2"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  Copy to Share
-                </button>
-                <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`\u{1F3C6} I won a private auction on Obscura!\n\nMy bid amount? That's private. Verified with zero-knowledge proofs on Aleo.\n\n${window.location.href}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-secondary text-xs py-2 px-4 flex items-center gap-2"
-                >
-                  Post on X
-                </a>
-              </div>
-              <p className="text-[10px] text-gray-600 mt-3">
-                Tip: Call <code className="text-accent-400">prove_won_auction</code> with your WinnerCertificate record to generate a verifiable on-chain proof.
-              </p>
             </div>
           )}
 
