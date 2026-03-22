@@ -228,6 +228,10 @@ export function generateNonce(): string {
  * or as an object with a `data` sub-object. Falls back to JSON.stringify.
  */
 export function serializeRecordForTx(rawRecord: Record<string, unknown>): string {
+  // Shield Wallet uses recordPlaintext
+  if (typeof rawRecord.recordPlaintext === 'string') {
+    return rawRecord.recordPlaintext
+  }
   // Prefer plaintext string (native Aleo record format)
   if (typeof rawRecord.plaintext === 'string') {
     return rawRecord.plaintext
@@ -236,6 +240,7 @@ export function serializeRecordForTx(rawRecord: Record<string, unknown>): string
   if (typeof rawRecord.serializedRecord === 'string') {
     return rawRecord.serializedRecord
   }
+  // Some adaptors use recordCiphertext — but that's encrypted, not usable directly
   // Fallback: JSON stringify the whole record object
   return JSON.stringify(rawRecord)
 }
@@ -487,6 +492,8 @@ export async function fetchCreditsRecord(
 
       if (typeof raw === 'string' && (raw as string).includes('microcredits')) {
         plaintext = raw as string
+      } else if (typeof record.recordPlaintext === 'string' && (record.recordPlaintext as string).includes('microcredits')) {
+        plaintext = record.recordPlaintext as string
       } else if (typeof record.plaintext === 'string' && record.plaintext.includes('microcredits')) {
         plaintext = record.plaintext
       } else if (typeof record.data === 'string' && record.data.includes('microcredits')) {
