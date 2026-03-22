@@ -394,8 +394,14 @@ export default function AuctionDetail() {
             )
           )}
 
-          {/* Cancel only shown to seller — we check if user previously created this auction via backend */}
-          {isActive && auction.bid_count === 0 && blockHeight <= auction.deadline && connected && (
+          {/* Cancel — only visible to the auction creator.
+              We track which auctions were created by this wallet in localStorage. */}
+          {isActive && auction.bid_count === 0 && blockHeight <= auction.deadline && connected && (() => {
+            try {
+              const created = JSON.parse(localStorage.getItem('obscura_my_auctions') || '[]') as string[]
+              return created.includes(auction.auction_id)
+            } catch { return false }
+          })() && (
             <CancelAuctionCard auctionId={auction.auction_id} onSuccess={refresh} />
           )}
 

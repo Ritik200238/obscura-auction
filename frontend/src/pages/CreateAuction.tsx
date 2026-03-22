@@ -207,6 +207,10 @@ export default function CreateAuction() {
       (realAuctionId) => {
         setOnChainAuctionId(realAuctionId)
         registerAuctionWithBackend(realAuctionId, txId)
+        try {
+          const list = JSON.parse(localStorage.getItem('obscura_my_auctions') || '[]') as string[]
+          if (!list.includes(realAuctionId)) { list.push(realAuctionId); localStorage.setItem('obscura_my_auctions', JSON.stringify(list)) }
+        } catch { /* localStorage unavailable */ }
       }
     )
   }, [txId, createdAuctionId, onChainAuctionId, registerAuctionWithBackend])
@@ -269,6 +273,7 @@ export default function CreateAuction() {
         const found = await scanBlocksForCreateAuction(startHeight, 20)
         if (found) {
           setOnChainAuctionId(found.auctionId)
+          try { const l = JSON.parse(localStorage.getItem('obscura_my_auctions') || '[]'); if (!l.includes(found.auctionId)) { l.push(found.auctionId); localStorage.setItem('obscura_my_auctions', JSON.stringify(l)) } } catch {}
           setConfirmedTxId(found.txId)
           registerAuctionWithBackend(found.auctionId, found.txId)
           return true
