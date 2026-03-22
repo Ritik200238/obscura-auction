@@ -74,13 +74,20 @@ export default function DutchBidPanel({ auction, onBidConfirmed }: DutchBidPanel
       // ALEO: bid_dutch needs credits record with sufficient balance
       const creditsRecord = await fetchCreditsRecord(requestRecords, bidAmount)
       if (!creditsRecord) {
-        // Debug: show what the wallet actually returned
+        // Debug: show raw record data from wallet so we can diagnose
         try {
           const recs = await requestRecords('credits.aleo', true)
           const arr = Array.isArray(recs) ? recs : []
-          setFormError(`No credits record with >= ${(bidAmount / 1e6).toFixed(4)} ALEO. Wallet returned ${arr.length} record(s). Try sending ALEO to this wallet via transfer_private.`)
-        } catch {
-          setFormError('Could not read wallet records. Reconnect wallet and try again.')
+          if (arr.length > 0) {
+            const sample = arr[0]
+            const keys = typeof sample === 'object' && sample !== null ? Object.keys(sample as object).join(', ') : typeof sample
+            const snippet = JSON.stringify(sample).slice(0, 300)
+            setFormError(`Record found but can't parse. Keys: [${keys}]. Data: ${snippet}`)
+          } else {
+            setFormError('No private credits records found in wallet.')
+          }
+        } catch (e) {
+          setFormError(`Wallet error: ${e instanceof Error ? e.message : String(e)}`)
         }
         return
       }
