@@ -239,8 +239,7 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
           disabled={loading}
         />
         <p className="text-xs text-gray-600 mt-1">
-          The seller's Aleo address — required to route the payment.
-          Ask the auction creator for their address, or check the auction description.
+          The seller's Aleo address — required to route the payment. The seller's identity is hidden on-chain (stored as an encrypted hash). Scroll down to find the seller's address if they've shared it, or ask them directly.
         </p>
       </div>
 

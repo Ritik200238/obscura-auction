@@ -581,17 +581,31 @@ export default function AuctionDetail() {
             </div>
           </div>
 
-          {/* Seller address card — helps winners discover where to send payment */}
+          {/* Seller address helper — shows for both seller and winner with different messaging */}
           {isSettled && connected && publicKey && (
             <div className="card border-green-500/20 bg-green-500/5">
               <div className="flex items-start gap-2">
                 <Shield className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs text-green-300 font-medium mb-1">Your Wallet Address</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-green-300 font-medium mb-1">Claim Requires Seller Address</p>
                   <p className="text-[11px] text-gray-400 mb-2">
-                    If you are the seller, share this with the winner so they can complete the claim.
+                    The winner needs the seller's Aleo address to claim. This is a privacy feature — the seller's identity stays hidden until they choose to share it.
                   </p>
-                  <p className="text-xs text-white font-mono break-all bg-surface-800 rounded p-2">{publicKey}</p>
+                  <div className="bg-surface-800 rounded-lg p-3 mb-2">
+                    <p className="text-[10px] text-gray-500 mb-1">Your connected wallet address:</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-white font-mono break-all flex-1">{publicKey}</p>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(publicKey || '')}
+                        className="shrink-0 px-2 py-1 rounded bg-surface-700 hover:bg-surface-600 text-[10px] text-gray-300 transition-colors"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-gray-600">
+                    If you're the seller: share this address with the winner. If you're the winner: ask the seller for their address.
+                  </p>
                 </div>
               </div>
             </div>

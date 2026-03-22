@@ -421,6 +421,25 @@ export default function CreateAuction() {
                 />
               </div>
             )}
+
+            {/* Seller address reminder */}
+            {publicKey && (
+              <div className="bg-accent-500/5 border border-accent-500/20 rounded-lg p-4">
+                <p className="text-xs text-accent-300 font-medium mb-1">Important: Save Your Address</p>
+                <p className="text-[11px] text-gray-400 mb-2">
+                  The winner will need your address to claim their prize. Share it with them after settlement.
+                </p>
+                <div className="flex items-center gap-2 bg-surface-800 rounded p-2">
+                  <p className="text-xs text-white font-mono break-all flex-1">{publicKey}</p>
+                  <button
+                    onClick={() => handleCopy(publicKey)}
+                    className="shrink-0 px-2 py-1 rounded bg-surface-700 hover:bg-surface-600 text-[10px] text-gray-300 transition-colors"
+                  >
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {backendNotice && (
