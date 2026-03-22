@@ -67,12 +67,21 @@ export default function EnglishBidPanel({ auction, highestBid, onBidConfirmed }:
       try {
         const recs = await requestRecords('credits.aleo', true)
         const arr = Array.isArray(recs) ? recs : []
+        let bestAmount = 0
         for (const raw of arr) {
           const rec = raw as Record<string, unknown>
           if (rec.spent === true || rec.is_spent === true) continue
-          recordStr = serializeRecordForTx(rec)
-          if (recordStr && recordStr !== '{}' && recordStr.length > 10) break
-          recordStr = null
+          const pt = (rec.recordPlaintext || rec.plaintext || '') as string
+          const mcMatch = pt.match(/microcredits\s*:\s*(\d+)u64/)
+          const amount = mcMatch ? parseInt(mcMatch[1], 10) : 0
+          if (amount > bestAmount) {
+            bestAmount = amount
+            recordStr = serializeRecordForTx(rec)
+          }
+        }
+        if (bestAmount > 0 && bestAmount < micros) {
+          setFormError(`Largest private record has ${(bestAmount / 1e6).toFixed(2)} ALEO but need ${(micros / 1e6).toFixed(2)}. Get more from the faucet.`)
+          return
         }
       } catch {
         setFormError('Could not read wallet records. Reconnect wallet and try again.')
