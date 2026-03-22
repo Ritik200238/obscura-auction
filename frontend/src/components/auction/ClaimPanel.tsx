@@ -68,7 +68,11 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
     }
 
     if (!receipt) {
-      setFormError('No EscrowReceipt found — you must reveal your bid first to create one')
+      setFormError(
+        auction.auction_mode === AUCTION_MODE.DUTCH || auction.auction_mode === AUCTION_MODE.ENGLISH
+          ? 'No EscrowReceipt found — try refreshing the page. Your wallet may need a moment to sync the record.'
+          : 'No EscrowReceipt found — you must reveal your bid first to create one'
+      )
       return
     }
 
@@ -269,7 +273,9 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
             Claiming...
           </>
         ) : !receipt ? (
-          'Reveal Bid First'
+          auction.auction_mode === AUCTION_MODE.DUTCH || auction.auction_mode === AUCTION_MODE.ENGLISH
+            ? 'Waiting for receipt...'
+            : 'Reveal Bid First'
         ) : (
           'Claim Winning Item'
         )}
