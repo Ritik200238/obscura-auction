@@ -6,6 +6,7 @@ import {
   STATUS_COLORS,
   AUCTION_MODE,
   TOKEN_TYPE,
+  TOKEN_LABELS,
   CATEGORY_LABELS,
   type AuctionData,
 } from '@/types'
@@ -21,7 +22,13 @@ export function AuctionCard({ auction, currentBlock }: AuctionCardProps) {
   const statusLabel = STATUS_LABELS[auction.status] || 'Unknown'
   const statusColor = STATUS_COLORS[auction.status] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'
   const categoryLabel = CATEGORY_LABELS[auction.category] || 'Other'
-  const modeLabel = auction.auction_mode === AUCTION_MODE.VICKREY ? 'Vickrey' : 'First-Price'
+  const MODE_SHORT: Record<number, string> = {
+    [AUCTION_MODE.FIRST_PRICE]: 'First-Price',
+    [AUCTION_MODE.VICKREY]: 'Vickrey',
+    [AUCTION_MODE.DUTCH]: 'Dutch',
+    [AUCTION_MODE.ENGLISH]: 'English',
+  }
+  const modeLabel = MODE_SHORT[auction.auction_mode] || 'Unknown'
   const isActive = auction.status === STATUS.ACTIVE
   const timeLeft = blockHeightToTime(auction.deadline, currentBlock)
 
@@ -73,11 +80,15 @@ export function AuctionCard({ auction, currentBlock }: AuctionCardProps) {
         </span>
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-surface-800/80 text-gray-400 text-xs">
           <Coins className="w-3 h-3" />
-          {auction.token_type === TOKEN_TYPE.USDCX ? 'USDCx' : 'ALEO'}
+          {TOKEN_LABELS[auction.token_type] || 'ALEO'}
         </span>
         <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs ${
           auction.auction_mode === AUCTION_MODE.VICKREY
             ? 'bg-brand-cyan/10 text-brand-cyan'
+            : auction.auction_mode === AUCTION_MODE.DUTCH
+            ? 'bg-orange-500/10 text-orange-400'
+            : auction.auction_mode === AUCTION_MODE.ENGLISH
+            ? 'bg-purple-500/10 text-purple-400'
             : 'bg-surface-800/80 text-gray-400'
         }`}>
           {modeLabel}

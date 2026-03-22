@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -26,11 +26,13 @@
   }
 
   h1 {
-    letter-spacing: -0.035em;
+    font-family: 'Space Grotesk', 'DM Sans', system-ui, sans-serif;
+    letter-spacing: -0.04em;
   }
 
   h2 {
-    letter-spacing: -0.03em;
+    font-family: 'Space Grotesk', 'DM Sans', system-ui, sans-serif;
+    letter-spacing: -0.035em;
   }
 
   #root {

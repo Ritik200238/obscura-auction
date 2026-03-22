@@ -18,7 +18,7 @@
 | Smart Contract v2 | [`obscura_v2.aleo`](https://explorer.provable.com/transaction/at1qy5h67s6629k07rf0vp2f6jxrh5xhqpxm6td2c8cmsl0s7233cgsafp7hk) (superseded) |
 | Smart Contract v1 | [`obscura_auction.aleo`](https://explorer.provable.com/transaction/at1j58ds0rvhpwtspyvmr9wjxkrd2jq3xg2v25p8se4ezsv40a8xupswz58g4) (initial, superseded) |
 | Frontend | [obscura-auction-95hm.vercel.app](https://obscura-auction-95hm.vercel.app) |
-| Backend API | [obscura-auction-igia.vercel.app](https://obscura-auction-igia.vercel.app/health) |
+| Backend API | [obscura-auction.onrender.com](https://obscura-auction.onrender.com/health) |
 | Repository | [github.com/Ritik200238/obscura-auction](https://github.com/Ritik200238/obscura-auction) |
 | Architecture | [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | Privacy Model | [PRIVACY.md](./PRIVACY.md) |

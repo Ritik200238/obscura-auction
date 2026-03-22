@@ -53,6 +53,7 @@ export default {
       },
       fontFamily: {
         sans: ['DM Sans', 'system-ui', 'sans-serif'],
+        display: ['Space Grotesk', 'DM Sans', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
       backdropBlur: {

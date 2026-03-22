@@ -157,6 +157,15 @@ export default function DutchBidPanel({ auction, onBidConfirmed }: DutchBidPanel
         </p>
       </div>
 
+      {/* Privacy notice */}
+      <div className="bg-surface-800 rounded-lg p-3 mb-4">
+        <p className="text-xs text-gray-400 leading-relaxed">
+          <span className="text-green-400 font-medium">Your identity stays private.</span>{' '}
+          The blockchain records the purchase but your wallet address is hashed. Other bidders
+          never see who bought or at what price until settlement.
+        </p>
+      </div>
+
       {(formError || txError) && (
         <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-4">
           <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />

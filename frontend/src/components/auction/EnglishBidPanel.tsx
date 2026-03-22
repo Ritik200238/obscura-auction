@@ -157,6 +157,14 @@ export default function EnglishBidPanel({ auction, highestBid, onBidConfirmed }:
             </div>
           </div>
 
+          {/* Privacy notice */}
+          <div className="bg-surface-800 rounded-lg p-3 mb-4">
+            <p className="text-xs text-gray-400 leading-relaxed">
+              <span className="text-green-400 font-medium">Bid amounts are public in English auctions</span> (that's how ascending bids work).
+              But your wallet identity is hashed on-chain — other bidders see the amount, not who placed it.
+            </p>
+          </div>
+
           {(formError || txError) && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-4">
               <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />

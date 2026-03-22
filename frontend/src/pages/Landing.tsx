@@ -262,9 +262,9 @@ function SettleVisual() {
    ───────────────────────────────────────────── */
 
 const stats = [
-  { label: 'Transitions', value: 31, detail: 'On-chain functions' },
+  { label: 'Transitions', value: 28, detail: 'On-chain functions' },
   { label: 'Records', value: 5, detail: 'Private UTXO records' },
-  { label: 'Mappings', value: 19, detail: 'On-chain state' },
+  { label: 'Mappings', value: 16, detail: 'On-chain state' },
   { label: 'Auction Formats', value: 4, detail: 'Sealed · Vickrey · Dutch · English' },
   { label: 'Token Types', value: 3, detail: 'ALEO + USDCx + USAD' },
 ]
@@ -386,13 +386,23 @@ export default function Landing() {
                 initial="hidden"
                 animate="visible"
                 variants={wordVariants}
-                className="text-5xl sm:text-8xl lg:text-9xl font-extrabold tracking-tighter text-white leading-none"
+                className="text-5xl sm:text-8xl lg:text-9xl font-extrabold tracking-tighter leading-none font-display"
                 style={{
-                  textShadow: i === 0
-                    ? '0 0 60px rgba(6, 182, 212, 0.3)'
+                  background: i === 0
+                    ? 'linear-gradient(135deg, #4ade80, #22d3ee)'
                     : i === 1
-                    ? '0 0 60px rgba(20, 184, 166, 0.3)'
-                    : '0 0 60px rgba(8, 145, 178, 0.3)',
+                    ? 'linear-gradient(135deg, #22d3ee, #14b8a6)'
+                    : 'linear-gradient(135deg, #06b6d4, #3b82f6)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  filter: `drop-shadow(0 0 40px ${
+                    i === 0
+                      ? 'rgba(74, 222, 128, 0.25)'
+                      : i === 1
+                      ? 'rgba(34, 211, 238, 0.25)'
+                      : 'rgba(59, 130, 246, 0.25)'
+                  })`,
                 }}
               >
                 {word}
@@ -406,7 +416,7 @@ export default function Landing() {
             transition={{ delay: 1.8, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed font-medium"
           >
-            The first zero-knowledge Vickrey auction protocol on Aleo
+            Private auctions on Aleo. Four formats. Three tokens. Zero data leaks.
           </motion.p>
 
           <motion.div
@@ -469,7 +479,7 @@ export default function Landing() {
       <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
         <AnimatedSection>
           <motion.div variants={fadeInUp} className="text-center mb-16">
-            <h2 className="text-3xl sm:text-5xl font-bold text-white mb-4">How It Works</h2>
+            <h2 className="text-3xl sm:text-5xl font-bold text-white mb-4 font-display">How It Works</h2>
             <p className="text-gray-400 max-w-lg mx-auto text-lg font-medium">Three phases. Zero trust required.</p>
           </motion.div>
         </AnimatedSection>
@@ -563,7 +573,7 @@ export default function Landing() {
         <AnimatedSection className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.h2
             variants={fadeInUp}
-            className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight"
+            className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight font-display"
           >
             This is what the
             <br />
@@ -617,46 +627,59 @@ export default function Landing() {
       <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
         <AnimatedSection>
           <motion.div variants={fadeInUp} className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">Built for Real Use Cases</h2>
-            <p className="text-gray-400 max-w-lg mx-auto">Four auction formats. Three tokens. One privacy-first platform.</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3 font-display">Built for Real People</h2>
+            <p className="text-gray-400 max-w-lg mx-auto">Every auction format solves a real problem. Pick the one that fits your use case.</p>
           </motion.div>
         </AnimatedSection>
 
-        <AnimatedSection className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <AnimatedSection className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {[
             {
               emoji: '🖼️',
-              title: 'NFT Launches',
-              description: 'Sell digital art and collectibles with private bidding. Losing bidders never see the winning price — fair for everyone.',
+              title: 'NFT Creator',
+              persona: 'You created a 1/1 artwork and want the fairest price without scaring off bidders.',
+              description: 'Vickrey auctions: highest bidder wins but pays the second-highest price. Bidders bid their true value because overbidding never hurts them.',
               mode: 'Vickrey (2nd-Price)',
               link: '/create?template=nft',
               color: 'from-cyan-500/10 to-transparent border-cyan-500/20',
             },
             {
-              emoji: '🪙',
-              title: 'Token Sales',
-              description: 'Fair price discovery without whale front-running. The price drops until someone buys — no insider advantages.',
+              emoji: '🏛️',
+              title: 'DAO Treasury',
+              persona: 'Your DAO needs to sell tokens without whales front-running the price.',
+              description: 'Dutch auctions: the price starts high and drops every block. First buyer wins at the current price. No sniping, no collusion.',
               mode: 'Dutch (Descending)',
               link: '/create?template=token_sale',
               color: 'from-orange-500/10 to-transparent border-orange-500/20',
             },
             {
-              emoji: '📋',
-              title: 'Procurement',
-              description: 'Suppliers bid privately for contracts. No bid rigging, no information leakage — the best price wins.',
+              emoji: '🔧',
+              title: 'Service Provider',
+              persona: 'You want to hire a contractor but need competitive bids without bid rigging.',
+              description: 'First-price sealed bids: every supplier submits once, privately. Lowest bid wins. Nobody sees competitors\' offers.',
               mode: 'Sealed Bid (1st-Price)',
               link: '/create?template=procurement',
               color: 'from-green-500/10 to-transparent border-green-500/20',
+            },
+            {
+              emoji: '⚡',
+              title: 'Rare Collectible',
+              persona: 'You have a rare item and want maximum price discovery with open competition.',
+              description: 'English auctions: open ascending bids with anti-snipe protection. Last-minute bids automatically extend the deadline.',
+              mode: 'English (Ascending)',
+              link: '/create',
+              color: 'from-purple-500/10 to-transparent border-purple-500/20',
             },
           ].map((uc) => (
             <motion.div key={uc.title} variants={fadeInUp}>
               <Link
                 to={uc.link}
-                className={`block h-full rounded-2xl p-6 bg-gradient-to-b ${uc.color} border hover:border-white/20 transition-all duration-300 group`}
+                className={`block h-full rounded-2xl p-5 bg-gradient-to-b ${uc.color} border hover:border-white/20 transition-all duration-300 group`}
               >
-                <span className="text-3xl mb-4 block">{uc.emoji}</span>
-                <h3 className="text-lg font-bold text-white mb-2">{uc.title}</h3>
-                <p className="text-sm text-gray-400 leading-relaxed mb-4">{uc.description}</p>
+                <span className="text-2xl mb-3 block">{uc.emoji}</span>
+                <h3 className="text-base font-bold text-white mb-1">{uc.title}</h3>
+                <p className="text-xs text-accent-400/80 italic mb-2">&ldquo;{uc.persona}&rdquo;</p>
+                <p className="text-xs text-gray-400 leading-relaxed mb-4">{uc.description}</p>
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-gray-500 font-mono">{uc.mode}</span>
                   <span className="text-xs text-accent-400 group-hover:text-accent-300 flex items-center gap-1">
@@ -670,12 +693,131 @@ export default function Landing() {
       </section>
 
       {/* ═══════════════════════════════════════
+          PROVE YOU WON — Selective Disclosure Feature
+          ═══════════════════════════════════════ */}
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
+        <AnimatedSection>
+          <motion.div variants={fadeInUp} className="relative rounded-2xl overflow-hidden border border-accent-500/20">
+            <div className="absolute inset-0 bg-gradient-to-br from-accent-500/5 via-transparent to-brand-cyan/5" />
+            <div className="relative p-8 sm:p-12">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-500/10 border border-accent-500/20 text-accent-400 text-xs font-medium mb-4">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Only on Obscura
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4 font-display">
+                    Prove You Won. Reveal Nothing Else.
+                  </h2>
+                  <p className="text-gray-400 leading-relaxed mb-6">
+                    Won an auction? Generate a zero-knowledge proof that verifies your win to anyone — a lender,
+                    a marketplace, an insurance provider — without revealing what you paid, who else bid, or any
+                    other auction details. Selective disclosure, powered by Aleo.
+                  </p>
+                  <div className="space-y-3">
+                    {[
+                      { label: 'Prove ownership to marketplaces', detail: 'without exposing your purchase price' },
+                      { label: 'Verify to lenders for collateralized loans', detail: 'without revealing auction history' },
+                      { label: 'Share proof with insurers', detail: 'without leaking bidder identities' },
+                    ].map((item) => (
+                      <div key={item.label} className="flex items-start gap-2">
+                        <Check className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
+                        <span className="text-sm text-gray-300">
+                          {item.label} <span className="text-gray-500">{item.detail}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="bg-surface-950/80 rounded-xl p-5 border border-surface-700/50 font-mono text-xs space-y-3">
+                  <div className="flex items-center gap-2 text-gray-500 mb-4">
+                    <Shield className="w-4 h-4 text-accent-400" />
+                    <span className="text-accent-400 font-semibold">prove_won_auction</span>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-3 h-3 text-red-400" />
+                      <span className="text-gray-500">auction_id:</span>
+                      <span className="text-red-400">hidden</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-3 h-3 text-red-400" />
+                      <span className="text-gray-500">winning_price:</span>
+                      <span className="text-red-400">hidden</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-3 h-3 text-red-400" />
+                      <span className="text-gray-500">other_bids:</span>
+                      <span className="text-red-400">hidden</span>
+                    </div>
+                    <div className="h-px bg-surface-700/50 my-3" />
+                    <div className="flex items-center gap-2">
+                      <Check className="w-3 h-3 text-green-400" />
+                      <span className="text-gray-500">is_winner:</span>
+                      <span className="text-green-400">true (verified by ZK proof)</span>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-gray-600 mt-4 pt-3 border-t border-surface-700/50">
+                    Third parties verify the proof on-chain. No trust required.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </AnimatedSection>
+      </section>
+
+      {/* ═══════════════════════════════════════
+          PRIVACY COMPARISON TABLE
+          ═══════════════════════════════════════ */}
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
+        <AnimatedSection>
+          <motion.div variants={fadeInUp} className="text-center mb-10">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 font-display">Why Private Auctions Matter</h2>
+            <p className="text-gray-400 max-w-lg mx-auto">Traditional auctions leak everything. Obscura leaks nothing.</p>
+          </motion.div>
+        </AnimatedSection>
+        <AnimatedSection>
+          <motion.div variants={fadeInUp} className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-surface-700">
+                  <th className="text-left text-gray-400 font-medium py-3 px-4 min-w-[180px]">Feature</th>
+                  <th className="text-center text-gray-500 font-medium py-3 px-4">Traditional Auctions</th>
+                  <th className="text-center text-accent-400 font-medium py-3 px-4">Obscura</th>
+                </tr>
+              </thead>
+              <tbody className="text-xs">
+                {[
+                  { feature: 'Bid amounts visible to others?', trad: 'Yes — everyone sees', obs: 'No — sealed until you choose to reveal' },
+                  { feature: 'Bidder identity exposed?', trad: 'Yes — wallet address on-chain', obs: 'No — hashed, never stored in clear' },
+                  { feature: 'Front-running possible?', trad: 'Yes — bots watch mempool', obs: 'No — zero-transfer at bid time' },
+                  { feature: 'Fair pricing guaranteed?', trad: 'No — winner\'s curse', obs: 'Yes — Vickrey 2nd-price mechanism' },
+                  { feature: 'Dispute resolution?', trad: 'None', obs: 'Bond-based on-chain arbitration' },
+                  { feature: 'Selective disclosure?', trad: 'Not possible', obs: 'ZK proof: prove you won without revealing price' },
+                ].map((row) => (
+                  <tr key={row.feature} className="border-b border-surface-800/50">
+                    <td className="py-3 px-4 text-gray-300 font-medium">{row.feature}</td>
+                    <td className="py-3 px-4 text-center text-red-400/70">{row.trad}</td>
+                    <td className="py-3 px-4 text-center text-green-400">{row.obs}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </motion.div>
+          <motion.p variants={fadeInUp} className="text-center text-xs text-gray-600 mt-4 italic">
+            The first Vickrey (second-price sealed-bid) auction protocol on Aleo — with 4 formats, 3 tokens, and dispute resolution.
+          </motion.p>
+        </AnimatedSection>
+      </section>
+
+      {/* ═══════════════════════════════════════
           TECHNICAL DEPTH — 3 detailed cards
           ═══════════════════════════════════════ */}
       <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
         <AnimatedSection>
           <motion.div variants={fadeInUp} className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">Under the Hood</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3 font-display">Under the Hood</h2>
             <p className="text-gray-400">Real architecture. Real security. Real token flow.</p>
           </motion.div>
         </AnimatedSection>
@@ -687,7 +829,7 @@ export default function Landing() {
               <h3 className="text-white font-semibold text-sm">Smart Contract</h3>
             </div>
             <div className="space-y-2.5 text-xs text-gray-400">
-              <div className="flex justify-between"><span>Transitions</span><span className="text-white font-mono">31</span></div>
+              <div className="flex justify-between"><span>Transitions</span><span className="text-white font-mono">28</span></div>
               <div className="flex justify-between"><span>Private Records</span><span className="text-white font-mono">5</span></div>
               <div className="flex justify-between"><span>Mappings</span><span className="text-white font-mono">16</span></div>
               <div className="flex justify-between"><span>Auction Formats</span><span className="text-white font-mono">4 modes</span></div>
@@ -845,7 +987,7 @@ export default function Landing() {
             />
 
             <div className="relative z-10 p-8 sm:p-12 text-center">
-              <h2 className="text-2xl sm:text-4xl font-bold text-white mb-4">
+              <h2 className="text-2xl sm:text-4xl font-bold text-white mb-4 font-display">
                 Ready to experience private auctions?
               </h2>
               <p className="text-gray-400 mb-8 max-w-lg mx-auto">
