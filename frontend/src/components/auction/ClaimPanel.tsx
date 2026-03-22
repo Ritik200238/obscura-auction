@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Award, Loader2, CheckCircle, AlertTriangle } from 'lucide-react'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import { useTransaction } from '@/hooks/useTransaction'
+import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { useWalletStore } from '@/stores/walletStore'
 import { useRecordStore } from '@/stores/recordStore'
 import { formatTokenAmount, formatAleoAmount, serializeRecordForTx, fetchMapping } from '@/lib/aleo'
@@ -19,6 +20,7 @@ interface ClaimPanelProps {
 export default function ClaimPanel({ auction, highestBid, secondHighest }: ClaimPanelProps) {
   const { execute, loading, error: txError, txId, status: txStatus, reset, retryCheck } = useTransaction()
   const { connected } = useWalletStore()
+  const { requestRecords } = useWallet()
   const { getForAuction } = useRecordStore()
 
   const [sellerAddress, setSellerAddress] = useState('')
@@ -67,23 +69,45 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
       return
     }
 
-    if (!receipt) {
-      setFormError(
-        auction.auction_mode === AUCTION_MODE.DUTCH || auction.auction_mode === AUCTION_MODE.ENGLISH
-          ? 'No EscrowReceipt found — try refreshing the page. Your wallet may need a moment to sync the record.'
-          : 'No EscrowReceipt found — you must reveal your bid first to create one'
-      )
-      return
-    }
-
     if (!sellerAddress.startsWith('aleo1') || sellerAddress.length < 60) {
       setFormError('Enter a valid Aleo address for the seller')
       return
     }
 
-    const rawReceipt = records.rawReceipts[receiptIndex]
-    if (!rawReceipt) {
-      setFormError('Raw receipt data missing — try refreshing your wallet records')
+    // Try to get receipt from record store first, then fall back to direct wallet fetch
+    let receiptStr: string | null = null
+    const rawReceipt = receipt ? records.rawReceipts[receiptIndex] : null
+    if (rawReceipt) {
+      receiptStr = serializeRecordForTx(rawReceipt)
+    }
+
+    // For Dutch/English: record store might not parse the receipt. Fetch directly from wallet.
+    if (!receiptStr) {
+      try {
+        const programId = config.programId
+        const recs = await requestRecords(programId, true)
+        const arr = Array.isArray(recs) ? recs : []
+        const auctionKey = auction.auction_id.replace(/field$/, '')
+        for (const raw of arr) {
+          const rec = raw as Record<string, unknown>
+          if (rec.spent === true || rec.is_spent === true) continue
+          const recName = rec.recordName || rec.record_name || ''
+          const pt = (rec.recordPlaintext || rec.plaintext || '') as string
+          // Match EscrowReceipt records for this auction
+          if ((recName === 'EscrowReceipt' || pt.includes('escrowed_amount')) && pt.includes(auctionKey)) {
+            receiptStr = serializeRecordForTx(rec)
+            break
+          }
+        }
+      } catch { /* ignore */ }
+    }
+
+    if (!receiptStr) {
+      setFormError(
+        auction.auction_mode === AUCTION_MODE.DUTCH || auction.auction_mode === AUCTION_MODE.ENGLISH
+          ? 'EscrowReceipt not found in wallet. Try refreshing the page — your wallet may need a moment to sync.'
+          : 'No EscrowReceipt found — you must reveal your bid first.'
+      )
       return
     }
 
@@ -105,7 +129,7 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
       await execute({
         functionName,
         inputs: [
-          serializeRecordForTx(rawReceipt),
+          receiptStr,
           sellerAddress,
           itemHash,
           `${secondHighest}u128`,
@@ -118,7 +142,7 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
       await execute({
         functionName,
         inputs: [
-          serializeRecordForTx(rawReceipt),
+          receiptStr,
           sellerAddress,
           itemHash,
         ],
@@ -263,7 +287,7 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
 
       <button
         onClick={handleClaim}
-        disabled={loading || !connected || !receipt}
+        disabled={loading || !connected || (!receipt && auction.auction_mode !== AUCTION_MODE.DUTCH && auction.auction_mode !== AUCTION_MODE.ENGLISH)}
         className="btn-primary w-full flex items-center justify-center gap-2"
       >
         {loading ? (
