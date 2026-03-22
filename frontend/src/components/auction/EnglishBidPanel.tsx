@@ -5,7 +5,7 @@ import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
 import { useCountdown } from '@/hooks/useCountdown'
 import { type AuctionData, AUCTION_MODE } from '@/types'
-import { generateNonce, toMicrocredits, formatTokenAmount, fetchMapping, parseAuctionData, fetchCreditsRecord } from '@/lib/aleo'
+import { generateNonce, toMicrocredits, formatTokenAmount, fetchMapping, parseAuctionData, serializeRecordForTx } from '@/lib/aleo'
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { config } from '@/lib/config'
 import TransactionProgress from '@/components/shared/TransactionProgress'
@@ -62,11 +62,29 @@ export default function EnglishBidPanel({ auction, highestBid, onBidConfirmed }:
     const tokenType = auction.token_type
 
     if (tokenType === 1) {
-      // ALEO: bid_english takes 4 inputs — the 4th is credits.aleo/credits record.
+      // ALEO: bid_english needs credits record as 4th input
+      let recordStr: string | null = null
+      try {
+        const recs = await requestRecords('credits.aleo', true)
+        const arr = Array.isArray(recs) ? recs : []
+        for (const raw of arr) {
+          const rec = raw as Record<string, unknown>
+          if (rec.spent === true || rec.is_spent === true) continue
+          recordStr = serializeRecordForTx(rec)
+          if (recordStr && recordStr !== '{}' && recordStr.length > 10) break
+          recordStr = null
+        }
+      } catch {
+        setFormError('Could not read wallet records. Reconnect wallet and try again.')
+        return
+      }
+      if (!recordStr) {
+        setFormError('No private ALEO credits found. Get tokens from the faucet.')
+        return
+      }
       await execute({
         functionName: 'bid_english',
-        inputs: [auctionKey, `${micros}u128`, nonce],
-        recordIndices: [3],
+        inputs: [auctionKey, `${micros}u128`, nonce, recordStr],
       })
     } else {
       const funcName = tokenType === 2 ? 'bid_english_usdcx' : 'bid_english_usad'

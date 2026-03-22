@@ -5,7 +5,7 @@ import { useTransaction } from '@/hooks/useTransaction'
 import { useWalletStore } from '@/stores/walletStore'
 import { useBlockHeight } from '@/contexts/BlockHeightContext'
 import { type AuctionData } from '@/types'
-import { generateNonce, toMicrocredits, formatTokenAmount, fetchMapping, fetchCreditsRecord } from '@/lib/aleo'
+import { generateNonce, toMicrocredits, formatTokenAmount, fetchMapping, serializeRecordForTx } from '@/lib/aleo'
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { config } from '@/lib/config'
 import TransactionProgress from '@/components/shared/TransactionProgress'
@@ -71,29 +71,29 @@ export default function DutchBidPanel({ auction, onBidConfirmed }: DutchBidPanel
     const tokenType = auction.token_type
 
     if (tokenType === 1) {
-      // ALEO: bid_dutch needs credits record with sufficient balance
-      const creditsRecord = await fetchCreditsRecord(requestRecords, bidAmount)
-      if (!creditsRecord) {
-        // Debug: show raw record data from wallet so we can diagnose
-        try {
-          const recs = await requestRecords('credits.aleo', true)
-          const arr = Array.isArray(recs) ? recs : []
-          if (arr.length > 0) {
-            const sample = arr[0]
-            const keys = typeof sample === 'object' && sample !== null ? Object.keys(sample as object).join(', ') : typeof sample
-            const snippet = JSON.stringify(sample).slice(0, 300)
-            setFormError(`Record found but can't parse. Keys: [${keys}]. Data: ${snippet}`)
-          } else {
-            setFormError('No private credits records found in wallet.')
-          }
-        } catch (e) {
-          setFormError(`Wallet error: ${e instanceof Error ? e.message : String(e)}`)
+      // ALEO: bid_dutch needs a credits.aleo/credits record as 4th input
+      let recordStr: string | null = null
+      try {
+        const recs = await requestRecords('credits.aleo', true)
+        const arr = Array.isArray(recs) ? recs : []
+        for (const raw of arr) {
+          const rec = raw as Record<string, unknown>
+          if (rec.spent === true || rec.is_spent === true) continue
+          recordStr = serializeRecordForTx(rec)
+          if (recordStr && recordStr !== '{}' && recordStr.length > 10) break
+          recordStr = null
         }
+      } catch {
+        setFormError('Could not read wallet records. Reconnect wallet and try again.')
+        return
+      }
+      if (!recordStr) {
+        setFormError('No private ALEO credits found. Get tokens from the faucet.')
         return
       }
       await execute({
         functionName: 'bid_dutch',
-        inputs: [auctionKey, `${bidAmount}u128`, nonce, creditsRecord],
+        inputs: [auctionKey, `${bidAmount}u128`, nonce, recordStr],
       })
     } else {
       const funcName = tokenType === 2 ? 'bid_dutch_usdcx' : 'bid_dutch_usad'
