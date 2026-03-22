@@ -62,18 +62,12 @@ export default function EnglishBidPanel({ auction, highestBid, onBidConfirmed }:
     const tokenType = auction.token_type
 
     if (tokenType === 1) {
-      const creditsRecord = await fetchCreditsRecord(requestRecords, micros)
-      if (creditsRecord) {
-        await execute({
-          functionName: 'bid_english',
-          inputs: [auctionKey, `${micros}u128`, nonce, creditsRecord],
-        })
-      } else {
-        await execute({
-          functionName: 'bid_english',
-          inputs: [auctionKey, `${micros}u128`, nonce],
-        })
-      }
+      // ALEO: bid_english takes 4 inputs — the 4th is credits.aleo/credits record.
+      await execute({
+        functionName: 'bid_english',
+        inputs: [auctionKey, `${micros}u128`, nonce],
+        recordIndices: [3],
+      })
     } else {
       const funcName = tokenType === 2 ? 'bid_english_usdcx' : 'bid_english_usad'
       await execute({

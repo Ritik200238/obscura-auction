@@ -16,6 +16,8 @@ interface ExecuteOptions {
   fee?: number
   /** Pay fee from private credits record? Default: false (public balance). */
   privateFee?: boolean
+  /** Indices of inputs that are records (Shield Wallet auto-resolves these). e.g. [3] means input[3] is a record */
+  recordIndices?: number[]
   /** Optional on-chain verification callback — the true source of truth.
    *  Checked every 3rd poll cycle. If it returns true, the TX is confirmed
    *  regardless of what the wallet adapter reports. */
@@ -203,6 +205,7 @@ export function useTransaction() {
           inputs: options.inputs,
           fee,
           privateFee: options.privateFee === true,
+          ...(options.recordIndices && { recordIndices: options.recordIndices }),
         }
 
         // PRIVACY: Never log transaction payload — contains bid amounts, nonces, and addresses

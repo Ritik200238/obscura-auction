@@ -71,20 +71,13 @@ export default function DutchBidPanel({ auction, onBidConfirmed }: DutchBidPanel
     const tokenType = auction.token_type
 
     if (tokenType === 1) {
-      // ALEO: needs credits record. Try fetching it.
-      const creditsRecord = await fetchCreditsRecord(requestRecords, bidAmount)
-      if (creditsRecord) {
-        await execute({
-          functionName: 'bid_dutch',
-          inputs: [auctionKey, `${bidAmount}u128`, nonce, creditsRecord],
-        })
-      } else {
-        // Fallback: pass without record, let Shield Wallet handle it
-        await execute({
-          functionName: 'bid_dutch',
-          inputs: [auctionKey, `${bidAmount}u128`, nonce],
-        })
-      }
+      // ALEO: bid_dutch takes 4 inputs — the 4th is credits.aleo/credits record.
+      // recordIndices tells Shield Wallet which input is a record to auto-resolve.
+      await execute({
+        functionName: 'bid_dutch',
+        inputs: [auctionKey, `${bidAmount}u128`, nonce],
+        recordIndices: [3],
+      })
     } else {
       const funcName = tokenType === 2 ? 'bid_dutch_usdcx' : 'bid_dutch_usad'
       await execute({
