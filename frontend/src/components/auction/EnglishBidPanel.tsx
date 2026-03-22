@@ -57,8 +57,12 @@ export default function EnglishBidPanel({ auction, highestBid, onBidConfirmed }:
     const microsStr = toMicrocredits(amount)
     const auctionKey = auction.auction_id.endsWith('field') ? auction.auction_id : `${auction.auction_id}field`
 
+    // Token-aware: ALEO uses bid_english, USDCx uses bid_english_usdcx
+    const tokenType = auction.token_type
+    const funcName = tokenType === 2 ? 'bid_english_usdcx' : tokenType === 3 ? 'bid_english_usad' : 'bid_english'
+
     await execute({
-      functionName: 'bid_english',
+      functionName: funcName,
       inputs: [auctionKey, `${micros}u128`, nonce],
     })
   }

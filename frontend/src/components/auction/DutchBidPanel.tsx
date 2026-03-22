@@ -64,11 +64,15 @@ export default function DutchBidPanel({ auction, onBidConfirmed }: DutchBidPanel
     const bidAmount = currentPrice + buffer
 
     const nonce = generateNonce()
-    const microsStr = toMicrocredits(bidAmount / 1_000_000)
     const auctionKey = auction.auction_id.endsWith('field') ? auction.auction_id : `${auction.auction_id}field`
 
+    // Token-aware: ALEO uses bid_dutch (needs credits record auto-resolved by Shield),
+    // USDCx uses bid_dutch_usdcx, USAD uses bid_dutch_usad
+    const tokenType = auction.token_type
+    const funcName = tokenType === 2 ? 'bid_dutch_usdcx' : tokenType === 3 ? 'bid_dutch_usad' : 'bid_dutch'
+
     await execute({
-      functionName: 'bid_dutch',
+      functionName: funcName,
       inputs: [auctionKey, `${bidAmount}u128`, nonce],
     })
   }
