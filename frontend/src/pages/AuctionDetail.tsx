@@ -356,9 +356,19 @@ export default function AuctionDetail() {
                     Post on X
                   </a>
                   <button
-                    onClick={() => {
-                      const text = `\u{1F3C6} I won a private auction on Obscura — the first ZK auction protocol on Aleo.\n\nMy bid amount? That's private. Verified with zero-knowledge proofs.\n\n${window.location.href}`
-                      navigator.clipboard.writeText(text).catch(() => {})
+                    onClick={async () => {
+                      const lines = [
+                        '\u{1F3C6} I won a private auction on Obscura — the first ZK auction protocol on Aleo.',
+                        '',
+                        'My bid amount? That\'s private. Verified with zero-knowledge proofs.',
+                        '',
+                        window.location.href,
+                      ]
+                      try {
+                        await navigator.clipboard.writeText(lines.join('\n'))
+                        const btn = document.activeElement as HTMLButtonElement
+                        if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy Proof Text' }, 2000) }
+                      } catch { /* clipboard blocked */ }
                     }}
                     className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-surface-600 text-sm text-gray-300 hover:border-accent-500/50 hover:text-white transition-colors"
                   >
