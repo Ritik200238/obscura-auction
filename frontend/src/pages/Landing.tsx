@@ -314,6 +314,199 @@ const hashStrings = [
 ]
 
 /* ─────────────────────────────────────────────
+   PRIVACY SPLIT — "Two Realities, One Auction"
+   ───────────────────────────────────────────── */
+
+const privacyStages = [
+  {
+    label: 'CREATE AUCTION',
+    right: [
+      { k: 'Item', v: 'Rare NFT Collection' },
+      { k: 'Reserve', v: '5.0 ALEO' },
+      { k: 'Format', v: 'Vickrey (2nd-price)' },
+      { k: 'Duration', v: '24 hours' },
+    ],
+    left: [
+      { k: 'auction_key', v: '387429...field' },
+      { k: 'reserve_hash', v: 'bhp256(████████)' },
+      { k: 'mode', v: '2u8' },
+      { k: 'deadline', v: '15224100u64' },
+    ],
+    glow: 'rgb(74, 222, 128)',
+  },
+  {
+    label: 'SEALED BID',
+    right: [
+      { k: 'Your bid', v: '12.5 ALEO' },
+      { k: 'Status', v: 'Sealed on-chain' },
+      { k: 'Tokens moved', v: 'None (zero transfer)' },
+    ],
+    left: [
+      { k: 'commitment', v: '8f3a91c2...d4e7' },
+      { k: 'bid_count', v: '1' },
+      { k: 'escrow', v: '0' },
+    ],
+    glow: 'rgb(34, 211, 238)',
+  },
+  {
+    label: 'MORE BIDS ARRIVE',
+    right: [
+      { k: 'Sealed bids', v: '3 total' },
+      { k: 'Amounts', v: 'All hidden' },
+      { k: 'Leader', v: 'Nobody knows' },
+    ],
+    left: [
+      { k: 'bid_count', v: '3' },
+      { k: 'commitments', v: '[hash₁, hash₂, hash₃]' },
+      { k: 'identities', v: 'none stored' },
+    ],
+    glow: 'rgb(34, 211, 238)',
+  },
+  {
+    label: 'REVEAL + SETTLE',
+    right: [
+      { k: 'Result', v: 'You won!' },
+      { k: 'Price paid', v: '8.2 ALEO (2nd-highest)' },
+      { k: 'Settlement', v: 'Tokens transferred' },
+    ],
+    left: [
+      { k: 'winner', v: 'hash(aleo1...)' },
+      { k: 'price', v: '8200000u128' },
+      { k: 'status', v: '4u8 (SETTLED)' },
+    ],
+    glow: 'rgb(59, 130, 246)',
+  },
+  {
+    label: 'PROVE YOU WON',
+    right: [
+      { k: 'Share', v: '"I won this auction"' },
+      { k: 'Proof', v: 'Verifiable. Private.' },
+      { k: 'Method', v: 'Zero-knowledge' },
+    ],
+    left: [
+      { k: 'proof', v: 'VALID' },
+      { k: 'is_winner', v: 'true' },
+      { k: 'price_paid', v: '████████' },
+    ],
+    glow: 'rgb(139, 92, 246)',
+  },
+]
+
+function PrivacySplit() {
+  const ref = useRef<HTMLDivElement>(null)
+  const isInView = useInView(ref, { once: true, margin: '-100px' })
+  const [stage, setStage] = useState(0)
+
+  useEffect(() => {
+    if (!isInView) return
+    const interval = setInterval(() => {
+      setStage((s) => (s + 1) % privacyStages.length)
+    }, 3500)
+    return () => clearInterval(interval)
+  }, [isInView])
+
+  const current = privacyStages[stage]
+
+  return (
+    <div ref={ref} className="relative max-w-5xl mx-auto">
+      {/* Stage label */}
+      <motion.div
+        key={`label-${stage}`}
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0 }}
+        className="text-center mb-6"
+      >
+        <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-800/80 border border-surface-700/50 text-xs font-mono text-gray-400">
+          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: current.glow }} />
+          STAGE {stage + 1} — {current.label}
+        </span>
+      </motion.div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-0 relative">
+        {/* Divider line */}
+        <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px z-20">
+          <motion.div
+            className="w-full h-full"
+            animate={{ background: `linear-gradient(to bottom, transparent, ${current.glow}, transparent)` }}
+            transition={{ duration: 0.5 }}
+          />
+          <motion.div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full blur-xl"
+            animate={{ background: current.glow, opacity: 0.4 }}
+          />
+        </div>
+
+        {/* RIGHT — What you see */}
+        <div className="relative p-6 sm:p-8 rounded-2xl md:rounded-r-none bg-surface-900/80 border border-surface-700/40 md:border-r-0 order-1 md:order-2">
+          <p className="text-[10px] uppercase tracking-widest text-green-400/70 font-mono mb-4">What you see</p>
+          <motion.div
+            key={`right-${stage}`}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, staggerChildren: 0.1 }}
+            className="space-y-3"
+          >
+            {current.right.map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: 15 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="flex items-center justify-between gap-4"
+              >
+                <span className="text-xs text-gray-500">{item.k}</span>
+                <span className="text-sm text-white font-medium">{item.v}</span>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+
+        {/* LEFT — What the network sees */}
+        <div className="relative p-6 sm:p-8 rounded-2xl md:rounded-l-none bg-black/60 border border-surface-800/60 md:border-r-0 order-2 md:order-1">
+          <p className="text-[10px] uppercase tracking-widest text-red-400/70 font-mono mb-4">What the network sees</p>
+          <motion.div
+            key={`left-${stage}`}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4 }}
+            className="space-y-3"
+          >
+            {current.left.map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -15 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 + 0.2 }}
+                className="flex items-center justify-between gap-4"
+              >
+                <span className="text-xs text-gray-600 font-mono">{item.k}:</span>
+                <span className={`text-sm font-mono ${
+                  item.v.includes('████') ? 'text-red-500/60' : 'text-gray-500'
+                }`}>{item.v}</span>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Stage dots */}
+      <div className="flex items-center justify-center gap-2 mt-6">
+        {privacyStages.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setStage(i)}
+            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+              i === stage ? 'w-6 bg-accent-400' : 'bg-surface-700 hover:bg-surface-600'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────
    ANIMATED COUNTER
    ───────────────────────────────────────────── */
 
@@ -544,7 +737,7 @@ export default function Landing() {
       </section>
 
       {/* ═══════════════════════════════════════
-          PRIVACY WALL
+          PRIVACY SPLIT — Two Realities, One Auction
           ═══════════════════════════════════════ */}
       <section className="relative py-24 sm:py-32 overflow-hidden">
         <div className="absolute inset-0">
@@ -560,23 +753,17 @@ export default function Landing() {
           </div>
         </div>
 
-        <AnimatedSection className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.h2
-            variants={fadeInUp}
-            className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight font-display"
-          >
-            This is what the
-            <br />
-            <span className="text-gradient-animated">blockchain sees.</span>
-          </motion.h2>
-          <motion.p variants={fadeInUp} className="text-lg sm:text-xl text-gray-400 mb-10 max-w-xl mx-auto">
-            Only you see the real data. That's zero-knowledge privacy.
-          </motion.p>
+        <AnimatedSection className="relative z-10 px-4 sm:px-6 lg:px-8">
+          <motion.div variants={fadeInUp} className="text-center mb-12">
+            <h2 className="text-3xl sm:text-5xl font-extrabold text-white mb-4 leading-tight font-display">
+              Two Realities. One Auction.
+            </h2>
+            <p className="text-lg text-gray-400 max-w-xl mx-auto">
+              Watch a full auction lifecycle. Left: what the blockchain stores. Right: what you actually see.
+            </p>
+          </motion.div>
           <motion.div variants={fadeInUp}>
-            <Link to="/docs" className="btn-secondary inline-flex items-center gap-2 text-base px-8 py-3.5">
-              See Privacy in Action
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+            <PrivacySplit />
           </motion.div>
         </AnimatedSection>
 
