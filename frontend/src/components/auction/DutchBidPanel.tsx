@@ -72,9 +72,15 @@ export default function DutchBidPanel({ auction, onBidConfirmed }: DutchBidPanel
 
     if (tokenType === 1) {
       // ALEO path — needs a private credits record as 4th input
-      const creditsRecord = await fetchCreditsRecord(requestRecords, bidAmount)
+      let creditsRecord: string | null = null
+      try {
+        creditsRecord = await fetchCreditsRecord(requestRecords, bidAmount)
+      } catch (e) {
+        setFormError(`Failed to fetch credits records from wallet: ${e instanceof Error ? e.message : 'unknown error'}`)
+        return
+      }
       if (!creditsRecord) {
-        setFormError('No ALEO credits record found with sufficient balance. Get tokens from the faucet.')
+        setFormError(`No ALEO credits record with >= ${(bidAmount / 1_000_000).toFixed(4)} ALEO found. Need a private record (not public balance). Try getting tokens from the faucet.`)
         return
       }
       await execute({

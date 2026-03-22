@@ -467,7 +467,13 @@ export async function fetchCreditsRecord(
   minAmountMicro: number
 ): Promise<string | null> {
   try {
-    const records = await requestRecords('credits.aleo')
+    // Try with plaintext first (Shield Wallet), fall back to without
+    let records: unknown
+    try {
+      records = await requestRecords('credits.aleo', true)
+    } catch {
+      records = await requestRecords('credits.aleo')
+    }
     const recordsArr = Array.isArray(records) ? records : []
 
     for (const raw of recordsArr) {
