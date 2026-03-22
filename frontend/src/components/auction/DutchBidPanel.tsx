@@ -70,31 +70,14 @@ export default function DutchBidPanel({ auction, onBidConfirmed }: DutchBidPanel
 
     const tokenType = auction.token_type
 
-    if (tokenType === 1) {
-      // ALEO path — needs a private credits record as 4th input
-      let creditsRecord: string | null = null
-      try {
-        creditsRecord = await fetchCreditsRecord(requestRecords, bidAmount)
-      } catch (e) {
-        setFormError(`Failed to fetch credits records from wallet: ${e instanceof Error ? e.message : 'unknown error'}`)
-        return
-      }
-      if (!creditsRecord) {
-        setFormError(`No ALEO credits record with >= ${(bidAmount / 1_000_000).toFixed(4)} ALEO found. Need a private record (not public balance). Try getting tokens from the faucet.`)
-        return
-      }
-      await execute({
-        functionName: 'bid_dutch',
-        inputs: [auctionKey, `${bidAmount}u128`, nonce, creditsRecord],
-      })
-    } else {
-      // USDCx/USAD path — no record needed (public balance transfer)
-      const funcName = tokenType === 2 ? 'bid_dutch_usdcx' : 'bid_dutch_usad'
-      await execute({
-        functionName: funcName,
-        inputs: [auctionKey, `${bidAmount}u128`, nonce],
-      })
-    }
+    // Shield Wallet with delegated proving auto-resolves credits.aleo/credits records.
+    // We pass only the non-record inputs — the prover fills in the record automatically.
+    const funcName = tokenType === 2 ? 'bid_dutch_usdcx' : tokenType === 3 ? 'bid_dutch_usad' : 'bid_dutch'
+
+    await execute({
+      functionName: funcName,
+      inputs: [auctionKey, `${bidAmount}u128`, nonce],
+    })
   }
 
   useEffect(() => {
