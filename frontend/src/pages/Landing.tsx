@@ -319,187 +319,290 @@ const hashStrings = [
 
 const privacyStages = [
   {
-    label: 'CREATE AUCTION',
+    num: '01',
+    label: 'CREATE',
+    subtitle: 'Auction goes live',
     right: [
-      { k: 'Item', v: 'Rare NFT Collection' },
-      { k: 'Reserve', v: '5.0 ALEO' },
-      { k: 'Format', v: 'Vickrey (2nd-price)' },
-      { k: 'Duration', v: '24 hours' },
+      { k: 'Item', v: 'Rare NFT Collection', icon: '🖼️' },
+      { k: 'Reserve', v: '5.0 ALEO', icon: '🔒' },
+      { k: 'Format', v: 'Vickrey (2nd-price)', icon: '⚡' },
+      { k: 'Duration', v: '24 hours', icon: '⏱️' },
     ],
     left: [
-      { k: 'auction_key', v: '387429...field' },
-      { k: 'reserve_hash', v: 'bhp256(████████)' },
-      { k: 'mode', v: '2u8' },
-      { k: 'deadline', v: '15224100u64' },
+      { k: 'auction_id', v: '38742918...field', redacted: false },
+      { k: 'reserve', v: '██████████████', redacted: true },
+      { k: 'seller', v: '██████████████', redacted: true },
+      { k: 'mode', v: '2u8', redacted: false },
     ],
-    glow: 'rgb(74, 222, 128)',
+    accent: '#4ade80',
+    accentName: 'green',
   },
   {
-    label: 'SEALED BID',
+    num: '02',
+    label: 'BID',
+    subtitle: 'Your sealed bid',
     right: [
-      { k: 'Your bid', v: '12.5 ALEO' },
-      { k: 'Status', v: 'Sealed on-chain' },
-      { k: 'Tokens moved', v: 'None (zero transfer)' },
+      { k: 'Your bid', v: '12.5 ALEO', icon: '💰' },
+      { k: 'Status', v: 'Sealed on-chain', icon: '🔐' },
+      { k: 'Tokens moved', v: 'Zero', icon: '✨' },
     ],
     left: [
-      { k: 'commitment', v: '8f3a91c2...d4e7' },
-      { k: 'bid_count', v: '1' },
-      { k: 'escrow', v: '0' },
+      { k: 'commitment', v: '8f3a91c2...d4e7', redacted: false },
+      { k: 'amount', v: '██████████████', redacted: true },
+      { k: 'bidder', v: '██████████████', redacted: true },
     ],
-    glow: 'rgb(34, 211, 238)',
+    accent: '#22d3ee',
+    accentName: 'cyan',
   },
   {
-    label: 'MORE BIDS ARRIVE',
+    num: '03',
+    label: 'COMPETE',
+    subtitle: '3 hidden bids',
     right: [
-      { k: 'Sealed bids', v: '3 total' },
-      { k: 'Amounts', v: 'All hidden' },
-      { k: 'Leader', v: 'Nobody knows' },
+      { k: 'Sealed bids', v: '3 placed', icon: '📊' },
+      { k: 'Amounts', v: 'All hidden', icon: '👁️‍🗨️' },
+      { k: 'Leader', v: 'Nobody knows', icon: '❓' },
     ],
     left: [
-      { k: 'bid_count', v: '3' },
-      { k: 'commitments', v: '[hash₁, hash₂, hash₃]' },
-      { k: 'identities', v: 'none stored' },
+      { k: 'bid_count', v: '3', redacted: false },
+      { k: 'bids', v: '[hash₁, hash₂, hash₃]', redacted: false },
+      { k: 'identities', v: '██ none stored ██', redacted: true },
     ],
-    glow: 'rgb(34, 211, 238)',
+    accent: '#a78bfa',
+    accentName: 'purple',
   },
   {
-    label: 'REVEAL + SETTLE',
+    num: '04',
+    label: 'SETTLE',
+    subtitle: 'You won!',
     right: [
-      { k: 'Result', v: 'You won!' },
-      { k: 'Price paid', v: '8.2 ALEO (2nd-highest)' },
-      { k: 'Settlement', v: 'Tokens transferred' },
+      { k: 'Result', v: '🏆 You won!', icon: '✅' },
+      { k: 'You pay', v: '8.2 ALEO (2nd price)', icon: '💎' },
+      { k: 'Status', v: 'Settled on-chain', icon: '🔗' },
     ],
     left: [
-      { k: 'winner', v: 'hash(aleo1...)' },
-      { k: 'price', v: '8200000u128' },
-      { k: 'status', v: '4u8 (SETTLED)' },
+      { k: 'winner', v: 'bhp256(aleo1...)', redacted: false },
+      { k: 'price', v: '8200000u128', redacted: false },
+      { k: 'identity', v: '██████████████', redacted: true },
     ],
-    glow: 'rgb(59, 130, 246)',
+    accent: '#3b82f6',
+    accentName: 'blue',
   },
   {
-    label: 'PROVE YOU WON',
+    num: '05',
+    label: 'PROVE',
+    subtitle: 'Zero-knowledge proof',
     right: [
-      { k: 'Share', v: '"I won this auction"' },
-      { k: 'Proof', v: 'Verifiable. Private.' },
-      { k: 'Method', v: 'Zero-knowledge' },
+      { k: 'Claim', v: '"I won this auction"', icon: '🏆' },
+      { k: 'Bid amount', v: 'Still private', icon: '🔒' },
+      { k: 'Proof', v: 'Verifiable by anyone', icon: '✨' },
     ],
     left: [
-      { k: 'proof', v: 'VALID' },
-      { k: 'is_winner', v: 'true' },
-      { k: 'price_paid', v: '████████' },
+      { k: 'is_winner', v: 'true', redacted: false },
+      { k: 'proof', v: 'VALID ✓', redacted: false },
+      { k: 'amount', v: '██████████████', redacted: true },
     ],
-    glow: 'rgb(139, 92, 246)',
+    accent: '#8b5cf6',
+    accentName: 'violet',
   },
 ]
 
 function PrivacySplit() {
   const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: '-100px' })
+  const isInView = useInView(ref, { once: true, margin: '-80px' })
   const [stage, setStage] = useState(0)
+  const [isTransitioning, setIsTransitioning] = useState(false)
 
   useEffect(() => {
     if (!isInView) return
     const interval = setInterval(() => {
-      setStage((s) => (s + 1) % privacyStages.length)
-    }, 3500)
+      setIsTransitioning(true)
+      setTimeout(() => {
+        setStage((s) => (s + 1) % privacyStages.length)
+        setIsTransitioning(false)
+      }, 400)
+    }, 5000)
     return () => clearInterval(interval)
   }, [isInView])
 
   const current = privacyStages[stage]
 
   return (
-    <div ref={ref} className="relative max-w-5xl mx-auto">
-      {/* Stage label */}
-      <motion.div
-        key={`label-${stage}`}
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0 }}
-        className="text-center mb-6"
-      >
-        <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-800/80 border border-surface-700/50 text-xs font-mono text-gray-400">
-          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: current.glow }} />
-          STAGE {stage + 1} — {current.label}
-        </span>
-      </motion.div>
+    <div ref={ref} className="relative max-w-6xl mx-auto">
+      {/* Stage indicator — large cinematic number */}
+      <div className="flex items-center justify-center gap-6 mb-10">
+        <motion.div
+          key={`num-${stage}`}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', bounce: 0.4, duration: 0.6 }}
+          className="flex items-center gap-4"
+        >
+          <span
+            className="text-6xl sm:text-7xl font-black tracking-tighter font-display opacity-20"
+            style={{ color: current.accent }}
+          >
+            {current.num}
+          </span>
+          <div>
+            <p className="text-xl sm:text-2xl font-extrabold text-white tracking-tight font-display">
+              {current.label}
+            </p>
+            <p className="text-sm text-gray-500">{current.subtitle}</p>
+          </div>
+        </motion.div>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-0 relative">
-        {/* Divider line */}
-        <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px z-20">
+      {/* Main split view */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 relative">
+
+        {/* Glowing divider */}
+        <div className="hidden lg:flex absolute left-1/2 top-0 bottom-0 w-px z-20 flex-col items-center justify-center">
           <motion.div
-            className="w-full h-full"
-            animate={{ background: `linear-gradient(to bottom, transparent, ${current.glow}, transparent)` }}
-            transition={{ duration: 0.5 }}
-          />
+            className="w-px h-full relative"
+            style={{ background: `linear-gradient(to bottom, transparent 10%, ${current.accent}40 50%, transparent 90%)` }}
+          >
+            {/* Traveling particle */}
+            <motion.div
+              key={`particle-${stage}`}
+              initial={{ top: '20%', opacity: 0 }}
+              animate={{ top: '80%', opacity: [0, 1, 1, 0] }}
+              transition={{ duration: 2, ease: 'easeInOut', delay: 0.5 }}
+              className="absolute left-1/2 -translate-x-1/2 w-3 h-3 rounded-full blur-sm"
+              style={{ background: current.accent }}
+            />
+          </motion.div>
+          {/* Center glow orb */}
           <motion.div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full blur-xl"
-            animate={{ background: current.glow, opacity: 0.4 }}
+            className="absolute top-1/2 -translate-y-1/2 w-20 h-20 rounded-full blur-2xl"
+            animate={{ background: current.accent, opacity: 0.15 }}
+            transition={{ duration: 0.8 }}
           />
+          {/* Arrow icon */}
+          <motion.div
+            className="absolute top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center z-30 border"
+            style={{ background: `${current.accent}15`, borderColor: `${current.accent}40` }}
+          >
+            <span className="text-xs" style={{ color: current.accent }}>→</span>
+          </motion.div>
         </div>
 
-        {/* RIGHT — What you see */}
-        <div className="relative p-6 sm:p-8 rounded-2xl md:rounded-r-none bg-surface-900/80 border border-surface-700/40 md:border-r-0 order-1 md:order-2">
-          <p className="text-[10px] uppercase tracking-widest text-green-400/70 font-mono mb-4">What you see</p>
+        {/* RIGHT — Your reality */}
+        <motion.div
+          className="relative p-7 sm:p-10 rounded-2xl lg:rounded-l-none border order-1 lg:order-2"
+          style={{ background: 'rgba(15, 23, 42, 0.6)', borderColor: `${current.accent}15` }}
+          animate={{ borderColor: isTransitioning ? 'rgba(255,255,255,0.05)' : `${current.accent}20` }}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-400" />
+              <p className="text-[11px] uppercase tracking-[0.2em] text-green-400/80 font-semibold">Your View</p>
+            </div>
+            <span className="text-[10px] text-gray-600 font-mono">private</span>
+          </div>
           <motion.div
             key={`right-${stage}`}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4, staggerChildren: 0.1 }}
-            className="space-y-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-4"
           >
             {current.right.map((item, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, x: 15 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="flex items-center justify-between gap-4"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 * i + 0.2, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]"
               >
-                <span className="text-xs text-gray-500">{item.k}</span>
-                <span className="text-sm text-white font-medium">{item.v}</span>
+                <span className="text-lg shrink-0">{item.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] text-gray-500 uppercase tracking-wider">{item.k}</p>
+                  <p className="text-[15px] text-white font-semibold truncate">{item.v}</p>
+                </div>
               </motion.div>
             ))}
           </motion.div>
-        </div>
+        </motion.div>
 
-        {/* LEFT — What the network sees */}
-        <div className="relative p-6 sm:p-8 rounded-2xl md:rounded-l-none bg-black/60 border border-surface-800/60 md:border-r-0 order-2 md:order-1">
-          <p className="text-[10px] uppercase tracking-widest text-red-400/70 font-mono mb-4">What the network sees</p>
+        {/* LEFT — Network reality */}
+        <motion.div
+          className="relative p-7 sm:p-10 rounded-2xl lg:rounded-r-none border order-2 lg:order-1"
+          style={{ background: 'rgba(0, 0, 0, 0.5)', borderColor: 'rgba(255,255,255,0.04)' }}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-red-400/60" />
+              <p className="text-[11px] uppercase tracking-[0.2em] text-red-400/60 font-semibold">Network View</p>
+            </div>
+            <span className="text-[10px] text-gray-700 font-mono">on-chain</span>
+          </div>
           <motion.div
             key={`left-${stage}`}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4 }}
-            className="space-y-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="space-y-4"
           >
             {current.left.map((item, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, x: -15 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.1 + 0.2 }}
-                className="flex items-center justify-between gap-4"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 * i + 0.5, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.015] border border-white/[0.03]"
               >
-                <span className="text-xs text-gray-600 font-mono">{item.k}:</span>
-                <span className={`text-sm font-mono ${
-                  item.v.includes('████') ? 'text-red-500/60' : 'text-gray-500'
-                }`}>{item.v}</span>
+                <span className="text-[10px] text-gray-600 font-mono w-20 shrink-0 text-right">{item.k}</span>
+                <div className="flex-1 min-w-0">
+                  {item.redacted ? (
+                    <div className="flex items-center gap-1.5">
+                      <motion.div
+                        className="h-4 rounded flex-1"
+                        style={{ background: `linear-gradient(90deg, ${current.accent}10, ${current.accent}05)` }}
+                        animate={{ opacity: [0.4, 0.7, 0.4] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      />
+                      <span className="text-[9px] px-1.5 py-0.5 rounded font-mono tracking-wider"
+                        style={{ color: `${current.accent}90`, background: `${current.accent}10` }}
+                      >
+                        ENCRYPTED
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 font-mono truncate">{item.v}</p>
+                  )}
+                </div>
               </motion.div>
             ))}
           </motion.div>
-        </div>
+        </motion.div>
       </div>
 
-      {/* Stage dots */}
-      <div className="flex items-center justify-center gap-2 mt-6">
-        {privacyStages.map((_, i) => (
+      {/* Stage navigation */}
+      <div className="flex items-center justify-center gap-3 mt-8">
+        {privacyStages.map((s, i) => (
           <button
             key={i}
-            onClick={() => setStage(i)}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
-              i === stage ? 'w-6 bg-accent-400' : 'bg-surface-700 hover:bg-surface-600'
-            }`}
-          />
+            onClick={() => { setIsTransitioning(true); setTimeout(() => { setStage(i); setIsTransitioning(false) }, 200) }}
+            className="group flex items-center gap-2 transition-all duration-300"
+          >
+            <span
+              className={`block h-1 rounded-full transition-all duration-500 ${
+                i === stage ? 'w-10' : 'w-3 group-hover:w-5'
+              }`}
+              style={{ background: i === stage ? current.accent : 'rgba(255,255,255,0.1)' }}
+            />
+            {i === stage && (
+              <motion.span
+                initial={{ opacity: 0, x: -5 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="text-[10px] font-mono"
+                style={{ color: current.accent }}
+              >
+                {s.label}
+              </motion.span>
+            )}
+          </button>
         ))}
       </div>
     </div>
