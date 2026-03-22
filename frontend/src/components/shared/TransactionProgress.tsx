@@ -48,7 +48,7 @@ function getStepState(
   }
   if (status === 'unconfirmed' && stepIndex === 2) return 'warning'
   if (stepIndex < activeStep) return 'complete'
-  if (stepIndex === activeStep) return 'active'
+  if (stepIndex === activeStep) return status === 'confirmed' ? 'complete' : 'active'
   if (status === 'submitting' && stepIndex <= 1) return 'active'
   return 'pending'
 }
