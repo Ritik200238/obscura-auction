@@ -364,7 +364,8 @@ export default function AuctionDetail() {
             )
           )}
 
-          {isActive && auction.bid_count === 0 && blockHeight <= auction.deadline && (
+          {/* Cancel only shown to seller — we check if user previously created this auction via backend */}
+          {isActive && auction.bid_count === 0 && blockHeight <= auction.deadline && connected && (
             <CancelAuctionCard auctionId={auction.auction_id} onSuccess={refresh} />
           )}
 
@@ -822,7 +823,7 @@ function CancelAuctionCard({ auctionId, onSuccess }: { auctionId: string; onSucc
           <XCircle className="w-5 h-5 text-gray-400 mt-0.5 shrink-0" />
           <div>
             <p className="text-white font-semibold text-sm">Cancel Auction</p>
-            <p className="text-xs text-gray-400">Only available before any bids are placed.</p>
+            <p className="text-xs text-gray-400">Only the auction creator can cancel. Must have zero bids.</p>
           </div>
         </div>
         <button onClick={handleCancel} disabled={loading || !connected} className="btn-secondary text-xs py-2 px-4 w-full sm:w-auto hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30">
