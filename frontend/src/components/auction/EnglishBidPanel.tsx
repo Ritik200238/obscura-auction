@@ -59,14 +59,28 @@ export default function EnglishBidPanel({ auction, highestBid, onBidConfirmed }:
     const microsStr = toMicrocredits(amount)
     const auctionKey = auction.auction_id.endsWith('field') ? auction.auction_id : `${auction.auction_id}field`
 
-    // Shield Wallet with delegated proving auto-resolves credits.aleo/credits records.
     const tokenType = auction.token_type
-    const funcName = tokenType === 2 ? 'bid_english_usdcx' : tokenType === 3 ? 'bid_english_usad' : 'bid_english'
 
-    await execute({
-      functionName: funcName,
-      inputs: [auctionKey, `${micros}u128`, nonce],
-    })
+    if (tokenType === 1) {
+      const creditsRecord = await fetchCreditsRecord(requestRecords, micros)
+      if (creditsRecord) {
+        await execute({
+          functionName: 'bid_english',
+          inputs: [auctionKey, `${micros}u128`, nonce, creditsRecord],
+        })
+      } else {
+        await execute({
+          functionName: 'bid_english',
+          inputs: [auctionKey, `${micros}u128`, nonce],
+        })
+      }
+    } else {
+      const funcName = tokenType === 2 ? 'bid_english_usdcx' : 'bid_english_usad'
+      await execute({
+        functionName: funcName,
+        inputs: [auctionKey, `${micros}u128`, nonce],
+      })
+    }
   }
 
   if (txId) {

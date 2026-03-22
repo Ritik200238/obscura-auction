@@ -70,14 +70,28 @@ export default function DutchBidPanel({ auction, onBidConfirmed }: DutchBidPanel
 
     const tokenType = auction.token_type
 
-    // Shield Wallet with delegated proving auto-resolves credits.aleo/credits records.
-    // We pass only the non-record inputs — the prover fills in the record automatically.
-    const funcName = tokenType === 2 ? 'bid_dutch_usdcx' : tokenType === 3 ? 'bid_dutch_usad' : 'bid_dutch'
-
-    await execute({
-      functionName: funcName,
-      inputs: [auctionKey, `${bidAmount}u128`, nonce],
-    })
+    if (tokenType === 1) {
+      // ALEO: needs credits record. Try fetching it.
+      const creditsRecord = await fetchCreditsRecord(requestRecords, bidAmount)
+      if (creditsRecord) {
+        await execute({
+          functionName: 'bid_dutch',
+          inputs: [auctionKey, `${bidAmount}u128`, nonce, creditsRecord],
+        })
+      } else {
+        // Fallback: pass without record, let Shield Wallet handle it
+        await execute({
+          functionName: 'bid_dutch',
+          inputs: [auctionKey, `${bidAmount}u128`, nonce],
+        })
+      }
+    } else {
+      const funcName = tokenType === 2 ? 'bid_dutch_usdcx' : 'bid_dutch_usad'
+      await execute({
+        functionName: funcName,
+        inputs: [auctionKey, `${bidAmount}u128`, nonce],
+      })
+    }
   }
 
   useEffect(() => {
