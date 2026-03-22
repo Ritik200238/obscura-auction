@@ -386,23 +386,13 @@ export default function Landing() {
                 initial="hidden"
                 animate="visible"
                 variants={wordVariants}
-                className="text-5xl sm:text-8xl lg:text-9xl font-extrabold tracking-tighter leading-none font-display"
+                className="text-5xl sm:text-8xl lg:text-9xl font-extrabold tracking-tighter text-white leading-none font-display"
                 style={{
-                  background: i === 0
-                    ? 'linear-gradient(135deg, #4ade80, #22d3ee)'
+                  textShadow: i === 0
+                    ? '0 0 80px rgba(74, 222, 128, 0.35), 0 0 30px rgba(74, 222, 128, 0.15)'
                     : i === 1
-                    ? 'linear-gradient(135deg, #22d3ee, #14b8a6)'
-                    : 'linear-gradient(135deg, #06b6d4, #3b82f6)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                  filter: `drop-shadow(0 0 40px ${
-                    i === 0
-                      ? 'rgba(74, 222, 128, 0.25)'
-                      : i === 1
-                      ? 'rgba(34, 211, 238, 0.25)'
-                      : 'rgba(59, 130, 246, 0.25)'
-                  })`,
+                    ? '0 0 80px rgba(34, 211, 238, 0.35), 0 0 30px rgba(34, 211, 238, 0.15)'
+                    : '0 0 80px rgba(59, 130, 246, 0.35), 0 0 30px rgba(59, 130, 246, 0.15)',
                 }}
               >
                 {word}
