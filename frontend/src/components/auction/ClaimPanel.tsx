@@ -40,18 +40,19 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
   const receipt = receiptIndex >= 0 ? records.receipts[receiptIndex] : undefined
 
   const isVickrey = auction.auction_mode === AUCTION_MODE.VICKREY
+  const isDutch = auction.auction_mode === AUCTION_MODE.DUTCH
   const isUsdcx = auction.token_type === TOKEN_TYPE.USDCX
-  const tokenSymbol = isUsdcx ? 'USDCx' : 'ALEO'
+  const isUsad = auction.token_type === 3 // TOKEN_USAD
+  const tokenSymbol = isUsdcx ? 'USDCx' : isUsad ? 'USAD' : 'ALEO'
 
-  // Vickrey: fee is on the second-highest bid (what the winner actually pays)
-  // First-price: fee is on the highest bid
-  const effectivePrice = isVickrey && secondHighest > 0n ? secondHighest : highestBid
+  // Vickrey/Dutch with overpayment: fee is on the second-highest bid (actual price paid)
+  // First-price/English: fee is on the highest bid
+  const hasOverpayment = (isVickrey || isDutch) && secondHighest > 0n && highestBid > secondHighest
+  const effectivePrice = hasOverpayment ? secondHighest : highestBid
   const feeBps = config.platformFeeBps
   const feeAmount = effectivePrice * BigInt(feeBps) / 10000n
   const sellerPayout = effectivePrice - feeAmount
-  const winnerRefund = isVickrey && secondHighest > 0n && highestBid > secondHighest
-    ? highestBid - secondHighest
-    : 0n
+  const winnerRefund = hasOverpayment ? highestBid - secondHighest : 0n
 
   // Seller address hash warning — show only when the address is valid and we have a hash to verify against.
   // The on-chain seller_hash = BHP256(seller_address), so we can't verify client-side without
@@ -122,10 +123,11 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
       return proof !== null && proof !== '0field'
     }
 
-    // Select the correct transition based on auction_mode + token_type
-    if (isVickrey && winnerRefund > 0n) {
-      // Vickrey with savings — needs claimed_second_price
-      const functionName = isUsdcx ? 'claim_win_vickrey_usdcx' : 'claim_win_vickrey'
+    // Select the correct transition based on overpayment + token_type
+    // Dutch with overpayment uses same claim_win_vickrey path (refunds difference)
+    if (hasOverpayment) {
+      // Vickrey or Dutch with overpayment — needs claimed_second_price
+      const functionName = isUsdcx ? 'claim_win_vickrey_usdcx' : isUsad ? 'claim_win_vickrey_usad' : 'claim_win_vickrey'
       await execute({
         functionName,
         inputs: [
@@ -137,8 +139,8 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
         onChainVerify,
       })
     } else {
-      // First-price, or Vickrey where highest == second (no savings)
-      const functionName = isUsdcx ? 'claim_win_usdcx' : 'claim_win'
+      // First-price, English, or exact-price Dutch/Vickrey (highest == second)
+      const functionName = isUsdcx ? 'claim_win_usdcx' : isUsad ? 'claim_win_usad' : 'claim_win'
       await execute({
         functionName,
         inputs: [
