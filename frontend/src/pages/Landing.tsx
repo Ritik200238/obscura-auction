@@ -799,7 +799,7 @@ export default function Landing() {
             </span>
             <span className="text-surface-600">|</span>
             <a
-              href="https://testnet.aleoscan.io/program?id=obscura_v4.aleo"
+              href="https://testnet.explorer.provable.com/program/obscura_v4.aleo"
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent-400 hover:text-accent-300 transition-colors flex items-center gap-1 text-xs"
@@ -1226,7 +1226,7 @@ export default function Landing() {
           <motion.p variants={fadeInUp} className="text-center text-xs text-gray-600 font-mono">
             Deployed as{' '}
             <a
-              href="https://testnet.aleoscan.io/program?id=obscura_v4.aleo"
+              href="https://testnet.explorer.provable.com/program/obscura_v4.aleo"
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent-400/70 hover:text-accent-400 transition-colors"
@@ -1351,7 +1351,7 @@ export default function Landing() {
                   <ExternalLink className="w-3 h-3" />
                 </a>
                 <a
-                  href="https://testnet.aleoscan.io/program?id=obscura_v4.aleo"
+                  href="https://testnet.explorer.provable.com/program/obscura_v4.aleo"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-gray-300 transition-colors flex items-center gap-1"

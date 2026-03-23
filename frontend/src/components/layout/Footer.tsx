@@ -32,7 +32,7 @@ export default function Footer() {
                 GitHub
               </a>
               <a
-                href="https://testnet.aleoscan.io/program?id=obscura_v4.aleo"
+                href="https://testnet.explorer.provable.com/program/obscura_v4.aleo"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-sm text-gray-500 hover:text-accent-400 transition-colors"

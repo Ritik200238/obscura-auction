@@ -323,8 +323,8 @@ export default function Docs() {
           Integrate Obscura into your dApp with the TypeScript SDK. Create auctions, place bids, and read on-chain state programmatically.
         </p>
         <div className="bg-surface-800/60 rounded-xl p-4 border border-surface-700 font-mono text-sm">
-          <p className="text-gray-500 mb-2"># Install</p>
-          <p className="text-accent-400 mb-4">npm install @obscura/sdk</p>
+          <p className="text-gray-500 mb-2"># Install from source</p>
+          <p className="text-accent-400 mb-4">cd sdk && npm install && npm run build</p>
           <p className="text-gray-500 mb-2"># Usage</p>
           <div className="text-gray-300 space-y-1">
             <p>{'import { ObscuraClient } from "@obscura/sdk";'}</p>
