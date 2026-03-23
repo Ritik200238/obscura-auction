@@ -16,10 +16,10 @@
 |---|---|---|---|---|
 | **Privacy (40%)** | Invoice hash public, amounts leak via API | 18 public mappings, resolver exposed | Sealed bids, hashed seller, zero-transfer bidding, winner self-identifies | Commit-reveal with no token transfer at bid = strictest privacy |
 | **Tech (20%)** | ~8 transitions, 2 records, 4 mappings | 30 transitions, 4 records, 18+ mappings | **28 transitions, 5 records, 16 mappings** | 4 auction formats + Vickrey + anti-sniping + dispute resolution + settlement proofs = never done on Aleo |
-| **UX (20%)** | Glassmorphism, mobile via Shield browser | Cluttered market UI with AMM math | Clean 6-page dashboard, phase-based panels, 5-step flow | Phase-aware UI adapts to auction state; quick templates |
+| **UX (20%)** | Glassmorphism, mobile via Shield browser | Cluttered market UI with AMM math | 9-page app, mode-aware panels, auction templates, Explorer dashboard | Phase-aware UI adapts to format + state; guided onboarding |
 | **Practicality (10%)** | Invoice payments | Prediction markets (FPMM) | Private procurement/auctions | Real-world sealed tenders, private art sales, government contracts |
 | **Novelty (10%)** | Multi-pay invoices, donation invoices | FPMM AMM, dispute mechanism | **Vickrey + anti-sniping + commit-reveal + selective disclosure** | First second-price ZK auction on any blockchain |
-| **Token Integration** | credits.aleo + USDCx (public transfer) | credits.aleo + USDCx (both paths) | credits.aleo + USDCx (full escrow paths) | Private ALEO + public USDCx with Vickrey refund flows |
+| **Token Integration** | credits.aleo + USDCx + USAD | credits.aleo + USDCx (both paths) | credits.aleo + USDCx + USAD (full escrow paths) | Private ALEO + public USDCx/USAD with Vickrey refund flows |
 | **Proofs** | None | None | Settlement proofs + payment proofs (on-chain) | Tamper-evident + verifiable commitments |
 | **Selective Disclosure** | None | None | `prove_won_auction` ZK transition | Winner proves ownership without revealing amount |
 
@@ -32,54 +32,69 @@
 Transitions:  28
 Records:      5  (all private, proper UTXO)
 Mappings:     16
-Structs:      8
+Structs:      9
 State Machine: 8 states
-Tokens:       credits.aleo (fully private ALEO credits) + test_usdcx_stablecoin.aleo (USDCx)
-Novel:        Vickrey (second-price) + anti-sniping + settlement proofs + payment proofs + selective disclosure
+Tokens:       credits.aleo + test_usdcx_stablecoin.aleo (USDCx) + test_usad_stablecoin.aleo (USAD)
+Novel:        Vickrey (second-price) + Dutch + English + anti-sniping + dispute resolution + settlement proofs + payment proofs + selective disclosure
 ```
 
-### All 17 Transitions
+### All 28 Transitions
 
 ```
-CONSTRUCTOR:
+PLATFORM (3):
   initialize_platform              → one-time setup (admin hash, fee %, pause)
+  admin_emergency                  → pause/unpause platform
+  withdraw_fees                    → ALEO: admin withdraws accumulated fees
 
-AUCTION LIFECYCLE (3):
-  create_auction                   → unified (auction_mode + token_type params)
+AUCTION LIFECYCLE (4):
+  create_auction                   → sealed-bid, Vickrey, or English (mode + token params)
+  create_dutch_auction             → Dutch-specific (start_price, end_price, decay)
   cancel_auction                   → seller cancels (0 bids only)
   close_bidding                    → anyone calls after deadline (→ REVEALING or EXPIRED)
 
-BIDDING (1):
-  place_bid                        → sealed bid commitment only — NO token transfer
+SEALED BIDDING (1):
+  place_bid                        → encrypted bid commitment — NO token transfer
 
-REVEAL + ESCROW (2):
+REVEAL + ESCROW (3):
   reveal_bid                       → ALEO: reveal + escrow (consume SealedBid, create EscrowReceipt)
   reveal_bid_usdcx                 → USDCx: reveal + escrow
+  reveal_bid_usad                  → USAD: reveal + escrow
 
-FINALIZATION (1):
-  finalize_auction                 → determines win/fail (settlement proof stored)
+SETTLEMENT (2):
+  finalize_auction                 → determines win/fail for sealed-bid/Vickrey
+  settle_english                   → determines winner for English format
 
-SETTLEMENT — FIRST-PRICE (2):
+CLAIM — FIRST-PRICE (3):
   claim_win                        → ALEO: winner claim + seller payout (payment proof stored)
   claim_win_usdcx                  → USDCx: winner claim + seller payout
+  claim_win_usad                   → USAD: winner claim + seller payout
 
-SETTLEMENT — VICKREY (2):
+CLAIM — VICKREY (2):
   claim_win_vickrey                → ALEO: winner pays 2nd price, refunded difference
   claim_win_vickrey_usdcx          → USDCx: winner pays 2nd price, refunded difference
 
-REFUNDS (2):
-  claim_refund                     → ALEO: loser refund (double-spend FIXED)
+REFUNDS (3):
+  claim_refund                     → ALEO: loser refund
   claim_refund_usdcx               → USDCx: loser refund
+  claim_refund_usad                → USAD: loser refund
 
-ADMIN (2):
-  withdraw_fees                    → ALEO: admin withdraws accumulated fees
-  withdraw_fees_usdcx              → USDCx: admin withdraws accumulated fees
+DUTCH (2):
+  bid_dutch                        → ALEO: instant buy at current descending price
+  bid_dutch_usdcx                  → USDCx: instant buy at current descending price
+
+ENGLISH (2):
+  bid_english                      → ALEO: ascending bid (5% min increment, anti-snipe)
+  bid_english_usdcx                → USDCx: ascending bid
+
+DISPUTE (2):
+  dispute_auction                  → bond-based challenge (10% of highest bid)
+  resolve_dispute                  → admin resolution (upheld → fail, rejected → bond forfeit)
 
 SELECTIVE DISCLOSURE (1):
   prove_won_auction                → ZK proof of winning (WinnerCertificate not consumed)
 ```
 
-### Records (4 — All Private)
+### Records (5 — All Private)
 ```
 SealedBid           → bidder's sealed commitment (consumed on reveal)
                       Fields: owner, auction_id, bid_amount, bid_nonce, token_type
@@ -92,9 +107,12 @@ WinnerCertificate   → winner's proof of purchase (kept forever, used in prove_
 
 SellerReceipt       → seller's proof of sale (kept forever)
                       Fields: owner, auction_id, item_hash, sale_amount, fee_paid, token_type (u8)
+
+DisputeBond         → disputer's bond receipt (consumed on resolution)
+                      Fields: owner, auction_id, bond_amount
 ```
 
-### Mappings (13)
+### Mappings (16)
 ```
 auctions             → AuctionData (status, hashes, deadlines, auction_mode, token_type)
 bid_commitments      → bool (replay prevention — stores BHP256 commitment hashes)
@@ -102,16 +120,19 @@ revealed_bids        → u128 (post-reveal amounts, keyed by bid_hash)
 highest_bids         → u128 (per-auction max revealed bid)
 second_highest_bids  → u128 (for Vickrey — second-highest revealed bid)
 auction_winners      → field (winning bid_hash — NOT winner's address)
-program_balance      → u128 (pooled by token type: 0u8=ALEO, 1u8=USDCx)
+program_balance      → u128 (pooled by token type: 1u8=ALEO, 2u8=USDCx, 3u8=USAD)
 auction_escrow       → u128 (per-auction total escrowed)
 platform_treasury    → u128 (accumulated fees by token type)
 settlements          → SettlementData (double-claim prevention)
-platform_config      → PlatformConfig (admin hash, fee_bps, pause state)
+platform_config      → PlatformConfig (admin hash, fee_bps, dispute_bond_bps, pause state)
 settlement_proofs    → field (BHP256 hash of SettlementProof — tamper-evident)
 payment_proofs       → field (BHP256 commit of payment amount — verifiable)
+dutch_params         → DutchConfig (start_price, end_price for Dutch auctions)
+disputes             → DisputeData (disputer_hash, bond_amount, reason_hash, status)
+dispute_bonds        → u128 (bond amounts per auction)
 ```
 
-### Structs (7)
+### Structs (9)
 ```
 AuctionData       → item_hash, seller_hash, category, token_type, auction_mode,
                      status, deadline, reveal_deadline, bid_count,
@@ -132,6 +153,10 @@ PaymentCommitData → auction_id, bid_amount, winner_bid_hash
                      (used as documentation struct — actual commit uses BHP256::commit_to_field)
 
 PlatformConfig    → admin_hash, fee_bps, dispute_bond_bps, paused
+
+DutchConfig       → start_price, end_price (stored in dutch_params mapping)
+
+DisputeData       → disputer_hash, bond_amount, reason_hash, status, token_type
 ```
 
 ### Constants
@@ -141,8 +166,9 @@ STATUS_REVEALING: u8 = 3     STATUS_SETTLED: u8 = 4
 STATUS_CANCELLED: u8 = 5     STATUS_FAILED: u8 = 6
 STATUS_DISPUTED: u8 = 7      STATUS_EXPIRED: u8 = 8
 
-TOKEN_ALEO: u8 = 1           TOKEN_USDCX: u8 = 2
+TOKEN_ALEO: u8 = 1           TOKEN_USDCX: u8 = 2       TOKEN_USAD: u8 = 3
 MODE_FIRST_PRICE: u8 = 1     MODE_VICKREY: u8 = 2
+MODE_DUTCH: u8 = 3           MODE_ENGLISH: u8 = 4
 
 PLATFORM_FEE_BPS: u128 = 100         (1%)
 FEE_DENOMINATOR: u128 = 10000
@@ -152,6 +178,9 @@ MIN_AUCTION_DURATION: u64 = 240      (~1 hour)
 MIN_BID_AMOUNT: u128 = 1000          (0.001 ALEO / 0.001 USDCx)
 SNIPE_WINDOW_BLOCKS: u64 = 40        (~10 minutes)
 SNIPE_EXTENSION_BLOCKS: u64 = 40     (~10 minutes)
+MIN_BID_INCREMENT_BPS: u128 = 500    (5% min increment for English)
+DISPUTE_WINDOW_BLOCKS: u64 = 100     (blocks after settlement to file dispute)
+DISPUTE_BOND_MIN_BPS: u128 = 1000    (10% of highest bid as minimum bond)
 ```
 
 ### State Machine
@@ -237,6 +266,15 @@ REFUND (claim_refund_usdcx):
 FEE WITHDRAWAL (withdraw_fees_usdcx):
   test_usdcx_stablecoin.aleo/transfer_public(admin, amount_u128)
   Result: Treasury → admin's public balance
+```
+
+#### USAD Path
+```
+Same flow as USDCx but via test_usad_stablecoin.aleo:
+  DEPOSIT:  transfer_public_as_signer(program_addr, amount_u128)
+  PAYOUT:   transfer_public(recipient, amount_u128)
+  REFUND:   transfer_public(bidder, amount_u128)
+USAD restricted to First-Price mode (no claim_win_vickrey_usad).
 ```
 
 ### Vickrey Payout Flow (Second-Price)
@@ -347,14 +385,14 @@ claim_win_vickrey (called by A):
 ## Privacy Wall
 
 ```
-PUBLIC (13 mappings):                    PRIVATE (4 records):
+PUBLIC (16 mappings):                    PRIVATE (5 records):
 ┌──────────────────────────────────┐    ┌──────────────────────────────────┐
 │ auction_id (derived hash)        │    │ Bidder addresses                 │
 │ item_hash (BHP256, not text)     │    │ Bid amounts (until reveal)       │
 │ seller_hash (BHP256, NOT addr)   │    │ Seller's real address            │
 │ category (1-4, generic)          │    │ Reserve price (hash only)        │
-│ auction_mode (1 or 2)            │    │ Winner identity (until claim)    │
-│ token_type (1 or 2)              │    │ Escrow records                   │
+│ auction_mode (1-4)               │    │ Winner identity (until claim)    │
+│ token_type (1-3)                 │    │ Escrow records                   │
 │ status (numeric enum)            │    │ Refund details                   │
 │ deadline (block height)          │    │ Payment to seller (private TX)   │
 │ bid_count (counter only)         │    │ Winner/Seller certificates       │
@@ -400,14 +438,17 @@ We expose:   Only hashes + counters + status. Zero identities. Zero amounts unti
 - @provablehq/aleo-wallet-adaptor-react (Shield Wallet primary)
 - Framer Motion (subtle animations)
 
-### 6 Pages
+### 9 Pages
 ```
 /                   → Landing + hero + features + privacy wall + demo instructions
 /browse             → Browse auctions (backend index + on-chain enrichment + direct lookup)
 /create             → Create auction form (templates, params, privacy notice)
 /auction/:id        → Phase-based detail (bid/reveal/settle/claim/refund panels)
 /my-activity        → My records: sealed bids, escrow receipts, certificates (wallet records)
-/docs               → Privacy model, architecture, how-to, FAQ (10 questions)
+/dashboard          → Seller dashboard with auction stats and activity
+/learn              → Vickrey auction explainer with game theory
+/docs               → 8-section technical documentation with Leo code
+/explorer           → Auction Intelligence: live stats, format/token distribution, phase timelines
 ```
 
 ### 4 Custom Hooks

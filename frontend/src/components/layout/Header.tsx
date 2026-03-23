@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { WalletMultiButton } from '@provablehq/aleo-wallet-adaptor-react-ui'
-import { Search, Plus, Activity, BookOpen, Menu, X, BarChart3, Lightbulb } from 'lucide-react'
+import { Search, Plus, Activity, BookOpen, Menu, X, BarChart3, Lightbulb, Radar } from 'lucide-react'
 import ObscuraLogo from '@/components/shared/ObscuraLogo'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import toast from 'react-hot-toast'
@@ -16,6 +16,7 @@ const navLinks = [
   { to: '/my-activity', label: 'Activity', icon: Activity },
   { to: '/learn', label: 'Learn', icon: Lightbulb },
   { to: '/docs', label: 'Docs', icon: BookOpen },
+  { to: '/explorer', label: 'Explorer', icon: Radar },
 ]
 
 export default function Header() {
@@ -80,7 +81,7 @@ export default function Header() {
                 <Link
                   key={to}
                   to={to}
-                  className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  className={`relative flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                     isActive
                       ? 'text-accent-400 bg-accent-500/10'
                       : 'text-gray-400 hover:text-white hover:bg-surface-800/60'

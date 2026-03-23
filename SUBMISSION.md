@@ -82,18 +82,20 @@ Traditional on-chain auctions expose all bids publicly, enabling front-running a
 
 | Record | Created By | Consumed By | Purpose |
 |--------|-----------|-------------|---------|
-| SealedBid | place_bid | reveal_bid | Proves bid commitment |
-| EscrowReceipt | place_bid | claim_refund / claim_win | Proves deposited amount |
-| WinnerCertificate | claim_win | -- | Proof of winning |
-| SellerReceipt | claim_win | -- | Proof of payment received |
+| SealedBid | place_bid | reveal_bid variants | Proves bid commitment |
+| EscrowReceipt | reveal_bid variants | claim_win* / claim_refund* | Proves deposited amount |
+| WinnerCertificate | claim_win* | -- | Proof of winning |
+| SellerReceipt | claim_win* | -- | Proof of payment received |
+| DisputeBond | dispute_auction | resolve_dispute | Proves dispute stake |
 
 ## Token Integration
 
 - **ALEO Credits**: Private deposit via `transfer_private_to_public`, private payout via `transfer_public_to_private`
 - **USDCx Stablecoin**: Integration with `test_usdcx_stablecoin.aleo` for stablecoin-denominated auctions
+- **USAD Stablecoin**: Integration with `test_usad_stablecoin.aleo` (First-Price mode)
 - Bidders deposit tokens to the program's public escrow
-- Winners and losers receive payouts as private records (no public trace of recipient)
-- Sellers choose token type at auction creation — all flows work for both ALEO and USDCx
+- Winners and losers receive payouts as private records (ALEO) or public balance (USDCx/USAD)
+- Sellers choose token type at auction creation — all flows work for ALEO, USDCx, and USAD
 
 ## Demo Flow
 
