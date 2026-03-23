@@ -814,9 +814,9 @@ export default function Landing() {
       {/* ═══════════════════════════════════════
           HOW IT WORKS — 3 Glassmorphism Cards
           ═══════════════════════════════════════ */}
-      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
         <AnimatedSection>
-          <motion.div variants={fadeInUp} className="text-center mb-16">
+          <motion.div variants={fadeInUp} className="text-center mb-12">
             <h2 className="text-3xl sm:text-5xl font-bold text-white mb-4 font-display">How It Works</h2>
             <p className="text-gray-400 max-w-lg mx-auto text-lg font-medium">Three phases. Zero trust required.</p>
           </motion.div>
@@ -894,7 +894,7 @@ export default function Landing() {
       {/* ═══════════════════════════════════════
           PRIVACY SPLIT — Two Realities, One Auction
           ═══════════════════════════════════════ */}
-      <section className="relative py-24 sm:py-32 overflow-hidden">
+      <section className="relative py-14 sm:py-20 overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-accent-600/[0.06] rounded-full blur-[120px]" />
         </div>
@@ -935,7 +935,7 @@ export default function Landing() {
       {/* ═══════════════════════════════════════
           STATS — Animated Counters
           ═══════════════════════════════════════ */}
-      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
         <AnimatedSection className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
           {stats.map((stat) => (
             <motion.div
@@ -961,7 +961,7 @@ export default function Landing() {
       {/* ═══════════════════════════════════════
           USE CASES — Who needs private auctions?
           ═══════════════════════════════════════ */}
-      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14 sm:pb-20">
         <AnimatedSection>
           <motion.div variants={fadeInUp} className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3 font-display">Built for Real People</h2>
@@ -1032,7 +1032,7 @@ export default function Landing() {
       {/* ═══════════════════════════════════════
           PROVE YOU WON — Selective Disclosure Feature
           ═══════════════════════════════════════ */}
-      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14 sm:pb-20">
         <AnimatedSection>
           <motion.div variants={fadeInUp} className="relative rounded-2xl overflow-hidden border border-accent-500/20">
             <div className="absolute inset-0 bg-gradient-to-br from-accent-500/5 via-transparent to-brand-cyan/5" />
@@ -1107,7 +1107,7 @@ export default function Landing() {
       {/* ═══════════════════════════════════════
           PRIVACY COMPARISON TABLE
           ═══════════════════════════════════════ */}
-      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14 sm:pb-20">
         <AnimatedSection>
           <motion.div variants={fadeInUp} className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 font-display">Why Private Auctions Matter</h2>
@@ -1151,7 +1151,7 @@ export default function Landing() {
       {/* ═══════════════════════════════════════
           TECHNICAL DEPTH — 3 detailed cards
           ═══════════════════════════════════════ */}
-      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14 sm:pb-20">
         <AnimatedSection>
           <motion.div variants={fadeInUp} className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3 font-display">Under the Hood</h2>
@@ -1205,7 +1205,7 @@ export default function Landing() {
       {/* ═══════════════════════════════════════
           TECH CREDENTIALS — 4 cards
           ═══════════════════════════════════════ */}
-      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14 sm:pb-20">
         <AnimatedSection className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {techItems.map((item) => (
             <motion.div
@@ -1241,7 +1241,7 @@ export default function Landing() {
       {/* ═══════════════════════════════════════
           E2E TEST GUIDE — Seller & Bidder flows
           ═══════════════════════════════════════ */}
-      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14 sm:pb-20">
         <AnimatedSection>
           <motion.div variants={fadeInUp} className="card border-accent-500/20 bg-accent-500/[0.02]">
             <div className="flex items-center gap-3 mb-6">
@@ -1312,7 +1312,7 @@ export default function Landing() {
       {/* ═══════════════════════════════════════
           FOOTER CTA
           ═══════════════════════════════════════ */}
-      <section className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
+      <section className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-14 sm:pb-20">
         <AnimatedSection>
           <motion.div variants={scaleIn} className="relative rounded-3xl overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-accent-600/20 via-surface-900 to-brand-cyan/10" />
