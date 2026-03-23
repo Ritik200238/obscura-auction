@@ -101,6 +101,12 @@ export default function SettlePanel({ auction }: SettlePanelProps) {
         </div>
       </div>
 
+      {/* Privacy notice */}
+      <div className="flex items-center gap-2 p-2.5 rounded-lg bg-cyan-500/5 border border-cyan-500/10 mb-4">
+        <span className="text-cyan-400 text-xs">🔒</span>
+        <p className="text-[11px] text-cyan-400/80">Settlement proof will be recorded on-chain. Anyone can verify the auction was settled fairly.</p>
+      </div>
+
       {/* Reserve price input */}
       <div className="mb-4">
         <label className="block text-sm text-gray-400 mb-1.5">Your Reserve Price</label>

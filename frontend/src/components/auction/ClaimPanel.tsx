@@ -253,6 +253,12 @@ export default function ClaimPanel({ auction, highestBid, secondHighest }: Claim
         </div>
       </div>
 
+      {/* Privacy notice */}
+      <div className="flex items-center gap-2 p-2.5 rounded-lg bg-cyan-500/5 border border-cyan-500/10 mb-4">
+        <span className="text-cyan-400 text-xs">🔒</span>
+        <p className="text-[11px] text-cyan-400/80">You can prove you won this auction without revealing what you paid. Your WinnerCertificate is a private ZK proof.</p>
+      </div>
+
       {/* Seller address input */}
       <div className="mb-4">
         <label className="block text-sm text-gray-400 mb-1.5">Seller Address</label>

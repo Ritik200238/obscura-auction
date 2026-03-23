@@ -45,7 +45,7 @@ const wordVariants = {
 /** Card 1: Envelope sealing — bid data lines get encrypted one by one, lock appears */
 function SealVisual() {
   const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: '-40px' })
+  const isInView = useInView(ref, { once: true, amount: 0.05 })
 
   const lines = [
     { label: 'bid_amount', value: '500000u128' },
@@ -108,7 +108,7 @@ function SealVisual() {
 /** Card 2: Envelope opening — encrypted data reveals and gets verified */
 function RevealVisual() {
   const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: '-40px' })
+  const isInView = useInView(ref, { once: true, amount: 0.05 })
 
   const lines = [
     { label: 'amount', encrypted: '████████████', revealed: '500000u128', delay: 0.6 },
@@ -170,7 +170,7 @@ function RevealVisual() {
 /** Card 3: Token flow — winner pays 2nd price, coins animate between parties */
 function SettleVisual() {
   const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: '-40px' })
+  const isInView = useInView(ref, { once: true, amount: 0.05 })
 
   return (
     <div ref={ref} className="relative py-5 px-4 rounded-xl bg-surface-950/60 border border-surface-700/30 overflow-hidden">
@@ -409,7 +409,7 @@ const privacyStages = [
 
 function PrivacySplit() {
   const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: '-80px' })
+  const isInView = useInView(ref, { once: true, amount: 0.05 })
   const [stage, setStage] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
 
@@ -615,7 +615,7 @@ function PrivacySplit() {
 
 function AnimatedCounter({ target }: { target: number }) {
   const ref = useRef<HTMLSpanElement>(null)
-  const isInView = useInView(ref, { once: true })
+  const isInView = useInView(ref, { once: true, amount: 0.05 })
   const [display, setDisplay] = useState(0)
 
   useEffect(() => {
@@ -637,12 +637,16 @@ function AnimatedCounter({ target }: { target: number }) {
 
 function AnimatedSection({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: '-80px' })
+  const isInView = useInView(ref, { once: true, amount: 0.05 })
+  // Safety: force visible after 3 seconds regardless of scroll
+  const [forceVisible, setForceVisible] = useState(false)
+  useEffect(() => { const t = setTimeout(() => setForceVisible(true), 3000); return () => clearTimeout(t) }, [])
+  const show = isInView || forceVisible
   return (
     <motion.div
       ref={ref}
       initial="hidden"
-      animate={isInView ? 'visible' : 'hidden'}
+      animate={show ? 'visible' : 'hidden'}
       variants={staggerContainer}
       className={className}
     >
