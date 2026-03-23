@@ -211,16 +211,16 @@ Anti-sniping: Bids in the last 40 blocks (~10 min) extend the deadline by 40 blo
 
 ### Verified Transactions
 
-<!-- TODO: Replace with Wave 4 demo TX IDs before submission -->
-
 | Action | TX ID | Format |
 |--------|-------|--------|
-| Create Auction | [`at14fpq6yazt7cye9pmhhuk6vgtem8zcxezc5p5yczndhmy43v0mv9qdn8qu2`](https://testnet.explorer.provable.com/transaction/at14fpq6yazt7cye9pmhhuk6vgtem8zcxezc5p5yczndhmy43v0mv9qdn8qu2) | Sealed-Bid |
-| Place Bid | [`at1nkl2w4jsztcqfqhue7ua5tmkksaze686xqmtkg0rd0g8jznwxqrqj8prxk`](https://testnet.explorer.provable.com/transaction/at1nkl2w4jsztcqfqhue7ua5tmkksaze686xqmtkg0rd0g8jznwxqrqj8prxk) | Sealed-Bid |
-| Close Bidding | [`at1enwthmddswqajfkctjpuwdzy7924fm6s2yqnxrydf3d97xs745qseg5ym5`](https://testnet.explorer.provable.com/transaction/at1enwthmddswqajfkctjpuwdzy7924fm6s2yqnxrydf3d97xs745qseg5ym5) | Sealed-Bid |
-| Reveal Bid | [`at1tz3fs6t82vx8peqvrxtzdyfr2tespy6kd92qhpeavhswcnf46urqqslxhx`](https://testnet.explorer.provable.com/transaction/at1tz3fs6t82vx8peqvrxtzdyfr2tespy6kd92qhpeavhswcnf46urqqslxhx) | Sealed-Bid |
+| Deploy | [`at1f3sxn...q928a`](https://testnet.explorer.provable.com/transaction/at1f3sxnlttr6spyvzgjhg7j9n40r088xuck04a9z5wxnuv9m09gc9suq928a) | Platform |
+| Initialize | [`at1ugfzn...myfu`](https://testnet.explorer.provable.com/transaction/at1ugfznxv9dufgatesere2gkstvph492f3ykd6sj4ajdjqazmgvgrs97myfu) | Platform |
+| Create Auction | [`at14fpq6...qu2`](https://testnet.explorer.provable.com/transaction/at14fpq6yazt7cye9pmhhuk6vgtem8zcxezc5p5yczndhmy43v0mv9qdn8qu2) | Sealed-Bid |
+| Place Bid | [`at1nkl2w...rxk`](https://testnet.explorer.provable.com/transaction/at1nkl2w4jsztcqfqhue7ua5tmkksaze686xqmtkg0rd0g8jznwxqrqj8prxk) | Sealed-Bid |
+| Close Bidding | [`at1enwth...ym5`](https://testnet.explorer.provable.com/transaction/at1enwthmddswqajfkctjpuwdzy7924fm6s2yqnxrydf3d97xs745qseg5ym5) | Sealed-Bid |
+| Reveal Bid | [`at1tz3fs...xhx`](https://testnet.explorer.provable.com/transaction/at1tz3fs6t82vx8peqvrxtzdyfr2tespy6kd92qhpeavhswcnf46urqqslxhx) | Sealed-Bid |
 
-Add your Wave 4 demo TX IDs here before submission: finalize, claim_win, Dutch bid, English bid, settle_english, dispute.
+All transactions verifiable on [Aleo Testnet Explorer](https://testnet.explorer.provable.com/program/obscura_v4.aleo).
 
 ---
 
