@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { motion, useInView, animate } from 'framer-motion'
 import { useRef, useEffect, useState, useMemo } from 'react'
 import { fadeInUp, staggerContainer, scaleIn } from '@/lib/animations'
+import { config } from '@/lib/config'
 import {
   Shield,
   ArrowRight,
@@ -610,6 +611,53 @@ function PrivacySplit() {
 }
 
 /* ─────────────────────────────────────────────
+   LIVE ACTIVITY BAR — fetches from backend
+   ───────────────────────────────────────────── */
+
+function LiveActivityBar() {
+  const [data, setData] = useState<{ auctions: number; bids: number; settled: number } | null>(null)
+
+  useEffect(() => {
+    fetch(`${config.backendApi}/api/stats/overview`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d && setData({ auctions: d.total_auctions, bids: d.total_bids, settled: d.settled_auctions }))
+      .catch(() => {})
+  }, [])
+
+  if (!data || (data.auctions === 0 && data.bids === 0)) return null
+
+  return (
+    <section className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 py-4 px-6 rounded-2xl bg-surface-900/60 border border-surface-700/30">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-xs text-gray-400">Live on Aleo Testnet</span>
+        </div>
+        <div className="flex items-center gap-6 sm:gap-8">
+          <div className="text-center">
+            <p className="text-lg font-bold text-white font-mono">{data.auctions}</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Auctions</p>
+          </div>
+          <div className="w-px h-8 bg-surface-700" />
+          <div className="text-center">
+            <p className="text-lg font-bold text-white font-mono">{data.bids}</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Bids</p>
+          </div>
+          <div className="w-px h-8 bg-surface-700" />
+          <div className="text-center">
+            <p className="text-lg font-bold text-white font-mono">{data.settled}</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Settled</p>
+          </div>
+        </div>
+        <Link to="/explorer" className="text-xs text-accent-400 hover:text-accent-300">
+          View Analytics →
+        </Link>
+      </div>
+    </section>
+  )
+}
+
+/* ─────────────────────────────────────────────
    ANIMATED COUNTER
    ───────────────────────────────────────────── */
 
@@ -904,6 +952,11 @@ export default function Landing() {
           ))}
         </AnimatedSection>
       </section>
+
+      {/* ═══════════════════════════════════════
+          LIVE PLATFORM ACTIVITY
+          ═══════════════════════════════════════ */}
+      <LiveActivityBar />
 
       {/* ═══════════════════════════════════════
           USE CASES — Who needs private auctions?

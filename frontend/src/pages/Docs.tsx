@@ -46,12 +46,13 @@ export default function Docs() {
       </div>
 
       {/* Quick nav */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
-        <NavCard href="#privacy" icon={Shield} label="Privacy Model" />
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-10">
+        <NavCard href="#privacy" icon={Shield} label="Privacy" />
         <NavCard href="#architecture" icon={Layers} label="Architecture" />
         <NavCard href="#how-to-use" icon={BookOpen} label="How to Use" />
         <NavCard href="#faq" icon={AlertTriangle} label="FAQ" />
         <NavCard href="#developers" icon={Zap} label="SDK" />
+        <NavCard href="#formats" icon={Gavel} label="Formats" />
       </div>
 
       {/* Privacy Model */}
@@ -237,6 +238,24 @@ export default function Docs() {
       </Section>
 
       {/* FAQ */}
+      {/* Auction Formats */}
+      <Section id="formats" title="Auction Formats" icon={Gavel}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[
+            { name: 'Sealed Bid (1st-Price)', mode: 'MODE_FIRST_PRICE', color: 'border-gray-500/20', desc: 'Commit-reveal. Bids are encrypted until reveal. Highest bidder wins and pays their bid.', when: 'Standard procurement, competitive bidding where bid privacy matters.' },
+            { name: 'Vickrey (2nd-Price)', mode: 'MODE_VICKREY', color: 'border-cyan-500/20', desc: 'Commit-reveal. Winner pays the second-highest bid. Encourages honest bidding — game-theoretically optimal.', when: 'NFT sales, rare items, situations where honest valuation is important.' },
+            { name: 'Dutch (Descending)', mode: 'MODE_DUTCH', color: 'border-orange-500/20', desc: 'Price starts high and drops every block. First buyer wins instantly at the current price. No reveal phase.', when: 'Token launches, liquidations, time-sensitive sales with fair price discovery.' },
+            { name: 'English (Ascending)', mode: 'MODE_ENGLISH', color: 'border-purple-500/20', desc: 'Open ascending bids. Each bid must beat the current highest by 5%. Anti-sniping extends deadline for late bids.', when: 'Traditional auctions, collectibles, items where open competition drives price up.' },
+          ].map((f) => (
+            <div key={f.name} className={`p-4 rounded-xl bg-surface-800/40 border ${f.color}`}>
+              <p className="text-sm font-semibold text-white mb-1">{f.name}</p>
+              <p className="text-xs text-gray-400 leading-relaxed mb-2">{f.desc}</p>
+              <p className="text-[10px] text-gray-600"><span className="text-accent-400">Best for:</span> {f.when}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
       <Section id="faq" title="FAQ" icon={AlertTriangle}>
         <div className="space-y-3">
           <FAQ

@@ -15,6 +15,7 @@ const MyActivity = React.lazy(() => import('./pages/MyActivity'))
 const Docs = React.lazy(() => import('./pages/Docs'))
 const Dashboard = React.lazy(() => import('./pages/Dashboard'))
 const VickreyExplainer = React.lazy(() => import('./pages/VickreyExplainer'))
+const Explorer = React.lazy(() => import('./pages/Explorer'))
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -89,6 +90,7 @@ function AnimatedRoutes() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/learn" element={<VickreyExplainer />} />
           <Route path="/docs" element={<Docs />} />
+          <Route path="/explorer" element={<Explorer />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </motion.div>
