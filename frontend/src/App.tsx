@@ -5,6 +5,7 @@ import { pageVariants } from '@/lib/animations'
 import { BlockHeightProvider } from '@/contexts/BlockHeightContext'
 import Layout from './components/layout/Layout'
 import OnboardingModal from './components/shared/OnboardingModal'
+import WaveUpdateModal from './components/shared/WaveUpdateModal'
 import Landing from './pages/Landing'
 import Browse from './pages/Browse'
 import CreateAuction from './pages/CreateAuction'
@@ -101,6 +102,7 @@ export default function App() {
       <BlockHeightProvider>
         <ScrollToTop />
         <OnboardingModal />
+        <WaveUpdateModal />
         <Layout>
           <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="w-6 h-6 border-2 border-accent-500 border-t-transparent rounded-full animate-spin" /></div>}>
             <AnimatedRoutes />

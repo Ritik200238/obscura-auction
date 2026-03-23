@@ -102,7 +102,10 @@ export default function Browse() {
     setLoading(true)
     setBackendDown(false)
     try {
-      const res = await fetch(`${config.backendApi}/api/auctions`)
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 5000)
+      const res = await fetch(`${config.backendApi}/api/auctions`, { signal: controller.signal })
+      clearTimeout(timeout)
       if (res.ok) {
         const data = await res.json()
         if (data.auctions && Array.isArray(data.auctions)) {

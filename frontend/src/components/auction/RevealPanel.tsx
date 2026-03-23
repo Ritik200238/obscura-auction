@@ -154,6 +154,12 @@ export default function RevealPanel({ auction, onRevealConfirmed }: RevealPanelP
         )}
       </div>
 
+      {/* Privacy notice */}
+      <div className="flex items-center gap-2 p-2.5 rounded-lg bg-cyan-500/5 border border-cyan-500/10 mb-4">
+        <span className="text-cyan-400 text-xs">{'\u{1F512}'}</span>
+        <p className="text-[11px] text-cyan-400/80">Revealing your bid locks your tokens on-chain. Your bidder identity stays hidden — only the bid amount becomes visible.</p>
+      </div>
+
       {/* Warning */}
       <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 mb-4">
         <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
