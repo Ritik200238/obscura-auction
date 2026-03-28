@@ -40,7 +40,7 @@ export default function CountdownTimer({ targetBlock, totalDuration }: Countdown
             urgency === 'warning' ? 'bg-gradient-to-r from-amber-500 to-yellow-400' :
             'bg-gradient-to-r from-accent-600 to-accent-400'
           }`}
-          style={{ width: `${Math.min(100, percentage)}%` }}
+          style={{ width: `${Math.min(100, Math.max(0, 100 - percentage))}%` }}
         />
       </div>
       <p className="text-xs text-gray-600 mt-1.5 font-mono">

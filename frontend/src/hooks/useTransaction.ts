@@ -43,6 +43,9 @@ export function useTransaction() {
   const [txId, setTxId] = useState<string | null>(null)
   const [status, setStatus] = useState<TxStatus>('idle')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // "Latest ref" pattern — always holds current transactionStatus without re-creating poll closure
+  const transactionStatusRef = useRef(transactionStatus)
+  transactionStatusRef.current = transactionStatus
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -106,11 +109,12 @@ export function useTransaction() {
           } catch { /* continue to wallet check */ }
         }
 
-        // Step 2: Try wallet adapter's transactionStatus
+        // Step 2: Try wallet adapter's transactionStatus (via ref to avoid stale closure)
         // IMPORTANT: wrapped in its own try/catch so failure doesn't skip explorer check
-        if (transactionStatus) {
+        const currentTransactionStatus = transactionStatusRef.current
+        if (currentTransactionStatus) {
           try {
-            const walletStatus: unknown = await transactionStatus(txId)
+            const walletStatus: unknown = await currentTransactionStatus(txId)
             // Transaction status logged only in development — no private data in status response
 
             let statusStr: string | null = null
@@ -178,7 +182,7 @@ export function useTransaction() {
         }
       }, 3000)
     },
-    [transactionStatus, stopPolling]
+    [stopPolling]
   )
 
   const execute = useCallback(

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { useAuction } from '@/hooks/useAuction'
 import { useRecords } from '@/hooks/useRecords'
+import { useRecordStore } from '@/stores/recordStore'
 import { useTransaction } from '@/hooks/useTransaction'
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import {
@@ -78,6 +79,9 @@ export default function AuctionDetail() {
   const { auction, highestBid, secondHighest, winner, blockHeight, loading, error, refresh } =
     useAuction(id)
   const { refresh: refreshRecords } = useRecords()
+  const { getForAuction } = useRecordStore()
+  const myRecords = id ? getForAuction(id) : { bids: [], escrow: [], winnerCert: undefined, rawBids: [], rawEscrow: [] }
+  const isWinner = !!myRecords.winnerCert
   const { connected, address: publicKey } = useWallet()
   const [settlementProof, setSettlementProof] = useState<string | null>(null)
   const [paymentProof, setPaymentProof] = useState<string | null>(null)
@@ -363,8 +367,8 @@ export default function AuctionDetail() {
             </div>
           )}
 
-          {/* Share Your Win — ZK Social Proof (First on Aleo) */}
-          {isSettled && connected && winner && (
+          {/* Share Your Win — ZK Social Proof (only shown to actual winner) */}
+          {isSettled && connected && isWinner && (
             <div className="relative overflow-hidden rounded-2xl border border-accent-500/30">
               {/* Animated gradient border top */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 via-accent-500 to-cyan-400" />

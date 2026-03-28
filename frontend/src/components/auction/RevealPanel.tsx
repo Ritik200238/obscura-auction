@@ -46,16 +46,17 @@ export default function RevealPanel({ auction, onRevealConfirmed }: RevealPanelP
   const records = getForAuction(auction.auction_id)
   const bids = records.bids
   const isUsdcx = auction.token_type === TOKEN_TYPE.USDCX
-  const tokenSymbol = isUsdcx ? 'USDCx' : 'ALEO'
+  const isUsad = auction.token_type === TOKEN_TYPE.USAD
+  const tokenSymbol = isUsdcx ? 'USDCx' : isUsad ? 'USAD' : 'ALEO'
 
-  // Pre-fetch USDCx public balance for preemptive insufficiency check
+  // Pre-fetch stablecoin public balance for preemptive insufficiency check
   const { address } = useWalletStore()
   useEffect(() => {
-    if (!isUsdcx || !connected || !address) return
+    if ((!isUsdcx && !isUsad) || !connected || !address) return
     let cancelled = false
     fetchUsdcxBalance(address).then((bal) => { if (!cancelled) setUsdcxBalance(bal) })
     return () => { cancelled = true }
-  }, [isUsdcx, connected, address])
+  }, [isUsdcx, isUsad, connected, address])
 
   const handleReveal = async (bid: SealedBidRecord, index: number) => {
     reset()
@@ -78,8 +79,8 @@ export default function RevealPanel({ auction, onRevealConfirmed }: RevealPanelP
         return escrow !== null && escrow !== '0u128'
       }
 
-      if (isUsdcx) {
-        // USDCx path: check public balance before submitting
+      if (isUsdcx || isUsad) {
+        // Stablecoin path: check public balance before submitting
         const bidAmountMicro = BigInt(bid.bid_amount.replace(/[^0-9]/g, '') || '0')
         if (address) {
           const balance = await fetchUsdcxBalance(address)
@@ -87,15 +88,15 @@ export default function RevealPanel({ auction, onRevealConfirmed }: RevealPanelP
             const needed = Number(bidAmountMicro) / 1_000_000
             const have = Number(balance) / 1_000_000
             setBalanceError(
-              `Insufficient USDCx balance. Need ${needed.toFixed(3)} USDCx but you have ${have.toFixed(3)}. ` +
-              `Deposit USDCx via test_usdcx_stablecoin.aleo first.`
+              `Insufficient ${tokenSymbol} balance. Need ${needed.toFixed(3)} ${tokenSymbol} but you have ${have.toFixed(3)}. ` +
+              `Deposit ${tokenSymbol} via ${isUsad ? 'test_usad_stablecoin.aleo' : 'test_usdcx_stablecoin.aleo'} first.`
             )
             return
           }
         }
 
         const result = await execute({
-          functionName: 'reveal_bid_usdcx',
+          functionName: isUsad ? 'reveal_bid_usad' : 'reveal_bid_usdcx',
           inputs: [serializeRecordForTx(rawBid)],
           onChainVerify,
         })
@@ -166,8 +167,8 @@ export default function RevealPanel({ auction, onRevealConfirmed }: RevealPanelP
         <p className="text-sm text-yellow-300">
           Unrevealed bids cannot win. Reveal all your bids before the deadline to participate
           in the auction settlement.
-          {isUsdcx
-            ? ' USDCx will be transferred from your public balance during reveal.'
+          {isUsdcx || isUsad
+            ? ` ${tokenSymbol} will be transferred from your public balance during reveal.`
             : ' Your ALEO credits will be escrowed (locked) during reveal.'}
         </p>
       </div>
@@ -208,7 +209,7 @@ export default function RevealPanel({ auction, onRevealConfirmed }: RevealPanelP
                 ) : (() => {
                   // Preemptive balance check for USDCx
                   const bidMicro = BigInt(bid.bid_amount.replace(/[^0-9]/g, '') || '0')
-                  const insufficientUsdcx = isUsdcx && usdcxBalance !== null && usdcxBalance < bidMicro
+                  const insufficientUsdcx = (isUsdcx || isUsad) && usdcxBalance !== null && usdcxBalance < bidMicro
                   return (
                     <button
                       onClick={() => handleReveal(bid, i)}

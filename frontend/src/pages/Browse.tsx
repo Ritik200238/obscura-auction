@@ -344,50 +344,56 @@ export default function Browse() {
               ))}
             </div>
 
-            {/* Token filter */}
-            <select
-              value={filters.tokenType ?? ''}
-              onChange={(e) =>
-                setFilters({ tokenType: e.target.value ? Number(e.target.value) : null })
-              }
-              className="bg-surface-800 border border-surface-700 text-gray-300 text-xs rounded-lg px-3 py-2 sm:py-1.5 min-h-[36px] focus:outline-none focus:border-accent-500"
-            >
+            {/* Token filter — pill group */}
+            <div className="flex rounded-lg overflow-x-auto border border-surface-700 max-w-full">
               {tokenFilters.map((f) => (
-                <option key={f.label} value={f.value ?? ''}>
+                <button
+                  key={f.label}
+                  onClick={() => setFilters({ tokenType: f.value })}
+                  className={`px-3 py-2 sm:py-1.5 text-xs font-medium transition-colors min-h-[36px] whitespace-nowrap ${
+                    filters.tokenType === f.value
+                      ? 'bg-accent-500 text-white'
+                      : 'bg-surface-800 text-gray-400 hover:text-white'
+                  }`}
+                >
                   {f.label}
-                </option>
+                </button>
               ))}
-            </select>
+            </div>
 
-            {/* Mode filter */}
-            <select
-              value={filters.mode ?? ''}
-              onChange={(e) =>
-                setFilters({ mode: e.target.value ? Number(e.target.value) : null })
-              }
-              className="bg-surface-800 border border-surface-700 text-gray-300 text-xs rounded-lg px-3 py-2 sm:py-1.5 min-h-[36px] focus:outline-none focus:border-accent-500"
-            >
+            {/* Mode filter — pill group */}
+            <div className="flex rounded-lg overflow-x-auto border border-surface-700 max-w-full">
               {modeFilters.map((f) => (
-                <option key={f.label} value={f.value ?? ''}>
+                <button
+                  key={f.label}
+                  onClick={() => setFilters({ mode: f.value })}
+                  className={`px-3 py-2 sm:py-1.5 text-xs font-medium transition-colors min-h-[36px] whitespace-nowrap ${
+                    filters.mode === f.value
+                      ? 'bg-accent-500 text-white'
+                      : 'bg-surface-800 text-gray-400 hover:text-white'
+                  }`}
+                >
                   {f.label}
-                </option>
+                </button>
               ))}
-            </select>
+            </div>
 
-            {/* Category filter */}
-            <select
-              value={filters.category ?? ''}
-              onChange={(e) =>
-                setFilters({ category: e.target.value ? Number(e.target.value) : null })
-              }
-              className="bg-surface-800 border border-surface-700 text-gray-300 text-xs rounded-lg px-3 py-2 sm:py-1.5 min-h-[36px] focus:outline-none focus:border-accent-500"
-            >
+            {/* Category filter — pill group */}
+            <div className="flex rounded-lg overflow-x-auto border border-surface-700 max-w-full">
               {categoryFilters.map((f) => (
-                <option key={f.label} value={f.value ?? ''}>
+                <button
+                  key={f.label}
+                  onClick={() => setFilters({ category: f.value })}
+                  className={`px-3 py-2 sm:py-1.5 text-xs font-medium transition-colors min-h-[36px] whitespace-nowrap ${
+                    filters.category === f.value
+                      ? 'bg-accent-500 text-white'
+                      : 'bg-surface-800 text-gray-400 hover:text-white'
+                  }`}
+                >
                   {f.label}
-                </option>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
         </div>
       </div>

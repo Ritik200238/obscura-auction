@@ -99,8 +99,10 @@ export default function AuctionStateMachine({ currentStatus }: AuctionStateMachi
         )}
       </div>
 
+      {/* Scroll hint for mobile */}
+      <p className="text-[9px] text-gray-600 text-right mb-1 sm:hidden">Swipe to see full lifecycle →</p>
       {/* State machine — horizontal, scrollable on mobile */}
-      <div className="flex items-start justify-between relative px-1 overflow-x-auto pb-2 -mx-1 scrollbar-hide" style={{ minWidth: 0 }}>
+      <div className="flex items-start justify-between relative px-1 overflow-x-auto pb-2 -mx-1 scrollbar-hide" style={{ minWidth: 'max-content' }}>
         {stateNodes.map((node, i) => {
           const isCompleted = activeIndex > i && activeIndex !== -1
           const isCurrent = activeIndex === i

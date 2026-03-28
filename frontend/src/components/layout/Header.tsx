@@ -113,8 +113,8 @@ export default function Header() {
           </nav>
 
           {/* Wallet Button + Mobile Menu Toggle */}
-          <div className="flex items-center gap-3">
-            <div className={!connected ? 'animate-wallet-pulse rounded-xl' : ''}>
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className={`shrink-0 max-w-[160px] sm:max-w-none overflow-hidden ${!connected ? 'animate-wallet-pulse rounded-xl' : ''} [&>button]:!px-2 [&>button]:!text-xs sm:[&>button]:!px-4 sm:[&>button]:!text-sm`}>
               <WalletMultiButton />
             </div>
             <button

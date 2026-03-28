@@ -159,14 +159,17 @@ export default function Dashboard() {
         </div>
       ) : error === 'backend_down' ? (
         <>
-          {/* Silent fallback to cached on-chain data — no yellow warning */}
-          <div className="mb-6">
-            <StatsCards data={statsForCards} />
-          </div>
-          {statsForCards.totalAuctions === 0 && (
-            <div className="card text-center py-8">
-              <p className="text-gray-400 text-sm">
-                No auction data loaded yet. <Link to="/browse" className="text-accent-400 hover:text-accent-300">Browse auctions</Link> to load on-chain data, or <Link to="/create" className="text-accent-400 hover:text-accent-300">create your first auction</Link>.
+          {/* Show stats only if we have data, otherwise show helpful message */}
+          {statsForCards.totalAuctions > 0 ? (
+            <div className="mb-6">
+              <StatsCards data={statsForCards} />
+            </div>
+          ) : (
+            <div className="card text-center py-8 mb-6">
+              <Activity className="w-8 h-8 text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-300 text-sm font-medium mb-1">Dashboard loading from blockchain</p>
+              <p className="text-gray-500 text-xs max-w-md mx-auto">
+                <Link to="/browse" className="text-accent-400 hover:text-accent-300">Browse auctions</Link> to populate your dashboard, or <Link to="/create" className="text-accent-400 hover:text-accent-300">create your first auction</Link>.
               </p>
             </div>
           )}

@@ -1569,13 +1569,17 @@ program obscura_v4.aleo {
         let winner: field = auction_winners.get_or_use(auction_id, 0field);
         assert_neq(bid_hash, winner);
 
-        let escrow: u128 = auction_escrow.get(auction_id);
-        auction_escrow.set(auction_id, escrow - amount);
+        // Safe escrow decrement — handles case where dispute was upheld after
+        // winner already claimed (escrow may have been partially decremented)
+        let escrow: u128 = auction_escrow.get_or_use(auction_id, 0u128);
+        let new_escrow: u128 = escrow > amount ? escrow - amount : 0u128;
+        auction_escrow.set(auction_id, new_escrow);
 
         let credit_key: u8 = token_type == TOKEN_ALEO ? 0u8
             : token_type == TOKEN_USDCX ? 1u8 : 2u8;
-        let bal: u128 = program_balance.get(credit_key);
-        program_balance.set(credit_key, bal - amount);
+        let bal: u128 = program_balance.get_or_use(credit_key, 0u128);
+        let new_bal: u128 = bal > amount ? bal - amount : 0u128;
+        program_balance.set(credit_key, new_bal);
     }
 
     // ########################################################################
@@ -1626,11 +1630,14 @@ program obscura_v4.aleo {
         let winner: field = auction_winners.get_or_use(auction_id, 0field);
         assert_neq(bid_hash, winner);
 
-        let escrow: u128 = auction_escrow.get(auction_id);
-        auction_escrow.set(auction_id, escrow - amount);
+        // Safe escrow decrement — handles dispute-upheld-after-claim edge case
+        let escrow: u128 = auction_escrow.get_or_use(auction_id, 0u128);
+        let new_escrow: u128 = escrow > amount ? escrow - amount : 0u128;
+        auction_escrow.set(auction_id, new_escrow);
 
-        let bal: u128 = program_balance.get(1u8);
-        program_balance.set(1u8, bal - amount);
+        let bal: u128 = program_balance.get_or_use(1u8, 0u128);
+        let new_bal: u128 = bal > amount ? bal - amount : 0u128;
+        program_balance.set(1u8, new_bal);
     }
 
     // ########################################################################
@@ -2621,8 +2628,10 @@ program obscura_v4.aleo {
             let auction: AuctionData = auctions.get(auction_id);
             assert_eq(auction.status, STATUS_REVEALING);
 
+            // Grace period: seller gets 100 blocks (~6 min) after reveal_deadline
+            // to call finalize_auction before anyone can force-close
             let current_height: u64 = block.height as u64;
-            assert(current_height > auction.reveal_deadline);
+            assert(current_height > auction.reveal_deadline + 100u64);
 
             // Move to FAILED — all escrowed bidders can now claim_refund.
             auctions.set(auction_id, AuctionData {
