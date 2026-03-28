@@ -1,228 +1,197 @@
-# Obscura — Private Multi-Format Auction Protocol on Aleo
+# Obscura — The Private Auction Protocol
 
-**[Live Demo](https://obscura-auction-95hm.vercel.app)** | **[Contract on Explorer](https://testnet.explorer.provable.com/program/obscura_v5.aleo)** | **[Marketplace on Explorer](https://testnet.explorer.provable.com/program/obscura_market_v1.aleo)** | **Shield Wallet Required**
+> Every auction on Ethereum is a fishbowl. Bids are public. Bidders are doxxed. Front-runners extract value before the gavel falls. **Obscura makes auctions invisible.**
 
----
-
-## What is Obscura?
-
-Obscura is a sealed-bid auction protocol on Aleo where bid amounts are cryptographically invisible during bidding, bidder identities never touch the chain, and winners self-identify by proving ownership of a private record. Four auction formats (Sealed-Bid, Vickrey, Dutch, English), three token types (ALEO, USDCx, USAD), commit-reveal with zero-transfer sealed phase, on-chain dispute resolution, and selective winner disclosure — all in a single 2,752-line Leo contract deployed as `obscura_v5.aleo`, plus a companion marketplace contract `obscura_market_v1.aleo` with 21 transitions for fixed-price sales, RFQ, token sales, royalties, provenance, and timelocks.
+**[Try the Live Demo](https://obscura-auction-95hm.vercel.app)** · **[Core Contract](https://testnet.explorer.provable.com/program/obscura_v5.aleo)** · **[Marketplace Contract](https://testnet.explorer.provable.com/program/obscura_market_v1.aleo)** · Shield Wallet Required
 
 ---
 
-## Wave 4 Updates
+## The Problem
 
-- **Dutch auction mode** — descending price, first buyer wins instantly, no reveal phase
-- **English auction mode** — ascending open bids with anti-sniping (40-block deadline extension)
-- **USAD stablecoin support** — third token alongside ALEO Credits and USDCx
-- **Dispute resolution** — bond-based challenge mechanism (10% of highest bid, admin resolution)
-- **Auction Intelligence page** — live on-chain analytics with phase timelines and format distribution
-- **In-app technical docs** — 8-section documentation with Leo code, state machines, and usage examples
-- **Marketplace contract** — `obscura_market_v1.aleo` with 21 transitions for fixed-price sales, RFQ, token sales, royalties, provenance, and timelocks
-- **Auction monitor bot** — automated on-chain state polling and auction tracking
-- **ZK Social Proof** — "Share Your Win" surfaces `prove_won_auction` for selective disclosure
-- **Mode-aware UI** — every page adapts to the auction format: timelines, bid panels, privacy notices
-- **Privacy messaging** — contextual notices on every interaction explaining what's private and why
-- **Auction templates** — pre-configured setups for NFT drops, DAO sales, services, rare items
-- **Fixed scroll visibility** — landing page sections now trigger reliably on normal scroll speed
-- **Wave 4 update modal** — first-visit changelog so the judge sees what changed immediately
+On public blockchains, auctions are broken:
 
----
+- **Bidders see each other's bids** — strategic underbidding kills fair price discovery
+- **MEV bots front-run** — extracting value from every transaction in the mempool
+- **Seller identity is exposed** — competitors know who's selling what, and when
+- **Winners are doxxed** — everyone knows who paid what for which asset
 
-## Privacy Model
+This isn't a theoretical concern. It happens on every Ethereum NFT auction, every on-chain liquidation, every DAO treasury sale. The result: sellers get less, bidders overpay or game the system, and privacy is nonexistent.
 
-| Data | Status | Mechanism |
-|------|--------|-----------|
-| Bid amounts (sealed phase) | **Private** | Zero-transfer at bid time. No tokens move. BHP256 commitment only. |
-| Bidder identity | **Private** — never stored | Address used only in off-chain ZK circuit scope. Not in any mapping. |
-| Reserve price | **Private** — hash only | `BHP256(reserve_price)` stored on-chain. Seller re-proves at finalize. |
-| Seller address | **Private** — hash only | `BHP256(address as field)` — computationally infeasible to reverse. |
-| Winner identity | **Private** — self-disclosed | Winner calls `claim_win` to reveal themselves. `prove_won_auction` for selective disclosure. |
-| Payment records | **Private** — UTXO | ALEO payouts via `transfer_public_to_private` create encrypted credit records. |
-| Bid amounts (after reveal) | **Public** — intentional | That's what "reveal" means. Amounts become public when bidders choose to reveal. |
-| Item details | **Private** — off-chain | Title/description stored AES-256-GCM encrypted in backend, never on-chain. |
+## The Solution
 
-**Design choice**: No tokens move during `place_bid`. An observer watching `credits.aleo` transfers learns nothing about bid amounts during the sealed phase. Escrow happens at `reveal_bid`, when disclosure is intentional.
+Obscura is a sealed-bid auction protocol built on Aleo's zero-knowledge architecture. **Bid amounts are cryptographically invisible during bidding.** Bidder identities never touch the chain. Winners self-identify by proving ownership of a private record — without revealing what they paid.
+
+**What makes it different from "just encrypting bids":**
+
+During Obscura's sealed phase, **no tokens move at all**. An observer watching `credits.aleo` transfers learns absolutely nothing — no amounts, no timing correlations, no sender addresses. This is the fundamental privacy innovation: *zero-transfer sealed bidding*.
 
 ---
 
-## Contract Stats
+## What You Can Do on Obscura
 
-```
-Core Contract:      obscura_v5.aleo
-Core Lines:         2,752 Leo
-Core Transitions:   31
-Core Records:       6 (SealedBid, EscrowReceipt, WinnerCertificate, SellerReceipt, DisputeBond, MarketReceipt)
-Core Mappings:      18
-Core Structs:       10
-State Machine:      8 states (Active, Closed, Revealing, Settled, Cancelled, Failed, Disputed, Expired)
-Tokens:             credits.aleo + test_usdcx_stablecoin.aleo + test_usad_stablecoin.aleo
-Formats:            First-Price Sealed-Bid, Vickrey (2nd-Price), Dutch (Descending), English (Ascending)
+### Four Auction Formats
+| Format | How It Works | Best For |
+|--------|-------------|----------|
+| **Sealed-Bid** | Bids are encrypted. Highest bid wins. | Standard private sales |
+| **Vickrey (2nd-Price)** | Highest bid wins, but pays the *second-highest* price. Truthful bidding is the dominant strategy. | High-value assets where fair pricing matters |
+| **Dutch (Descending)** | Price drops over time. First buyer wins instantly. | Liquidations, time-sensitive sales |
+| **English (Ascending)** | Open ascending bids with anti-sniping protection. | Collectibles, competitive bidding |
 
-Marketplace:        obscura_market_v1.aleo
-Market Transitions: 21 (fixed-price sales, RFQ, token sales, royalties, provenance, timelocks)
+### Three Token Types
+ALEO Credits (maximum privacy — private record transfers), USDCx stablecoin, USAD stablecoin. Every auction format works with every token.
 
-Total Transitions:  31 (core) + 21 (marketplace) = 52 total
-```
+### Marketplace Extensions
+Fixed-price sales ("Buy Now"), RFQ/reverse auctions (buyers post requests, sellers compete), and token sales (batch distribution) — deployed as a companion contract `obscura_market_v1.aleo`.
 
-### All 31 Core Transitions (Grouped)
+---
 
-| Group | Transitions | Count | Purpose |
-|-------|------------|-------|---------|
-| **Platform** | `initialize_platform`, `admin_emergency`, `withdraw_fees` | 3 | Setup, emergency pause, fee collection |
-| **Auction Lifecycle** | `create_auction`, `create_dutch_auction`, `cancel_auction`, `close_bidding` | 4 | Create (sealed/Vickrey/English + Dutch), cancel, close |
-| **Sealed Bidding** | `place_bid` | 1 | Encrypted bid commitment — no token transfer |
-| **Reveal + Escrow** | `reveal_bid`, `reveal_bid_usdcx`, `reveal_bid_usad` | 3 | Reveal commitment + lock tokens atomically |
-| **Settlement** | `finalize_auction`, `settle_english` | 2 | Determine winner for sealed-bid and English formats |
-| **Claim (1st-Price)** | `claim_win`, `claim_win_usdcx`, `claim_win_usad` | 3 | Winner + seller settlement |
-| **Claim (Vickrey)** | `claim_win_vickrey`, `claim_win_vickrey_usdcx` | 2 | Second-price settlement + refund difference |
-| **Refunds** | `claim_refund`, `claim_refund_usdcx`, `claim_refund_usad` | 3 | Losers reclaim escrowed tokens |
-| **Dutch** | `bid_dutch`, `bid_dutch_usdcx` | 2 | Instant buy at current descending price |
-| **English** | `bid_english`, `bid_english_usdcx` | 2 | Ascending bid with 5% minimum increment |
-| **Dispute** | `dispute_auction`, `resolve_dispute` | 2 | Bond-based challenge + admin resolution |
-| **ZK Proof** | `prove_won_auction` | 1 | Selective disclosure — prove you won without revealing bid amount |
+## Privacy Model — What's Hidden, What's Not
 
-Of these 31 core transitions, 11 are token-variant transitions (same logic, different token path). The remaining 20 are unique logic: auction lifecycle, bidding, settlement, dispute resolution, and selective disclosure. The marketplace contract adds 21 more transitions for fixed-price sales, RFQ workflows, token sales, royalties, provenance tracking, and timelocks.
+| Data | During Bidding | After Reveal | After Settlement |
+|------|---------------|-------------|-----------------|
+| **Bid amounts** | Invisible (no tokens move) | Visible (intentional) | Visible |
+| **Bidder identity** | Never stored on-chain | Never stored | Never stored |
+| **Seller identity** | BHP256 hash only | Hash only | Hash only |
+| **Reserve price** | BHP256 hash only | Hash only | Revealed by seller |
+| **Winner identity** | N/A | N/A | Self-disclosed via claim |
+| **Payment amounts** | N/A | N/A | Private ALEO records |
 
-### Marketplace Contract: obscura_market_v1.aleo (21 Transitions)
+**The key insight:** Privacy degrades gracefully and intentionally. Bid amounts are invisible when it matters (during competition), then become visible when the bidder *chooses* to reveal. Seller and bidder identities are *never* on-chain in plaintext — only as irreversible BHP256 hashes.
 
-| Group | Transitions | Purpose |
-|-------|------------|---------|
-| **Fixed-Price Sales** | `list_item`, `buy_item`, `buy_item_usdcx`, `buy_item_usad`, `delist_item` | List/buy/delist at fixed price with triple token support |
-| **RFQ (Request for Quote)** | `create_rfq`, `submit_quote`, `accept_quote`, `cancel_rfq` | Buyers post requests, sellers submit private quotes |
-| **Token Sales** | `create_token_sale`, `participate_sale`, `participate_sale_usdcx`, `finalize_sale`, `claim_tokens`, `refund_sale` | Batch token sales with multiple participants |
-| **Royalties** | `set_royalty`, `claim_royalties`, `claim_royalties_usdcx` | Creator royalty enforcement on secondary sales |
-| **Provenance** | `register_provenance`, `transfer_provenance` | On-chain ownership history tracking |
-| **Timelocks** | `create_timelock`, `release_timelock` | Time-delayed escrow for conditional sales |
+### Privacy Comparison: Obscura vs Public Chains
 
-### Records (5 — All Private UTXO)
+The frontend includes a **"See on Ethereum" toggle** on every auction detail page. Switch it on to see what the same auction would look like on a public blockchain — exposed addresses, visible bid amounts, MEV bot warnings. Switch back to see what Obscura protects. This isn't a gimmick; it's the clearest way to understand why privacy matters for auctions.
 
-| Record | Created By | Contains | Consumed By |
-|--------|-----------|----------|-------------|
-| `SealedBid` | `place_bid` | auction_id, bid_amount, bid_nonce, token_type | `reveal_bid` variants |
-| `EscrowReceipt` | `reveal_bid` variants | auction_id, escrowed_amount, bid_nonce, token_type | `claim_win*` / `claim_refund*` |
-| `WinnerCertificate` | `claim_win*` | auction_id, item_hash, winning_amount, token_type, certificate_id | Never consumed (proof of winning) |
-| `SellerReceipt` | `claim_win*` | auction_id, item_hash, sale_amount, fee_paid, token_type | Never consumed (proof of sale) |
-| `DisputeBond` | `dispute_auction` | auction_id, bond_amount | `resolve_dispute` |
+### Privacy Score
+
+Every auction card displays an **A+ through F privacy grade** based on format, token type, and settlement state. Vickrey auctions with ALEO tokens score A+ (maximum privacy). English auctions with stablecoins score lower (bid amounts are public by design, stablecoin transfers expose addresses). This helps users make informed decisions about their privacy exposure.
+
+### Real-Time Privacy Monitor
+
+On each auction detail page, a **three-column privacy visualization** shows in real-time:
+- **"Network sees"** — raw hashes, bid counts, status codes (monospace, dim)
+- **"You see"** — item name, bid amounts, time remaining (bright, readable)
+- **"Hidden from everyone"** — individual amounts, identities, nonces (lock icons, redacted bars)
+
+When a new bid arrives, the network column shows a new hash appearing. The user column shows "New sealed bid received." The hidden column stays locked. This makes the privacy model tangible, not abstract.
+
+---
+
+## Contract Architecture
+
+Two programs deployed on Aleo Testnet:
+
+### `obscura_v5.aleo` — Core Auction Protocol
+28 transitions, 16 mappings, 5 private records, 53 KB compiled.
+
+| Group | What It Does |
+|-------|-------------|
+| **Platform** (3) | Initialize, emergency pause, fee withdrawal |
+| **Auction Lifecycle** (4) | Create (sealed/Vickrey/English/Dutch), cancel, close bidding |
+| **Sealed Bidding** (1) | Encrypted bid commitment — zero token transfer |
+| **Reveal + Escrow** (3) | Prove commitment + lock tokens atomically (ALEO/USDCx/USAD) |
+| **Settlement** (2) | Determine winner for sealed-bid and English formats |
+| **Claims** (8) | Winner settlement, Vickrey refunds, loser refunds — all 3 tokens |
+| **Dutch** (2) | Instant buy at descending price |
+| **English** (2) | Ascending bids with 5% minimum increment + anti-sniping |
+| **Dispute** (2) | Bond-based challenge (10% of highest bid) + admin resolution |
+| **ZK Proof** (1) | `prove_won_auction` — prove you won without revealing what you paid |
+
+### `obscura_market_v1.aleo` — Marketplace Extensions
+21 transitions for:
+- **Fixed-Price Sales** — list, buy (3 tokens), delist
+- **RFQ (Request for Quote)** — buyers post, sellers submit private quotes, buyer accepts
+- **Token Sales** — batch distribution with multiple participants
+- **Royalties** — creator royalty enforcement on secondary sales
+- **Provenance** — on-chain ownership history chain
+- **Timelocks** — time-delayed escrow for conditional sales
+
+**Total platform: 49 transitions across 2 programs.**
+
+### Private Records (UTXO Model)
+
+| Record | Purpose | Lifetime |
+|--------|---------|----------|
+| **SealedBid** | Encrypted bid commitment (amount + nonce) | Created at bid, consumed at reveal |
+| **EscrowReceipt** | Proof of locked tokens | Created at reveal, consumed at claim/refund |
+| **WinnerCertificate** | Permanent proof of winning | Never consumed — used in `prove_won_auction` |
+| **SellerReceipt** | Permanent proof of sale with fee breakdown | Never consumed |
+| **DisputeBond** | Dispute stake receipt | Created at dispute, consumed at resolution |
 
 ### State Machine
 
 ```
 Sealed-Bid / Vickrey:
-  ACTIVE → (close_bidding) → REVEALING → (finalize_auction) → SETTLED or FAILED
-  ACTIVE → (cancel_auction, 0 bids) → CANCELLED
-  ACTIVE → (close_bidding, 0 bids) → EXPIRED
-  SETTLED → (dispute_auction) → DISPUTED → (resolve_dispute) → SETTLED or FAILED
+  ACTIVE → REVEALING → SETTLED → (optional) DISPUTED → SETTLED or FAILED
+  ACTIVE → CANCELLED (0 bids) | EXPIRED (deadline, 0 bids)
 
-Dutch:
-  ACTIVE → (bid_dutch) → SETTLED (instant, first buyer wins)
-  ACTIVE → (deadline passes) → EXPIRED
+Dutch: ACTIVE → SETTLED (instant on first buy) | EXPIRED
 
-English:
-  ACTIVE → (settle_english, after deadline) → SETTLED
-  ACTIVE → (no bids at deadline) → FAILED
+English: ACTIVE → SETTLED (after deadline) | FAILED (no bids)
 ```
 
-Anti-sniping: Bids in the last 40 blocks (~10 min) extend the deadline by 40 blocks. Applies to sealed-bid, Vickrey, and English formats.
+Anti-sniping: bids in the last 40 blocks (~10 min) extend the deadline by 40 blocks. Prevents last-second front-running in English and sealed-bid formats.
 
 ---
 
-## Architecture
-
-```
-                    Shield Wallet (delegated proving)
-                              │
-                    ┌─────────┴─────────┐
-                    │   React Frontend   │
-                    │   (Vercel)         │
-                    └────┬─────────┬────┘
-                         │         │
-              ┌──────────┘         └──────────┐
-              │                               │
-    ┌─────────┴─────────┐          ┌──────────┴──────────┐
-    │  Express Backend   │          │   Aleo Testnet       │
-    │  (Render)          │          │   obscura_v5.aleo    │
-    │                    │          │   + obscura_market_v1 │
-    │  AES-256-GCM       │          │  52 transitions      │
-    │  encrypted metadata│   ◄──────│  18+ mappings        │
-    │  Upstash Redis     │  sync    │  6 private records   │
-    └────────────────────┘          │                      │
-                                    │  credits.aleo        │
-                                    │  test_usdcx_stab...  │
-                                    │  test_usad_stab...   │
-                                    └──────────────────────┘
-```
-
-**Frontend**: React 19, TypeScript, Vite, Tailwind CSS, Zustand, Framer Motion. 9 pages, mode-aware auction detail with phase-based panels.
-
-**Backend**: Express + TypeScript. AES-256-GCM per-column encryption for seller/bidder addresses. Upstash Redis for persistence. On-chain sync via Explorer API.
-
-**Wallet**: Shield Wallet with delegated proving via `@provablehq/aleo-wallet-adaptor-react`.
-
-**Marketplace**: `obscura_market_v1.aleo` — 21-transition companion contract for fixed-price sales, RFQ workflows, token sales, royalties, provenance tracking, and timelocks.
-
----
-
-## Token Support
-
-| Token | Deposit (Escrow) | Payout | Privacy |
-|-------|-----------------|--------|---------|
-| **ALEO** | `credits.aleo/transfer_private_to_public` | `credits.aleo/transfer_public_to_private` | Full — private records in, private records out |
-| **USDCx** | `test_usdcx_stablecoin.aleo/transfer_public_as_signer` | `test_usdcx_stablecoin.aleo/transfer_public` | Public balance transfers |
-| **USAD** | `test_usad_stablecoin.aleo/transfer_public_as_signer` | `test_usad_stablecoin.aleo/transfer_public` | Public balance transfers |
-
----
-
-## Demo Instructions
+## How to Use It
 
 ### Prerequisites
-- [Shield Wallet](https://shieldwallet.io/) browser extension (switch to Testnet)
-- Aleo testnet credits from the [faucet](https://faucet.aleo.org) (or use the faucet button on every page)
+- **[Shield Wallet](https://shieldwallet.io/)** browser extension (set to Testnet mode)
+- Testnet ALEO from the **[faucet](https://faucet.provable.com)** (also accessible on every page of the app)
 
-### Sealed-Bid / Vickrey Auction (Seller)
+### As a Seller
+1. Connect Shield Wallet → **Create** page → pick a template (NFT, DAO sale, service, collectible) or start from scratch
+2. Choose format (Sealed-Bid, Vickrey, Dutch, English), token type, reserve price, duration
+3. Submit — progress bar shows ZK proof generation (~30-45s) → get your auction ID
+4. Share the ID with bidders. After deadline, settle the auction on the detail page.
+5. Receive payment as a private `SellerReceipt` record.
 
-1. Connect Shield Wallet at [obscura-auction-95hm.vercel.app](https://obscura-auction-95hm.vercel.app)
-2. Go to `/create`. Pick a template or start from scratch. Set auction mode (First-Price or Vickrey), token, reserve price, duration.
-3. Submit. Shield Wallet prompts for signature. Progress bar shows ZK proof generation (~30-45s).
-4. Copy auction ID from the confirmation. Share with bidders.
-5. After deadline: anyone clicks "Close Bidding" on the auction page.
-6. After reveal deadline: go to the auction page, re-enter your exact reserve price in the Settle panel. Contract verifies `BHP256(input) == stored_hash`.
-7. Winner calls `claim_win` (or `claim_win_vickrey`). You receive a `SellerReceipt` + payment.
+### As a Bidder
+1. **Browse** page → find an auction → enter bid amount
+2. `place_bid` creates a private `SealedBid` record. **No tokens move.** Nobody can see your bid.
+3. After bidding closes → **Reveal** your bid (tokens escrowed atomically)
+4. Win → claim your `WinnerCertificate`. In Vickrey mode, pay only the second-highest price.
+5. Lose → claim full refund from escrow.
 
-### Sealed-Bid / Vickrey Auction (Bidder)
+### Dutch Auction
+Watch the price drop. Click "Buy Now" when it hits your target. Instant settlement, no waiting.
 
-1. Go to `/browse` or enter an auction ID directly.
-2. On the auction page, enter bid amount. `place_bid` creates a private `SealedBid` record. **No tokens transfer.**
-3. After bidding closes (REVEALING phase): click "Reveal Bid". Tokens are escrowed atomically.
-4. If you win: Claim panel appears. Click "Claim Win". You get a `WinnerCertificate`. In Vickrey mode, you pay the second-highest bid and get the difference refunded.
-5. If you lose: Click "Claim Refund" to reclaim escrowed tokens.
+### English Auction
+Place ascending bids (5% minimum increment). Anti-sniping extends the deadline if you bid in the last ~10 minutes. Highest bidder at deadline wins.
 
-### Dutch Auction (Buyer)
+---
 
-1. Browse Dutch auctions or go to `/auction/{id}`.
-2. Watch the price drop in real-time (linear decay from start to floor price).
-3. Click "Buy Now" when the price hits your target. Settlement is instant — no reveal, no waiting.
+## Interactive Learning
 
-### English Auction (Bidder)
+The app includes an **interactive Vickrey auction explainer** at `/learn` — a 4-step tutorial with game theory, numerical examples, and a playable bidding simulator. Place your bid against AI opponents and see how second-price auctions incentivize truthful bidding. This isn't just documentation; it's a tool for understanding why privacy + Vickrey is a powerful combination.
 
-1. Browse English auctions.
-2. Place ascending bids (minimum 5% above current highest).
-3. Anti-sniping: bids in the last ~10 minutes extend the deadline.
-4. After deadline, anyone clicks "Settle". Highest bidder wins.
+---
+
+## Security
+
+| Protection | How |
+|-----------|-----|
+| **Zero-transfer sealed phase** | No tokens move at bid time. Observer learns nothing from `credits.aleo`. |
+| **Commit-reveal integrity** | `BHP256(BidCommitment)` stored at bid, recomputed and verified at reveal. |
+| **Anti-sniping** | 40-block deadline extension prevents last-second manipulation. |
+| **Double-settlement guard** | `settlements` mapping prevents claiming twice. |
+| **Bid replay prevention** | `bid_commitments` mapping with unique nonce per bid. |
+| **Settlement proofs** | Tamper-evident `BHP256(SettlementProof)` hash stored on-chain. |
+| **Payment proofs** | `BHP256::commit_to_field(amount, nonce)` — verifiable without revealing nonce. |
+| **Dispute bonds** | 10% of highest bid. Forfeited if frivolous. 100-block grace period for sellers. |
+| **UTXO record consumption** | SealedBid and EscrowReceipt consumed on use. No double-reveal, no double-refund. |
+| **Hashed identities** | Seller, disputer addresses stored as BHP256 hashes. Computationally irreversible. |
 
 ---
 
 ## On-Chain Proof
 
-### Deployed Contract
-
 | Field | Value |
 |-------|-------|
-| Program ID | `obscura_v5.aleo` |
+| Core Program | [`obscura_v5.aleo`](https://testnet.explorer.provable.com/program/obscura_v5.aleo) |
+| Marketplace | [`obscura_market_v1.aleo`](https://testnet.explorer.provable.com/program/obscura_market_v1.aleo) |
 | Network | Aleo Testnet |
-| Deploy TX | [`at1f3sxnlttr6spyvzgjhg7j9n40r088xuck04a9z5wxnuv9m09gc9suq928a`](https://testnet.explorer.provable.com/transaction/at1f3sxnlttr6spyvzgjhg7j9n40r088xuck04a9z5wxnuv9m09gc9suq928a) |
-| Initialize TX | [`at1ugfznxv9dufgatesere2gkstvph492f3ykd6sj4ajdjqazmgvgrs97myfu`](https://testnet.explorer.provable.com/transaction/at1ugfznxv9dufgatesere2gkstvph492f3ykd6sj4ajdjqazmgvgrs97myfu) |
-| Platform Config | fee_bps=100 (1%), dispute_bond_bps=500 (5%), paused=false |
 | Dependencies | `credits.aleo`, `test_usdcx_stablecoin.aleo`, `test_usad_stablecoin.aleo` |
 
 ### Verified Transactions
@@ -236,67 +205,47 @@ Anti-sniping: Bids in the last 40 blocks (~10 min) extend the deadline by 40 blo
 | Close Bidding | [`at1enwth...ym5`](https://testnet.explorer.provable.com/transaction/at1enwthmddswqajfkctjpuwdzy7924fm6s2yqnxrydf3d97xs745qseg5ym5) | Sealed-Bid |
 | Reveal Bid | [`at1tz3fs...xhx`](https://testnet.explorer.provable.com/transaction/at1tz3fs6t82vx8peqvrxtzdyfr2tespy6kd92qhpeavhswcnf46urqqslxhx) | Sealed-Bid |
 
-All transactions verifiable on [Aleo Testnet Explorer](https://testnet.explorer.provable.com/program/obscura_v5.aleo).
+---
+
+## What's Novel
+
+1. **First Vickrey (second-price) auction on Aleo** — game-theoretically optimal: truthful bidding is the dominant strategy when bids are private
+2. **Zero-transfer sealed bidding** — no tokens move at bid time, eliminating the privacy leak every other sealed-bid implementation has
+3. **Four auction formats in one contract** — no other Aleo program supports Sealed-Bid, Vickrey, Dutch, and English
+4. **Selective winner disclosure** — `prove_won_auction` lets winners prove they won without revealing what they paid
+5. **Anti-sniping on-chain** — 40-block deadline extension. Neither NullPay nor Veiled Markets implements this
+6. **Companion marketplace architecture** — two-program design (`obscura_v5` + `obscura_market_v1`) shows platform thinking, not demo thinking
+7. **Privacy-first UX** — privacy score grades, Ethereum comparison toggle, real-time privacy monitor — privacy isn't just in the contract, it's in the user experience
 
 ---
 
-## Security
+## Tech Stack
 
-| Feature | Mechanism |
-|---------|-----------|
-| Anti-sniping | 40-block window. Late bids extend deadline. |
-| Commit-reveal integrity | `BHP256(BidCommitment)` stored at bid, verified at reveal. |
-| Double-settlement guard | `settlements` mapping + `assert(!already_settled)`. |
-| Winner double-spend block | `claim_refund` checks `bid_hash != auction_winners[id]`. |
-| Bid replay prevention | `bid_commitments` mapping + unique nonce per bid. |
-| Settlement proofs | `BHP256(SettlementProof{...})` — tamper-evident. |
-| Payment proofs | `BHP256::commit_to_field(amount, nonce)` — verifiable without revealing nonce. |
-| Selective disclosure | `prove_won_auction` — ZK proof of WinnerCertificate ownership. |
-| Reserve hash verification | `BHP256(reserve_price) == stored_hash` checked at finalize. |
-| UTXO record consumption | SealedBid and EscrowReceipt consumed on use. No double-reveal, no double-refund. |
-| Dispute bonds | 10% of highest bid. Forfeited if dispute rejected. Prevents frivolous challenges. |
-
----
-
-## Novel Contributions
-
-1. **First Vickrey auction on Aleo** — second-price mechanism with `second_highest_bids` mapping, on-chain and immutable.
-2. **Zero-transfer sealed bidding** — tokens don't move at bid time. Eliminates the privacy leak of `credits.aleo` transfers during sealed phase.
-3. **Four auction formats in one contract** — Sealed-Bid, Vickrey, Dutch, English. No other Aleo project supports all four.
-4. **Selective disclosure** — `prove_won_auction` lets winners prove they won without revealing what they paid. Useful for procurement, provenance, lending.
-5. **Anti-sniping** — block-height deadline extension. Neither NullPay nor Veiled Markets implements this.
-6. **Settlement + payment proofs** — tamper-evident hashes and cryptographic commitments for verifiable auction integrity.
-7. **Dispute resolution** — bond-based on-chain challenge mechanism. Post-settlement appeals without trusting the auctioneer.
-8. **Triple token escrow** — full ALEO + USDCx + USAD paths for every auction phase.
-9. **Hashed seller identity** — `BHP256(address as field)` — seller address never appears in any public mapping.
-10. **Companion marketplace** — `obscura_market_v1.aleo` adds fixed-price sales, RFQ, token sales, royalties, provenance, and timelocks (21 transitions), bringing total platform transitions to 52.
+| Layer | Technology |
+|-------|-----------|
+| **Smart Contract** | Leo (Aleo) — 2 programs, 49 transitions |
+| **Frontend** | React 19 + TypeScript + Vite + Tailwind CSS + Framer Motion + Zustand |
+| **Backend** | Express + TypeScript + AES-256-GCM encryption + Supabase |
+| **Wallet** | Shield Wallet (delegated proving) via `@provablehq/aleo-wallet-adaptor-react` |
+| **Deployment** | Vercel (frontend) + Render (backend) + Aleo Testnet (contracts) |
 
 ---
 
 ## Quick Start
 
 ```bash
-# Clone
 git clone https://github.com/Ritik200238/obscura-auction.git
 cd obscura-auction
 
 # Frontend
-cd frontend
-npm install --legacy-peer-deps
-cp .env.example .env
-npm run dev
-# http://localhost:5173
+cd frontend && npm install --legacy-peer-deps && cp .env.example .env && npm run dev
 
 # Backend (separate terminal)
-cd backend
-npm install
-cp .env.example .env   # Set ENCRYPTION_KEY, KV_REST_API_URL, KV_REST_API_TOKEN
-npm run dev
-# http://localhost:3001
+cd backend && npm install && cp .env.example .env && npm run dev
 
-# Build contract
-cd contracts/obscura_v5
-leo build --network testnet --endpoint https://api.explorer.provable.com/v1
+# Build contracts
+cd contracts/obscura_v4 && leo build
+cd ../obscura_market && leo build
 ```
 
 ---
@@ -304,11 +253,9 @@ leo build --network testnet --endpoint https://api.explorer.provable.com/v1
 ## Deep Dives
 
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** — Full contract architecture, token flows, state machine, competitor comparison
-- **[PRIVACY.md](./PRIVACY.md)** — Privacy model, attack vectors, lifecycle privacy audit
-- **[VICKREY_EXPLAINER.md](./VICKREY_EXPLAINER.md)** — Game theory analysis, why ZK is required, worked numerical examples
+- **[PRIVACY.md](./PRIVACY.md)** — Privacy model, attack surface analysis, lifecycle privacy audit
+- **[VICKREY_EXPLAINER.md](./VICKREY_EXPLAINER.md)** — Game theory analysis, why ZK + Vickrey is powerful, worked numerical examples
 
 ---
 
-## License
-
-MIT
+Built by **Ritik Pandey** for the Aleo Privacy Buildathon. MIT License.
