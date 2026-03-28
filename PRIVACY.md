@@ -326,7 +326,7 @@ These are well-understood trade-offs, not design flaws. Each exists because the 
 
 ---
 
-## v4 Privacy Additions
+## v5 Privacy Additions
 
 ### New Auction Modes — Privacy by Format
 
@@ -356,17 +356,17 @@ Winners can prove they won a specific auction to any third party without reveali
 
 Works for all 4 modes (Sealed, Vickrey, Dutch, English) because `WinnerCertificate` records are issued at claim time via the same `claim_win` transitions.
 
-### New Attack Vectors (v4-specific)
+### New Attack Vectors (v5-specific)
 
 **7. Block height correlation for Dutch pricing**: Observer sees exact purchase block, revealing the Dutch price. Mitigation: inherent to format; bidder identity still private on ALEO path.
 
 **8. Front-running English auctions**: Observer sees pending `bid_english` in mempool, submits higher bid. Mitigation: anti-sniping (40-block deadline extension) + 5% minimum increment requirement.
 
-**9. Admin deanonymization via stablecoin fee withdrawal**: If admin uses `withdraw_fees_usdcx`/`withdraw_fees_usad` with their main address, the USDCx `transfer_public` reveals it. Mitigation: v4 accepts a `recipient: address` parameter — admin should specify a fresh address for each withdrawal. ALEO `withdraw_fees` uses `transfer_public_to_private` which hides the recipient.
+**9. Admin deanonymization via stablecoin fee withdrawal**: If admin uses `withdraw_fees_usdcx`/`withdraw_fees_usad` with their main address, the USDCx `transfer_public` reveals it. Mitigation: v5 accepts a `recipient: address` parameter — admin should specify a fresh address for each withdrawal. ALEO `withdraw_fees` uses `transfer_public_to_private` which hides the recipient.
 
-### v4 Privacy Improvements Over v3
+### v5 Privacy Improvements Over v3
 
-1. **No tokens transferred at bid time** — v3 escrowed tokens at `place_bid`; v4 only stores a BHP256 commitment. Zero on-chain transfer means zero amount leakage during sealed phase.
+1. **No tokens transferred at bid time** — v3 escrowed tokens at `place_bid`; v5 only stores a BHP256 commitment. Zero on-chain transfer means zero amount leakage during sealed phase.
 2. **Anti-sniping for English auctions** — prevents last-second manipulation.
 3. **Settlement proofs** — tamper-evident BHP256 hash of (auction_id, highest_bid, second_bid, winner_hash, block). Any third party can verify the settlement was computed honestly.
 4. **Payment proofs** — BHP256::commit_to_field(amount, nonce) provides hiding+binding commitment. Winner can prove payment without revealing the nonce.

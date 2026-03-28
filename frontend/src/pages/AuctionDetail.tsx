@@ -23,12 +23,15 @@ import {
   Link2,
   Percent,
   CalendarClock,
+  ExternalLink,
+  CheckCircle,
 } from 'lucide-react'
 import { useAuction } from '@/hooks/useAuction'
 import { useRecords } from '@/hooks/useRecords'
 import { useRecordStore } from '@/stores/recordStore'
 import { useTransaction } from '@/hooks/useTransaction'
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
+import { config } from '@/lib/config'
 import {
   STATUS,
   AUCTION_MODE,
@@ -618,12 +621,16 @@ export default function AuctionDetail() {
               On-Chain Data
             </h3>
             <div className="space-y-3">
-              <InfoRow label="Auction ID" value={truncateId(auction.auction_id, 10)} mono />
-              <InfoRow label="Item Hash" value={truncateId(auction.item_hash, 10)} mono />
+              <CopyableRow
+                label="Auction ID"
+                value={auction.auction_id}
+                href={`https://testnet.explorer.provable.com/program/${config.programId}`}
+              />
+              <CopyableRow label="Item Hash" value={auction.item_hash} />
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500">Seller</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-300 font-mono">{truncateId(auction.seller_hash, 10)}</span>
+                  <CopyableValue value={auction.seller_hash} />
                   <ReputationBadge sellerHash={auction.seller_hash} size="sm" />
                 </div>
               </div>
@@ -775,6 +782,74 @@ function InfoRow({
       <span className={`text-xs text-gray-300 ${mono ? 'font-mono' : ''}`}>
         {value}
       </span>
+    </div>
+  )
+}
+
+/** Inline copyable value — shows truncated text with a copy icon */
+function CopyableValue({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false)
+  const handleCopy = () => {
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }).catch(() => {})
+  }
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span className="text-xs text-gray-300 font-mono">{truncateId(value, 10)}</span>
+      <button
+        onClick={handleCopy}
+        className="p-0.5 rounded hover:bg-surface-700 transition-colors"
+        title={copied ? 'Copied!' : 'Copy to clipboard'}
+      >
+        {copied ? (
+          <CheckCircle className="w-3 h-3 text-green-400" />
+        ) : (
+          <Copy className="w-3 h-3 text-gray-500 hover:text-gray-300" />
+        )}
+      </button>
+    </span>
+  )
+}
+
+/** Full row with label, truncated copyable value, optional explorer link */
+function CopyableRow({ label, value, href }: { label: string; value: string; href?: string }) {
+  const [copied, setCopied] = useState(false)
+  const handleCopy = () => {
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }).catch(() => {})
+  }
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-gray-500">{label}</span>
+      <div className="flex items-center gap-1">
+        <span className="text-xs text-gray-300 font-mono">{truncateId(value, 10)}</span>
+        <button
+          onClick={handleCopy}
+          className="p-0.5 rounded hover:bg-surface-700 transition-colors"
+          title={copied ? 'Copied!' : 'Copy to clipboard'}
+        >
+          {copied ? (
+            <CheckCircle className="w-3 h-3 text-green-400" />
+          ) : (
+            <Copy className="w-3 h-3 text-gray-500 hover:text-gray-300" />
+          )}
+        </button>
+        {href && (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-0.5 rounded hover:bg-surface-700 transition-colors"
+            title="View on Aleo Explorer"
+          >
+            <ExternalLink className="w-3 h-3 text-gray-500 hover:text-accent-400" />
+          </a>
+        )}
+      </div>
     </div>
   )
 }

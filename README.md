@@ -1,12 +1,12 @@
 # Obscura — Private Multi-Format Auction Protocol on Aleo
 
-**[Live Demo](https://obscura-auction-95hm.vercel.app)** | **[Contract on Explorer](https://testnet.explorer.provable.com/program/obscura_v4.aleo)** | **Shield Wallet Required**
+**[Live Demo](https://obscura-auction-95hm.vercel.app)** | **[Contract on Explorer](https://testnet.explorer.provable.com/program/obscura_v5.aleo)** | **[Marketplace on Explorer](https://testnet.explorer.provable.com/program/obscura_market_v1.aleo)** | **Shield Wallet Required**
 
 ---
 
 ## What is Obscura?
 
-Obscura is a sealed-bid auction protocol on Aleo where bid amounts are cryptographically invisible during bidding, bidder identities never touch the chain, and winners self-identify by proving ownership of a private record. Four auction formats (Sealed-Bid, Vickrey, Dutch, English), three token types (ALEO, USDCx, USAD), commit-reveal with zero-transfer sealed phase, on-chain dispute resolution, and selective winner disclosure — all in a single 2,752-line Leo contract deployed as `obscura_v4.aleo`.
+Obscura is a sealed-bid auction protocol on Aleo where bid amounts are cryptographically invisible during bidding, bidder identities never touch the chain, and winners self-identify by proving ownership of a private record. Four auction formats (Sealed-Bid, Vickrey, Dutch, English), three token types (ALEO, USDCx, USAD), commit-reveal with zero-transfer sealed phase, on-chain dispute resolution, and selective winner disclosure — all in a single 2,752-line Leo contract deployed as `obscura_v5.aleo`, plus a companion marketplace contract `obscura_market_v1.aleo` with 21 transitions for fixed-price sales, RFQ, token sales, royalties, provenance, and timelocks.
 
 ---
 
@@ -17,8 +17,8 @@ Obscura is a sealed-bid auction protocol on Aleo where bid amounts are cryptogra
 - **USAD stablecoin support** — third token alongside ALEO Credits and USDCx
 - **Dispute resolution** — bond-based challenge mechanism (10% of highest bid, admin resolution)
 - **Auction Intelligence page** — live on-chain analytics with phase timelines and format distribution
-- **In-app technical docs** — 8-section documentation with Leo code, state machines, SDK examples
-- **TypeScript SDK** — `@obscura/sdk` for programmatic auction creation, bidding, and on-chain reads
+- **In-app technical docs** — 8-section documentation with Leo code, state machines, and usage examples
+- **Marketplace contract** — `obscura_market_v1.aleo` with 21 transitions for fixed-price sales, RFQ, token sales, royalties, provenance, and timelocks
 - **Auction monitor bot** — automated on-chain state polling and auction tracking
 - **ZK Social Proof** — "Share Your Win" surfaces `prove_won_auction` for selective disclosure
 - **Mode-aware UI** — every page adapts to the auction format: timelines, bid panels, privacy notices
@@ -49,18 +49,23 @@ Obscura is a sealed-bid auction protocol on Aleo where bid amounts are cryptogra
 ## Contract Stats
 
 ```
-Program:       obscura_v4.aleo
-Lines:         2,752 Leo
-Transitions:   28 (27 async + 1 pure off-chain)
-Records:       5 (SealedBid, EscrowReceipt, WinnerCertificate, SellerReceipt, DisputeBond)
-Mappings:      16
-Structs:       9
-State Machine: 8 states (Active, Closed, Revealing, Settled, Cancelled, Failed, Disputed, Expired)
-Tokens:        credits.aleo + test_usdcx_stablecoin.aleo + test_usad_stablecoin.aleo
-Formats:       First-Price Sealed-Bid, Vickrey (2nd-Price), Dutch (Descending), English (Ascending)
+Core Contract:      obscura_v5.aleo
+Core Lines:         2,752 Leo
+Core Transitions:   31
+Core Records:       6 (SealedBid, EscrowReceipt, WinnerCertificate, SellerReceipt, DisputeBond, MarketReceipt)
+Core Mappings:      18
+Core Structs:       10
+State Machine:      8 states (Active, Closed, Revealing, Settled, Cancelled, Failed, Disputed, Expired)
+Tokens:             credits.aleo + test_usdcx_stablecoin.aleo + test_usad_stablecoin.aleo
+Formats:            First-Price Sealed-Bid, Vickrey (2nd-Price), Dutch (Descending), English (Ascending)
+
+Marketplace:        obscura_market_v1.aleo
+Market Transitions: 21 (fixed-price sales, RFQ, token sales, royalties, provenance, timelocks)
+
+Total Transitions:  31 (core) + 21 (marketplace) = 52 total
 ```
 
-### All 28 Transitions (Grouped)
+### All 31 Core Transitions (Grouped)
 
 | Group | Transitions | Count | Purpose |
 |-------|------------|-------|---------|
@@ -77,7 +82,18 @@ Formats:       First-Price Sealed-Bid, Vickrey (2nd-Price), Dutch (Descending), 
 | **Dispute** | `dispute_auction`, `resolve_dispute` | 2 | Bond-based challenge + admin resolution |
 | **ZK Proof** | `prove_won_auction` | 1 | Selective disclosure — prove you won without revealing bid amount |
 
-Of these 28, 11 are token-variant transitions (same logic, different token path). The remaining 17 are unique logic: auction lifecycle, bidding, settlement, dispute resolution, and selective disclosure.
+Of these 31 core transitions, 11 are token-variant transitions (same logic, different token path). The remaining 20 are unique logic: auction lifecycle, bidding, settlement, dispute resolution, and selective disclosure. The marketplace contract adds 21 more transitions for fixed-price sales, RFQ workflows, token sales, royalties, provenance tracking, and timelocks.
+
+### Marketplace Contract: obscura_market_v1.aleo (21 Transitions)
+
+| Group | Transitions | Purpose |
+|-------|------------|---------|
+| **Fixed-Price Sales** | `list_item`, `buy_item`, `buy_item_usdcx`, `buy_item_usad`, `delist_item` | List/buy/delist at fixed price with triple token support |
+| **RFQ (Request for Quote)** | `create_rfq`, `submit_quote`, `accept_quote`, `cancel_rfq` | Buyers post requests, sellers submit private quotes |
+| **Token Sales** | `create_token_sale`, `participate_sale`, `participate_sale_usdcx`, `finalize_sale`, `claim_tokens`, `refund_sale` | Batch token sales with multiple participants |
+| **Royalties** | `set_royalty`, `claim_royalties`, `claim_royalties_usdcx` | Creator royalty enforcement on secondary sales |
+| **Provenance** | `register_provenance`, `transfer_provenance` | On-chain ownership history tracking |
+| **Timelocks** | `create_timelock`, `release_timelock` | Time-delayed escrow for conditional sales |
 
 ### Records (5 — All Private UTXO)
 
@@ -125,11 +141,11 @@ Anti-sniping: Bids in the last 40 blocks (~10 min) extend the deadline by 40 blo
               │                               │
     ┌─────────┴─────────┐          ┌──────────┴──────────┐
     │  Express Backend   │          │   Aleo Testnet       │
-    │  (Render)          │          │   obscura_v4.aleo    │
-    │                    │          │                      │
-    │  AES-256-GCM       │          │  28 transitions      │
-    │  encrypted metadata│   ◄──────│  16 mappings         │
-    │  Upstash Redis     │  sync    │  5 private records   │
+    │  (Render)          │          │   obscura_v5.aleo    │
+    │                    │          │   + obscura_market_v1 │
+    │  AES-256-GCM       │          │  52 transitions      │
+    │  encrypted metadata│   ◄──────│  18+ mappings        │
+    │  Upstash Redis     │  sync    │  6 private records   │
     └────────────────────┘          │                      │
                                     │  credits.aleo        │
                                     │  test_usdcx_stab...  │
@@ -143,7 +159,7 @@ Anti-sniping: Bids in the last 40 blocks (~10 min) extend the deadline by 40 blo
 
 **Wallet**: Shield Wallet with delegated proving via `@provablehq/aleo-wallet-adaptor-react`.
 
-**SDK**: `@obscura/sdk` — TypeScript client for programmatic auction interaction. Prepare transactions, read on-chain state, calculate Dutch prices.
+**Marketplace**: `obscura_market_v1.aleo` — 21-transition companion contract for fixed-price sales, RFQ workflows, token sales, royalties, provenance tracking, and timelocks.
 
 ---
 
@@ -202,7 +218,7 @@ Anti-sniping: Bids in the last 40 blocks (~10 min) extend the deadline by 40 blo
 
 | Field | Value |
 |-------|-------|
-| Program ID | `obscura_v4.aleo` |
+| Program ID | `obscura_v5.aleo` |
 | Network | Aleo Testnet |
 | Deploy TX | [`at1f3sxnlttr6spyvzgjhg7j9n40r088xuck04a9z5wxnuv9m09gc9suq928a`](https://testnet.explorer.provable.com/transaction/at1f3sxnlttr6spyvzgjhg7j9n40r088xuck04a9z5wxnuv9m09gc9suq928a) |
 | Initialize TX | [`at1ugfznxv9dufgatesere2gkstvph492f3ykd6sj4ajdjqazmgvgrs97myfu`](https://testnet.explorer.provable.com/transaction/at1ugfznxv9dufgatesere2gkstvph492f3ykd6sj4ajdjqazmgvgrs97myfu) |
@@ -220,7 +236,7 @@ Anti-sniping: Bids in the last 40 blocks (~10 min) extend the deadline by 40 blo
 | Close Bidding | [`at1enwth...ym5`](https://testnet.explorer.provable.com/transaction/at1enwthmddswqajfkctjpuwdzy7924fm6s2yqnxrydf3d97xs745qseg5ym5) | Sealed-Bid |
 | Reveal Bid | [`at1tz3fs...xhx`](https://testnet.explorer.provable.com/transaction/at1tz3fs6t82vx8peqvrxtzdyfr2tespy6kd92qhpeavhswcnf46urqqslxhx) | Sealed-Bid |
 
-All transactions verifiable on [Aleo Testnet Explorer](https://testnet.explorer.provable.com/program/obscura_v4.aleo).
+All transactions verifiable on [Aleo Testnet Explorer](https://testnet.explorer.provable.com/program/obscura_v5.aleo).
 
 ---
 
@@ -253,6 +269,7 @@ All transactions verifiable on [Aleo Testnet Explorer](https://testnet.explorer.
 7. **Dispute resolution** — bond-based on-chain challenge mechanism. Post-settlement appeals without trusting the auctioneer.
 8. **Triple token escrow** — full ALEO + USDCx + USAD paths for every auction phase.
 9. **Hashed seller identity** — `BHP256(address as field)` — seller address never appears in any public mapping.
+10. **Companion marketplace** — `obscura_market_v1.aleo` adds fixed-price sales, RFQ, token sales, royalties, provenance, and timelocks (21 transitions), bringing total platform transitions to 52.
 
 ---
 
@@ -278,7 +295,7 @@ npm run dev
 # http://localhost:3001
 
 # Build contract
-cd contracts/obscura_v4
+cd contracts/obscura_v5
 leo build --network testnet --endpoint https://api.explorer.provable.com/v1
 ```
 

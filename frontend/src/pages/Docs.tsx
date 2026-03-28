@@ -51,7 +51,7 @@ export default function Docs() {
         <NavCard href="#architecture" icon={Layers} label="Architecture" />
         <NavCard href="#how-to-use" icon={BookOpen} label="How to Use" />
         <NavCard href="#faq" icon={AlertTriangle} label="FAQ" />
-        <NavCard href="#developers" icon={Zap} label="SDK" />
+        <NavCard href="#developers" icon={Zap} label="Contracts" />
         <NavCard href="#formats" icon={Gavel} label="Formats" />
       </div>
 
@@ -317,25 +317,24 @@ export default function Docs() {
         </div>
       </Section>
 
-      {/* Developers / SDK */}
+      {/* Developers */}
       <Section id="developers" title="Build on Obscura" icon={Layers}>
         <p className="text-gray-400 text-sm mb-4">
-          Integrate Obscura into your dApp with the TypeScript SDK. Create auctions, place bids, and read on-chain state programmatically.
+          Interact with Obscura directly on Aleo Testnet. The core auction contract and marketplace contract are deployed and ready to use.
         </p>
         <div className="bg-surface-800/60 rounded-xl p-4 border border-surface-700 font-mono text-sm">
-          <p className="text-gray-500 mb-2"># Install from source</p>
-          <p className="text-accent-400 mb-4">cd sdk && npm install && npm run build</p>
-          <p className="text-gray-500 mb-2"># Usage</p>
+          <p className="text-gray-500 mb-2"># Core auction contract</p>
+          <p className="text-accent-400 mb-2">obscura_v5.aleo — 31 transitions</p>
+          <p className="text-gray-500 mb-2"># Marketplace contract</p>
+          <p className="text-accent-400 mb-4">obscura_market_v1.aleo — 21 transitions</p>
+          <p className="text-gray-500 mb-2"># Build from source</p>
           <div className="text-gray-300 space-y-1">
-            <p>{'import { ObscuraClient } from "@obscura/sdk";'}</p>
-            <p>&nbsp;</p>
-            <p>{'const client = new ObscuraClient("https://api.explorer.provable.com/v1");'}</p>
-            <p>{'const auction = await client.getAuction("your-auction-id");'}</p>
-            <p>{'const price = await client.getDutchCurrentPrice("auction-id");'}</p>
+            <p>cd contracts/obscura_v5</p>
+            <p>leo build --network testnet --endpoint https://api.explorer.provable.com/v1</p>
           </div>
         </div>
         <p className="text-xs text-gray-500 mt-3">
-          See the full SDK documentation in <code className="text-accent-400">sdk/README.md</code> for all available methods including createAuction, placeBid, bidDutch, bidEnglish, and more.
+          See <code className="text-accent-400">ARCHITECTURE.md</code> for the full list of transitions, records, and mappings across both contracts.
         </p>
       </Section>
     </div>

@@ -12,6 +12,7 @@ import { useBlockHeight } from '@/contexts/BlockHeightContext'
 import { fetchMapping, truncateId, hashStringToField, generateNonce, toMicrocredits, blockHeightToTime, fetchBlockHeight, serializeRecordForTx, fetchCreditsRecord } from '@/lib/aleo'
 import { config } from '@/lib/config'
 import { TOKEN_TYPE, TOKEN_LABELS, CATEGORY_LABELS } from '@/types'
+import toast from 'react-hot-toast'
 import { ShimmerCard } from '@/components/shared/Shimmer'
 import FaucetBanner from '@/components/shared/FaucetBanner'
 import TransactionProgress from '@/components/shared/TransactionProgress'
@@ -161,6 +162,7 @@ export default function Procurement() {
     const deadlineHeight = currentHeight + durationToBlocks(rfqDeadline)
 
     const result = await execute({
+      program: 'obscura_market_v1.aleo',
       functionName: 'create_rfq',
       inputs: [
         `${rfqCategory}u8`,
@@ -179,13 +181,18 @@ export default function Procurement() {
   }
 
   const handleSubmitQuote = async (rfqId: string) => {
-    if (!connected || !quoteAmount || parseFloat(quoteAmount) <= 0) return
+    if (!connected) {
+      toast.error('Connect your wallet first')
+      return
+    }
+    if (!quoteAmount || parseFloat(quoteAmount) <= 0) return
 
     const nonce = generateNonce()
     const amountMicros = toMicrocredits(parseFloat(quoteAmount))
     const key = rfqId.endsWith('field') ? rfqId : `${rfqId}field`
 
     await execute({
+      program: 'obscura_market_v1.aleo',
       functionName: 'submit_quote',
       inputs: [
         key,
@@ -224,7 +231,10 @@ export default function Procurement() {
             Refresh
           </button>
           <button
-            onClick={() => setShowCreate(!showCreate)}
+            onClick={() => {
+              if (!connected) { toast.error('Connect your wallet first'); return }
+              setShowCreate(!showCreate)
+            }}
             className="btn-primary text-xs inline-flex items-center gap-2 py-2.5"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -377,7 +387,10 @@ export default function Procurement() {
             Post a request for quotes and let sellers compete to offer you the best price privately.
           </p>
           <button
-            onClick={() => setShowCreate(true)}
+            onClick={() => {
+              if (!connected) { toast.error('Connect your wallet first'); return }
+              setShowCreate(true)
+            }}
             className="btn-primary inline-flex items-center gap-2 text-sm px-6 py-3"
           >
             <Plus className="w-4 h-4" />
@@ -397,6 +410,7 @@ export default function Procurement() {
                 rfq={rfq}
                 currentBlock={blockHeight}
                 onQuote={() => {
+                  if (!connected) { toast.error('Connect your wallet first'); return }
                   setQuotingRfqId(rfq.rfq_id)
                   setQuoteAmount('')
                   resetTx()

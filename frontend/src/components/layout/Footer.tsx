@@ -53,11 +53,11 @@ export default function Footer() {
             <div className="flex items-center gap-2 text-xs text-gray-600">
               <span className="font-mono text-gray-500">obscura_v5.aleo</span>
               <span className="text-surface-700">·</span>
-              <span>51 transitions</span>
+              <span>51 functions</span>
               <span className="text-surface-700">·</span>
-              <span>8 records</span>
+              <span>8 record types</span>
               <span className="text-surface-700">·</span>
-              <span>32 mappings</span>
+              <span>32 data stores</span>
             </div>
             <div className="flex items-center gap-3 text-xs text-gray-600">
               <span className="flex items-center gap-1">

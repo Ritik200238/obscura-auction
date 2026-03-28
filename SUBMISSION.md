@@ -13,8 +13,9 @@
 
 | Resource | URL |
 |----------|-----|
-| Smart Contract v4 | [`obscura_v4.aleo`](https://testnet.explorer.provable.com/program/obscura_v4.aleo) on Aleo Testnet |
-| Deploy TX v4 | [`at1f3sxnlttr6spyvzgjhg7j9n40r088xuck04a9z5wxnuv9m09gc9suq928a`](https://testnet.explorer.provable.com/transaction/at1f3sxnlttr6spyvzgjhg7j9n40r088xuck04a9z5wxnuv9m09gc9suq928a) |
+| Smart Contract v5 | [`obscura_v5.aleo`](https://testnet.explorer.provable.com/program/obscura_v5.aleo) on Aleo Testnet |
+| Marketplace Contract | [`obscura_market_v1.aleo`](https://testnet.explorer.provable.com/program/obscura_market_v1.aleo) on Aleo Testnet |
+| Deploy TX v5 | [`at1f3sxnlttr6spyvzgjhg7j9n40r088xuck04a9z5wxnuv9m09gc9suq928a`](https://testnet.explorer.provable.com/transaction/at1f3sxnlttr6spyvzgjhg7j9n40r088xuck04a9z5wxnuv9m09gc9suq928a) |
 | Smart Contract v2 | [`obscura_v2.aleo`](https://explorer.provable.com/transaction/at1qy5h67s6629k07rf0vp2f6jxrh5xhqpxm6td2c8cmsl0s7233cgsafp7hk) (superseded) |
 | Smart Contract v1 | [`obscura_auction.aleo`](https://explorer.provable.com/transaction/at1j58ds0rvhpwtspyvmr9wjxkrd2jq3xg2v25p8se4ezsv40a8xupswz58g4) (initial, superseded) |
 | Frontend | [obscura-auction-95hm.vercel.app](https://obscura-auction-95hm.vercel.app) |
@@ -54,7 +55,7 @@ Traditional on-chain auctions expose all bids publicly, enabling front-running a
 
 ## Technical Highlights
 
-### Smart Contract (28 transitions)
+### Smart Contract (31 core + 21 marketplace = 52 total transitions)
 - **Commit-Reveal Sealed Bids** -- strictest privacy model for auctions
 - **Vickrey (Second-Price) Auctions** -- first implementation on Aleo; winner pays 2nd-highest bid
 - **Anti-Sniping** -- block-height-based deadline extensions prevent last-second manipulation
@@ -62,8 +63,9 @@ Traditional on-chain auctions expose all bids publicly, enabling front-running a
 - **Full Escrow** -- funds locked in program balance until settlement/refund
 - **Settlement & Payment Proofs** -- BHP256 hashes for tamper-evident on-chain verification
 - **Selective Disclosure** -- prove_won_auction transition proves winning without revealing bid amount
-- **5 Record Types** -- SealedBid, EscrowReceipt, WinnerCertificate, SellerReceipt, DisputeBond
-- **16 Mappings** -- minimal public data, hashed identities
+- **6 Record Types** -- SealedBid, EscrowReceipt, WinnerCertificate, SellerReceipt, DisputeBond, MarketReceipt
+- **18 Mappings** -- minimal public data, hashed identities
+- **Marketplace Contract** -- `obscura_market_v1.aleo` with 21 transitions for fixed-price sales, RFQ, token sales, royalties, provenance, and timelocks
 - **8-State Machine** -- Active -> Revealing -> Settled/Failed/Cancelled/Expired/Disputed
 
 ### Frontend

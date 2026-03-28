@@ -116,10 +116,8 @@ export default function RevealPanel({ auction, onRevealConfirmed }: RevealPanelP
           const feeAleo = (feeMicro / 1_000_000).toFixed(3)
           const totalAleo = (totalNeeded / 1_000_000).toFixed(3)
           setBalanceError(
-            `Insufficient private ALEO balance. You need ${totalAleo} ALEO (bid: ${bidAleo} + fee: ${feeAleo}). ` +
-            `Reveal requires PRIVATE credits (records), not public balance. ` +
-            `If your ALEO is public (from faucet), run credits.aleo/transfer_public_to_private first. ` +
-            `Shield Wallet handles this automatically via delegated proving.`
+            `Not enough ALEO to reveal this bid. You need ${totalAleo} ALEO (${bidAleo} bid amount + ${feeAleo} network fee). ` +
+            `If you received ALEO from the faucet, Shield Wallet will handle the conversion automatically.`
           )
           return
         }

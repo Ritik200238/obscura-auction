@@ -78,14 +78,7 @@ export default function Browse() {
         const parsed = JSON.parse(cached)
         if (Array.isArray(parsed) && parsed.length > 0) ids = parsed
       }
-      // Seed with known testnet auction IDs so Browse is never empty
-      if (ids.length === 0) {
-        ids = [
-          { auction_id: '3260538278553498539952032815960203938089422917682498124688254011404384920985', title: 'Vickrey Demo Auction', description: 'Second-price sealed bid demo' },
-          { auction_id: '5765804604498146834891098015942662361794790965609988498577075879791498140950', title: 'Dutch Auction Example', description: 'Descending price — first bid wins' },
-          { auction_id: '4089622424271198767199887088832796800477901588084498908185006862177437037834', title: 'English Auction Test', description: 'Ascending bids with anti-snipe' },
-        ]
-      }
+      if (ids.length === 0) return  // No cached data — show empty state
 
       const results = await Promise.allSettled(
         ids.map(async (entry) => {

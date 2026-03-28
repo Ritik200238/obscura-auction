@@ -12,6 +12,7 @@ import { useBlockHeight } from '@/contexts/BlockHeightContext'
 import { fetchMapping, formatAleoAmount, truncateId, generateNonce, toMicrocredits, fetchBlockHeight, fetchCreditsRecord, serializeRecordForTx, blockHeightToTime } from '@/lib/aleo'
 import { config } from '@/lib/config'
 import { TOKEN_TYPE, TOKEN_LABELS } from '@/types'
+import toast from 'react-hot-toast'
 import { ShimmerCard } from '@/components/shared/Shimmer'
 import FaucetBanner from '@/components/shared/FaucetBanner'
 import TransactionProgress from '@/components/shared/TransactionProgress'
@@ -148,6 +149,7 @@ export default function TokenSale() {
     const deadlineHeight = currentHeight + durationToBlocks(deadline)
 
     const result = await execute({
+      program: 'obscura_market_v1.aleo',
       functionName: 'create_token_sale',
       inputs: [
         `${supplyMicros}u128`,
@@ -165,7 +167,10 @@ export default function TokenSale() {
   }
 
   const handleBid = async (sale: TokenSaleData) => {
-    if (!connected || !publicKey || !requestRecords) return
+    if (!connected || !publicKey || !requestRecords) {
+      toast.error('Connect your wallet first')
+      return
+    }
     if (!bidQuantity || !bidPrice) return
 
     setBiddingSaleId(sale.sale_id)
@@ -186,6 +191,7 @@ export default function TokenSale() {
           return
         }
         await execute({
+          program: 'obscura_market_v1.aleo',
           functionName: 'bid_token_sale',
           inputs: [
             saleKey,
@@ -198,6 +204,7 @@ export default function TokenSale() {
         })
       } else {
         await execute({
+          program: 'obscura_market_v1.aleo',
           functionName: 'bid_token_sale_usdcx',
           inputs: [
             saleKey,
@@ -234,7 +241,10 @@ export default function TokenSale() {
             Refresh
           </button>
           <button
-            onClick={() => setShowCreate(!showCreate)}
+            onClick={() => {
+              if (!connected) { toast.error('Connect your wallet first'); return }
+              setShowCreate(!showCreate)
+            }}
             className="btn-primary text-xs inline-flex items-center gap-2 py-2.5"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -356,7 +366,10 @@ export default function TokenSale() {
             Launch a fair-distribution token sale with fixed supply and minimum pricing on Aleo.
           </p>
           <button
-            onClick={() => setShowCreate(true)}
+            onClick={() => {
+              if (!connected) { toast.error('Connect your wallet first'); return }
+              setShowCreate(true)
+            }}
             className="btn-primary inline-flex items-center gap-2 text-sm px-6 py-3"
           >
             <Plus className="w-4 h-4" />
@@ -376,6 +389,7 @@ export default function TokenSale() {
                 sale={sale}
                 currentBlock={blockHeight}
                 onBid={() => {
+                  if (!connected) { toast.error('Connect your wallet first'); return }
                   setBiddingSaleId(sale.sale_id)
                   setBidQuantity('')
                   setBidPrice(formatAleoAmount(sale.min_price_per_token))

@@ -34,7 +34,7 @@ function fakeBidAmount(index: number, highest: number): string {
   if (amount >= 1000000) {
     return `${(amount / 1000000).toFixed(2)} ALEO`
   }
-  return `${amount.toFixed(0)} microcredits`
+  return `${(amount / 1000000).toFixed(6)} ALEO`
 }
 
 const MODE_LABELS: Record<number, string> = {
@@ -182,7 +182,7 @@ export default function PublicComparison({
 
             {/* Privacy summary */}
             <div className="bg-black/20 rounded-lg p-3 space-y-2.5">
-              <PrivacyLine label="Sealed bids" value={`${bidCount} encrypted commitments`} />
+              <PrivacyLine label="Sealed bids" value={`${bidCount} encrypted bids`} />
               <PrivacyLine label="Bid amounts" value="All amounts encrypted on-chain" />
               <PrivacyLine label="Bidder identities" value="Hidden behind ZK hashes" />
               <PrivacyLine
@@ -197,7 +197,7 @@ export default function PublicComparison({
             <div className="flex items-center gap-2 pt-2 border-t border-accent-500/10">
               <ShieldCheck className="w-3 h-3 text-accent-400/50" />
               <span className="text-[10px] text-accent-400/50">
-                obscura_v5.aleo — all bids sealed with BHP256 commitments
+                obscura_v5.aleo — all bids sealed with encrypted commitments
               </span>
             </div>
           </motion.div>
