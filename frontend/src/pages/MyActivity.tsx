@@ -1,25 +1,110 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { useRecords } from '@/hooks/useRecords'
-import { motion } from 'framer-motion'
+import { useTransaction } from '@/hooks/useTransaction'
+import { motion, AnimatePresence } from 'framer-motion'
 import { staggerContainer, fadeInUp } from '@/lib/animations'
-import { Loader2, RefreshCw, Wallet, Lock, Receipt, Award, AlertCircle, ArrowUpRight, Search } from 'lucide-react'
-import { formatAleoAmount, truncateId, shortenAddress, formatTokenAmount } from '@/lib/aleo'
+import { Loader2, RefreshCw, Wallet, Lock, Receipt, Award, AlertCircle, ArrowUpRight, Search, Eye, Send, X } from 'lucide-react'
+import { formatAleoAmount, truncateId, shortenAddress, formatTokenAmount, serializeRecordForTx } from '@/lib/aleo'
+import { config } from '@/lib/config'
 import { TOKEN_TYPE } from '@/types'
 import { ShimmerRow } from '@/components/shared/Shimmer'
 import FaucetBanner from '@/components/shared/FaucetBanner'
+import TransactionProgress from '@/components/shared/TransactionProgress'
 import { Link } from 'react-router-dom'
 
 export default function MyActivity() {
-  const { connected, address: publicKey } = useWallet()
+  const { connected, address: publicKey, requestRecords } = useWallet()
   const { refresh, sealedBids, escrowReceipts, winnerCerts, loading, error } = useRecords()
-  const [activeTab, setActiveTab] = useState<'bids' | 'escrow' | 'certificates'>('bids')
+  const { execute, loading: txLoading, error: txError, txId, status: txStatus, reset: resetTx } = useTransaction()
+  const [activeTab, setActiveTab] = useState<'bids' | 'escrow' | 'certificates' | 'permits'>('bids')
+  const [viewPermits, setViewPermits] = useState<any[]>([])
+  const [grantingCertIdx, setGrantingCertIdx] = useState<number | null>(null)
+  const [auditorAddress, setAuditorAddress] = useState('')
+
+  const loadViewPermits = useCallback(async () => {
+    if (!requestRecords) return
+    try {
+      const records = await requestRecords(config.programId)
+      const recs = Array.isArray(records) ? records : []
+      const permits: any[] = []
+      for (const raw of recs) {
+        const record = raw as Record<string, unknown>
+        const data = (record.data && typeof record.data === 'object' ? record.data : record) as Record<string, unknown>
+        const recordName = String(record.recordName || record.record_name || record.type || '')
+        const plaintext = typeof record.plaintext === 'string' ? record.plaintext : null
+
+        const extractField = (name: string) => {
+          if (data[name] !== undefined) return data[name]
+          if (plaintext) {
+            const regex = new RegExp(`${name}\\s*:\\s*([^,}]+)`)
+            const match = plaintext.match(regex)
+            if (match && match[1]) return match[1].trim()
+          }
+          return undefined
+        }
+
+        if (recordName === 'ViewPermit' || (extractField('winning_price') !== undefined && extractField('granted_by') !== undefined)) {
+          const strip = (v: unknown) => String(v || '').replace(/u128|u64|u32|u8|field|\.private|\.public/g, '').trim()
+          permits.push({
+            auction_id: strip(extractField('auction_id')),
+            winning_price: strip(extractField('winning_price')),
+            item_hash: strip(extractField('item_hash')),
+            settled_at: strip(extractField('settled_at')),
+            granted_by: strip(extractField('granted_by')),
+          })
+        }
+      }
+      setViewPermits(permits)
+    } catch { /* silent */ }
+  }, [requestRecords])
+
+  const handleGrantViewAccess = async (certIndex: number) => {
+    if (!auditorAddress || !winnerCerts[certIndex]) return
+    const cert = winnerCerts[certIndex]
+
+    // Need the raw record for the transaction
+    try {
+      const records = await requestRecords(config.programId)
+      const recs = Array.isArray(records) ? records : []
+      let rawCert: any = null
+      let certCount = 0
+
+      for (const raw of recs) {
+        const record = raw as Record<string, unknown>
+        const data = (record.data && typeof record.data === 'object' ? record.data : record) as Record<string, unknown>
+        const recordName = String(record.recordName || record.record_name || record.type || '')
+        if (recordName === 'WinnerCertificate' || data.winning_amount !== undefined) {
+          if (certCount === certIndex) {
+            rawCert = raw
+            break
+          }
+          certCount++
+        }
+      }
+
+      if (!rawCert) return
+
+      const certPlaintext = serializeRecordForTx(rawCert)
+      const auctionKey = cert.auction_id.endsWith('field') ? cert.auction_id : `${cert.auction_id}field`
+
+      await execute({
+        functionName: 'grant_view_access',
+        inputs: [certPlaintext, auditorAddress, auctionKey],
+        recordIndices: [0],
+      })
+
+      setGrantingCertIdx(null)
+      setAuditorAddress('')
+    } catch { /* error shown via hook */ }
+  }
 
   useEffect(() => {
     if (connected) {
       refresh()
+      loadViewPermits()
     }
-  }, [connected, refresh])
+  }, [connected, refresh, loadViewPermits])
 
   if (!connected) {
     return (
@@ -61,6 +146,7 @@ export default function MyActivity() {
     { id: 'bids' as const, label: 'Sealed Bids', icon: Lock, count: sealedBids.length },
     { id: 'escrow' as const, label: 'Escrow Receipts', icon: Receipt, count: escrowReceipts.length },
     { id: 'certificates' as const, label: 'Certificates', icon: Award, count: winnerCerts.length },
+    { id: 'permits' as const, label: 'View Permits', icon: Eye, count: viewPermits.length },
   ]
 
   const totalRecords = sealedBids.length + escrowReceipts.length + winnerCerts.length
@@ -214,36 +300,112 @@ export default function MyActivity() {
 
           {activeTab === 'certificates' && winnerCerts.map((cert, i) => (
             <motion.div key={i} variants={fadeInUp}>
-            <Link
-              to={`/auction/${cert.auction_id}`}
-              className="card-hover block group border-yellow-500/20 hover:border-yellow-500/40"
-            >
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500/20 to-amber-500/10 flex items-center justify-center shrink-0">
-                    <Award className="w-4 h-4 text-yellow-400" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm text-white font-medium group-hover:text-yellow-400 transition-colors">
-                        Winner Certificate
-                      </p>
-                      <span className="text-[9px] font-bold text-yellow-400 bg-yellow-500/20 px-1.5 py-0.5 rounded-full">
-                        WON
-                      </span>
+              <div className="card group border-yellow-500/20">
+                <Link
+                  to={`/auction/${cert.auction_id}`}
+                  className="block hover:opacity-90 transition-opacity"
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500/20 to-amber-500/10 flex items-center justify-center shrink-0">
+                        <Award className="w-4 h-4 text-yellow-400" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-white font-medium group-hover:text-yellow-400 transition-colors">
+                            Winner Certificate
+                          </p>
+                          <span className="text-[9px] font-bold text-yellow-400 bg-yellow-500/20 px-1.5 py-0.5 rounded-full">
+                            WON
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 font-mono">{truncateId(cert.auction_id, 10)}</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-500 font-mono">{truncateId(cert.auction_id, 10)}</p>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-sm text-yellow-400 font-semibold">{formatTokenAmount(cert.winning_amount, cert.token_type)}</p>
+                        <p className="text-xs text-gray-500">Winning Amount</p>
+                      </div>
+                      <ArrowUpRight className="w-4 h-4 text-gray-600 group-hover:text-yellow-400 transition-colors" />
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <p className="text-sm text-yellow-400 font-semibold">{formatTokenAmount(cert.winning_amount, cert.token_type)}</p>
-                    <p className="text-xs text-gray-500">Winning Amount</p>
-                  </div>
-                  <ArrowUpRight className="w-4 h-4 text-gray-600 group-hover:text-yellow-400 transition-colors" />
+                </Link>
+                {/* Grant View Access */}
+                <div className="mt-3 pt-3 border-t border-surface-700/50">
+                  {grantingCertIdx === i ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={auditorAddress}
+                        onChange={(e) => setAuditorAddress(e.target.value)}
+                        placeholder="Auditor Aleo address (aleo1...)"
+                        className="input-field text-sm"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setGrantingCertIdx(null); setAuditorAddress(''); resetTx() }}
+                          className="btn-secondary text-xs py-1.5 flex-1"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleGrantViewAccess(i)}
+                          disabled={txLoading || !auditorAddress}
+                          className="btn-primary text-xs py-1.5 flex-1"
+                        >
+                          {txLoading ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : 'Grant Access'}
+                        </button>
+                      </div>
+                      {txStatus !== 'idle' && (
+                        <TransactionProgress status={txStatus} txId={txId} error={txError} onRetry={resetTx} />
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { setGrantingCertIdx(i); resetTx() }}
+                      className="text-xs text-accent-400 hover:text-accent-300 flex items-center gap-1.5"
+                    >
+                      <Eye className="w-3 h-3" />
+                      Grant View Access to Auditor
+                    </button>
+                  )}
                 </div>
               </div>
-            </Link>
+            </motion.div>
+          ))}
+
+          {activeTab === 'permits' && viewPermits.map((permit, i) => (
+            <motion.div key={i} variants={fadeInUp}>
+              <Link
+                to={`/auction/${permit.auction_id}`}
+                className="card-hover block group border-cyan-500/20 hover:border-cyan-500/40"
+              >
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center shrink-0">
+                      <Eye className="w-4 h-4 text-cyan-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-white font-medium group-hover:text-cyan-400 transition-colors">
+                        View Permit
+                      </p>
+                      <p className="text-xs text-gray-500 font-mono">{truncateId(permit.auction_id, 10)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-sm text-cyan-400 font-semibold">{formatAleoAmount(permit.winning_price)}</p>
+                      <p className="text-xs text-gray-500">Winning Price</p>
+                    </div>
+                    <ArrowUpRight className="w-4 h-4 text-gray-600 group-hover:text-cyan-400 transition-colors" />
+                  </div>
+                </div>
+                <div className="mt-2 pt-2 border-t border-surface-700/30 flex items-center gap-4 text-[10px] text-gray-600">
+                  <span>Item: {truncateId(permit.item_hash, 8)}</span>
+                  <span>Granted by: {truncateId(permit.granted_by, 8)}</span>
+                </div>
+              </Link>
             </motion.div>
           ))}
 
@@ -283,7 +445,19 @@ export default function MyActivity() {
               </div>
               <h3 className="text-white font-semibold mb-1">No Winner Certificates</h3>
               <p className="text-gray-500 text-sm max-w-xs mx-auto">
-                Win an auction to earn your first certificate! In Vickrey mode, you pay the second-highest bid — game-theoretically optimal.
+                Win an auction to earn your first certificate! In Vickrey mode, you pay the second-highest bid -- game-theoretically optimal.
+              </p>
+            </div>
+          )}
+
+          {activeTab === 'permits' && viewPermits.length === 0 && (
+            <div className="text-center py-12">
+              <div className="w-14 h-14 rounded-xl bg-cyan-500/10 flex items-center justify-center mx-auto mb-4">
+                <Eye className="w-6 h-6 text-cyan-400" />
+              </div>
+              <h3 className="text-white font-semibold mb-1">No View Permits</h3>
+              <p className="text-gray-500 text-sm max-w-xs mx-auto">
+                View permits are granted by auction winners to auditors or institutions. They allow selective disclosure of outcome details without revealing raw records.
               </p>
             </div>
           )}

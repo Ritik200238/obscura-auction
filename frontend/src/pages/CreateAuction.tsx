@@ -22,11 +22,17 @@ import {
   Clock,
   Copy,
   Users,
+  CalendarClock,
+  Lock,
+  Percent,
+  ToggleLeft,
+  ToggleRight,
 } from 'lucide-react'
 import TransactionLink from '@/components/shared/TransactionLink'
 import AuctionQR from '@/components/shared/AuctionQR'
 import FaucetBanner from '@/components/shared/FaucetBanner'
 import ShieldWalletBanner from '@/components/shared/ShieldWalletBanner'
+import PrivacyScore from '@/components/shared/PrivacyScore'
 
 const categories = [
   { value: 1, label: 'Art' },
@@ -59,6 +65,12 @@ export default function CreateAuction() {
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null)
   const [startPrice, setStartPrice] = useState('')
   const [endPrice, setEndPrice] = useState('')
+  const [scheduleEnabled, setScheduleEnabled] = useState(false)
+  const [scheduleBlocks, setScheduleBlocks] = useState('')
+  const [timelockEnabled, setTimelockEnabled] = useState(false)
+  const [timelockBlocks, setTimelockBlocks] = useState('')
+  const [royaltyEnabled, setRoyaltyEnabled] = useState(false)
+  const [royaltyPct, setRoyaltyPct] = useState(2.5)
   const [formError, setFormError] = useState<string | null>(null)
   const [createdAuctionId, setCreatedAuctionId] = useState<string | null>(null)
   const [onChainAuctionId, setOnChainAuctionId] = useState<string | null>(null)
@@ -215,6 +227,52 @@ export default function CreateAuction() {
     )
   }, [txId, createdAuctionId, onChainAuctionId, registerAuctionWithBackend])
 
+  // Fire advanced option calls once we have the on-chain auction ID
+  useEffect(() => {
+    if (!onChainAuctionId) return
+    const opts = (window as any).__obscura_advanced_opts
+    if (!opts) return
+    delete (window as any).__obscura_advanced_opts
+
+    const auctionKey = onChainAuctionId.endsWith('field') ? onChainAuctionId : `${onChainAuctionId}field`
+
+    const fireAdvancedCalls = async () => {
+      const currentHeight = opts.currentHeight || await fetchBlockHeight()
+
+      if (opts.scheduleEnabled && opts.scheduleBlocks) {
+        const startBlock = currentHeight + parseInt(opts.scheduleBlocks, 10)
+        try {
+          await execute({
+            functionName: 'set_auction_schedule',
+            inputs: [auctionKey, `${startBlock}u64`],
+          })
+        } catch { /* non-critical */ }
+      }
+
+      if (opts.timelockEnabled && opts.timelockBlocks) {
+        const revealBlock = currentHeight + parseInt(opts.timelockBlocks, 10) + durationToBlocks(duration) + 5000
+        try {
+          await execute({
+            functionName: 'set_result_timelock',
+            inputs: [auctionKey, `${revealBlock}u64`],
+          })
+        } catch { /* non-critical */ }
+      }
+
+      if (opts.royaltyEnabled && opts.royaltyPct > 0 && publicKey) {
+        const bps = Math.round(opts.royaltyPct * 100)
+        try {
+          await execute({
+            functionName: 'set_royalty',
+            inputs: [auctionKey, publicKey, `${bps}u128`],
+          })
+        } catch { /* non-critical */ }
+      }
+    }
+
+    fireAdvancedCalls()
+  }, [onChainAuctionId])
+
   const validate = (): boolean => {
     if (!title.trim()) {
       setFormError('Item title is required')
@@ -324,6 +382,14 @@ export default function CreateAuction() {
           seller: publicKey || '',
           tokenType,
           deadlineHeight,
+        }
+
+        // Queue advanced option calls (schedule, time-lock, royalty)
+        // These will be called after the auction ID is available
+        const advancedCallsRef = { scheduleEnabled, scheduleBlocks, timelockEnabled, timelockBlocks, royaltyEnabled, royaltyPct, currentHeight: startHeight }
+        if (advancedCallsRef.scheduleEnabled || advancedCallsRef.timelockEnabled || advancedCallsRef.royaltyEnabled) {
+          // Store for the onChainAuctionId effect to pick up
+          ;(window as any).__obscura_advanced_opts = advancedCallsRef
         }
 
         // If the ID is already a real on-chain TX ID (Leo Wallet), start polling immediately
@@ -839,6 +905,124 @@ export default function CreateAuction() {
           </div>
         </div>
 
+        {/* Advanced Options */}
+        <div className="card">
+          <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-accent-400" />
+            3. Advanced Options
+          </h3>
+          <div className="space-y-4">
+            {/* Schedule for later */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-surface-800/40 border border-surface-700/50">
+              <button
+                type="button"
+                onClick={() => setScheduleEnabled(!scheduleEnabled)}
+                className="mt-0.5 shrink-0"
+              >
+                {scheduleEnabled ? (
+                  <ToggleRight className="w-6 h-6 text-accent-400" />
+                ) : (
+                  <ToggleLeft className="w-6 h-6 text-gray-600" />
+                )}
+              </button>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <CalendarClock className="w-3.5 h-3.5 text-cyan-400" />
+                  <p className="text-sm font-medium text-white">Schedule for later</p>
+                </div>
+                <p className="text-[10px] text-gray-500 mt-0.5">Auction is created now but bidding opens later.</p>
+                {scheduleEnabled && (
+                  <div className="mt-2">
+                    <input
+                      type="number"
+                      min="1"
+                      value={scheduleBlocks}
+                      onChange={(e) => setScheduleBlocks(e.target.value)}
+                      placeholder="Blocks from now (e.g., 240 = ~1 hour)"
+                      className="input-field text-sm"
+                    />
+                    <p className="text-[10px] text-gray-600 mt-1">~{config.blockTime} seconds per block. 240 blocks = ~1 hour.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Time-lock results */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-surface-800/40 border border-surface-700/50">
+              <button
+                type="button"
+                onClick={() => setTimelockEnabled(!timelockEnabled)}
+                className="mt-0.5 shrink-0"
+              >
+                {timelockEnabled ? (
+                  <ToggleRight className="w-6 h-6 text-accent-400" />
+                ) : (
+                  <ToggleLeft className="w-6 h-6 text-gray-600" />
+                )}
+              </button>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  <p className="text-sm font-medium text-white">Time-lock results</p>
+                </div>
+                <p className="text-[10px] text-gray-500 mt-0.5">Keep the winning price private until a specified block.</p>
+                {timelockEnabled && (
+                  <div className="mt-2">
+                    <input
+                      type="number"
+                      min="1"
+                      value={timelockBlocks}
+                      onChange={(e) => setTimelockBlocks(e.target.value)}
+                      placeholder="Blocks after settlement (e.g., 480 = ~2 hours)"
+                      className="input-field text-sm"
+                    />
+                    <p className="text-[10px] text-gray-600 mt-1">Result is revealed publicly after this delay.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Creator Royalty */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-surface-800/40 border border-surface-700/50">
+              <button
+                type="button"
+                onClick={() => setRoyaltyEnabled(!royaltyEnabled)}
+                className="mt-0.5 shrink-0"
+              >
+                {royaltyEnabled ? (
+                  <ToggleRight className="w-6 h-6 text-accent-400" />
+                ) : (
+                  <ToggleLeft className="w-6 h-6 text-gray-600" />
+                )}
+              </button>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <Percent className="w-3.5 h-3.5 text-purple-400" />
+                  <p className="text-sm font-medium text-white">Set creator royalty</p>
+                </div>
+                <p className="text-[10px] text-gray-500 mt-0.5">Creator receives a percentage on settlement.</p>
+                {royaltyEnabled && (
+                  <div className="mt-2">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range"
+                        min="0"
+                        max="10"
+                        step="0.5"
+                        value={royaltyPct}
+                        onChange={(e) => setRoyaltyPct(parseFloat(e.target.value))}
+                        className="flex-1 accent-purple-500"
+                      />
+                      <span className="text-sm font-semibold text-purple-400 w-12 text-right">{royaltyPct}%</span>
+                    </div>
+                    <p className="text-[10px] text-gray-600 mt-1">{(royaltyPct * 100).toFixed(0)} basis points. Max 10%.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Privacy Notice */}
         <div className="bg-accent-500/5 border border-accent-500/20 rounded-xl p-4">
           <p className="text-accent-400 text-sm font-medium mb-1">Privacy Guarantees</p>
@@ -885,6 +1069,10 @@ export default function CreateAuction() {
             <div><span className="text-gray-500">Mode: </span><span className="text-white">{modeLabel}</span></div>
             <div><span className="text-gray-500">Token: </span><span className="text-white">{tokenLabel}</span></div>
             <div><span className="text-gray-500">Reserve: </span><span className="text-white font-mono">{reservePrice || '—'}</span></div>
+            <div className="col-span-2 flex items-center gap-1.5">
+              <span className="text-gray-500">Privacy: </span>
+              <PrivacyScore auctionMode={auctionMode} tokenType={tokenType} size="sm" />
+            </div>
           </div>
         </div>
 
@@ -981,6 +1169,14 @@ export default function CreateAuction() {
               <div className="flex justify-between">
                 <span className="text-gray-500">Duration</span>
                 <span className="text-white">{durationLabel}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Privacy Grade</span>
+                <PrivacyScore
+                  auctionMode={auctionMode}
+                  tokenType={tokenType}
+                  size="sm"
+                />
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Privacy</span>

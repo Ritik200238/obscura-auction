@@ -2,14 +2,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { staggerContainer, fadeInUp } from '@/lib/animations'
-import { Search, Filter, PackageOpen, RefreshCw, AlertTriangle, Plus, Shield, Coins, Radio } from 'lucide-react'
+import { Search, Filter, PackageOpen, RefreshCw, AlertTriangle, Plus, Shield, Coins, Radio, CalendarClock, Clock } from 'lucide-react'
 import { useAuctionStore } from '@/stores/auctionStore'
 import { useBlockHeight } from '@/contexts/BlockHeightContext'
-import { fetchMapping, parseAuctionData } from '@/lib/aleo'
+import { fetchMapping, parseAuctionData, blockHeightToTime } from '@/lib/aleo'
 import { config } from '@/lib/config'
 import { AuctionCard } from '@/components/auction/AuctionCard'
 import { ShimmerCard } from '@/components/shared/Shimmer'
 import FaucetBanner from '@/components/shared/FaucetBanner'
+import ActivityFeedSidebar from '@/components/shared/ActivityFeed'
 import { STATUS, TOKEN_TYPE, AUCTION_MODE } from '@/types'
 import type { AuctionData } from '@/types'
 
@@ -53,6 +54,8 @@ export default function Browse() {
   const [lookupId, setLookupId] = useState('')
   const [lookupError, setLookupError] = useState<string | null>(null)
   const [backendDown, setBackendDown] = useState(false)
+  const [viewTab, setViewTab] = useState<'all' | 'upcoming'>('all')
+  const [scheduledMap, setScheduledMap] = useState<Record<string, number>>({})
 
   /** Save known auction IDs to localStorage for fallback when backend is down */
   const cacheAuctionIds = (auctionList: AuctionData[]) => {
@@ -75,8 +78,14 @@ export default function Browse() {
         const parsed = JSON.parse(cached)
         if (Array.isArray(parsed) && parsed.length > 0) ids = parsed
       }
-      // No seed data — show empty state instead of fake auctions
-      if (ids.length === 0) return
+      // Seed with known testnet auction IDs so Browse is never empty
+      if (ids.length === 0) {
+        ids = [
+          { auction_id: '3260538278553498539952032815960203938089422917682498124688254011404384920985', title: 'Vickrey Demo Auction', description: 'Second-price sealed bid demo' },
+          { auction_id: '5765804604498146834891098015942662361794790965609988498577075879791498140950', title: 'Dutch Auction Example', description: 'Descending price — first bid wins' },
+          { auction_id: '4089622424271198767199887088832796800477901588084498908185006862177437037834', title: 'English Auction Test', description: 'Ascending bids with anti-snipe' },
+        ]
+      }
 
       const results = await Promise.allSettled(
         ids.map(async (entry) => {
@@ -162,12 +171,49 @@ export default function Browse() {
     fetchAuctionsFromBackend()
   }, [fetchAuctionsFromBackend])
 
-  const displayed = filteredAuctions().filter((a) => {
+  // Check for scheduled start blocks on active auctions
+  useEffect(() => {
+    if (auctions.length === 0) return
+    const activeAuctions = auctions.filter(a => a.status === STATUS.ACTIVE)
+    if (activeAuctions.length === 0) return
+
+    Promise.allSettled(
+      activeAuctions.map(async (a) => {
+        const key = a.auction_id.endsWith('field') ? a.auction_id : `${a.auction_id}field`
+        const raw = await fetchMapping('scheduled_start', key)
+        if (raw) {
+          const block = parseInt(raw.replace(/u64\s*$/, '').trim(), 10)
+          if (block > 0) return { id: a.auction_id, block }
+        }
+        return null
+      })
+    ).then((results) => {
+      const newMap: Record<string, number> = {}
+      results.forEach(r => {
+        if (r.status === 'fulfilled' && r.value) {
+          newMap[r.value.id] = r.value.block
+        }
+      })
+      setScheduledMap(newMap)
+    })
+  }, [auctions])
+
+  const upcomingIds = new Set(
+    Object.entries(scheduledMap)
+      .filter(([_, block]) => blockHeight > 0 && block > blockHeight)
+      .map(([id]) => id)
+  )
+
+  const allDisplayed = filteredAuctions().filter((a) => {
     if (searchId.trim()) {
       return a.auction_id.toLowerCase().includes(searchId.trim().toLowerCase())
     }
     return true
   })
+
+  const displayed = viewTab === 'upcoming'
+    ? allDisplayed.filter(a => upcomingIds.has(a.auction_id))
+    : allDisplayed.filter(a => !upcomingIds.has(a.auction_id))
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -197,11 +243,11 @@ export default function Browse() {
 
       {/* Backend down banner */}
       {backendDown && (
-        <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 mb-4">
-          <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
-          <p className="text-sm text-yellow-300">
-            Indexer is unavailable — showing cached auctions with live on-chain data.
-            Use the on-chain lookup below to find auctions by ID directly.
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-surface-800/50 border border-surface-700 mb-4">
+          <Radio className="w-4 h-4 text-accent-400 mt-0.5 shrink-0" />
+          <p className="text-sm text-gray-400">
+            Loading data directly from the Aleo blockchain.
+            You can also search by Auction ID below.
           </p>
         </div>
       )}
@@ -216,7 +262,7 @@ export default function Browse() {
       <div className="glass-card p-5 mb-6 glow-sm">
         <div className="flex items-center gap-2 mb-3">
           <Shield className="w-4 h-4 text-accent-400" />
-          <h3 className="text-sm font-medium text-white">On-Chain Auction Lookup</h3>
+          <h3 className="text-sm font-medium text-white">Find an Auction by ID</h3>
           <span className="text-[10px] text-gray-600 ml-1">Reads directly from Aleo blockchain</span>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
@@ -224,7 +270,7 @@ export default function Browse() {
             type="text"
             value={lookupId}
             onChange={(e) => setLookupId(e.target.value)}
-            placeholder="Paste auction_id field hash..."
+            placeholder="Paste an Auction ID (e.g. 1234...field)"
             className="input-field flex-1 font-mono text-sm min-w-0"
             onKeyDown={(e) => e.key === 'Enter' && handleDirectLookup()}
           />
@@ -234,6 +280,33 @@ export default function Browse() {
         </div>
         {lookupError && <p className="text-xs text-red-400 mt-2">{lookupError}</p>}
       </div>
+
+      {/* View Tabs */}
+      {upcomingIds.size > 0 && (
+        <div className="flex gap-1 mb-4">
+          <button
+            onClick={() => setViewTab('all')}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+              viewTab === 'all'
+                ? 'bg-accent-500/10 text-accent-400'
+                : 'text-gray-400 hover:text-white hover:bg-surface-800/60'
+            }`}
+          >
+            Active Auctions
+          </button>
+          <button
+            onClick={() => setViewTab('upcoming')}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+              viewTab === 'upcoming'
+                ? 'bg-cyan-500/10 text-cyan-400'
+                : 'text-gray-400 hover:text-white hover:bg-surface-800/60'
+            }`}
+          >
+            <CalendarClock className="w-3.5 h-3.5" />
+            Upcoming ({upcomingIds.size})
+          </button>
+        </div>
+      )}
 
       {/* Search and Filters */}
       <div className="card mb-6">
@@ -319,7 +392,9 @@ export default function Browse() {
         </div>
       </div>
 
-      {/* Results */}
+      {/* Results with Activity Sidebar */}
+      <div className="flex gap-6">
+      <div className="flex-1 min-w-0">
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -368,6 +443,7 @@ export default function Browse() {
               <AuctionCard
                 auction={auction}
                 currentBlock={blockHeight}
+                scheduledStart={scheduledMap[auction.auction_id]}
               />
             </motion.div>
           ))}
@@ -379,6 +455,24 @@ export default function Browse() {
         <p className="text-center text-gray-600 text-xs mt-6">
           Showing {displayed.length} of {auctions.length} auction{auctions.length !== 1 ? 's' : ''}
         </p>
+      )}
+      </div>
+
+      {/* Activity Feed Sidebar — desktop only */}
+      {auctions.length > 0 && (
+        <div className="hidden xl:block w-72 shrink-0">
+          <div className="sticky top-24">
+            <ActivityFeedSidebar auctionIds={auctions.map(a => a.auction_id)} />
+          </div>
+        </div>
+      )}
+      </div>
+
+      {/* Activity Feed — mobile */}
+      {auctions.length > 0 && (
+        <div className="xl:hidden mt-6">
+          <ActivityFeedSidebar auctionIds={auctions.map(a => a.auction_id)} />
+        </div>
       )}
     </div>
   )

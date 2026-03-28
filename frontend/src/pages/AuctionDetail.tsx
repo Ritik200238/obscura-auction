@@ -18,6 +18,11 @@ import {
   Shield,
   Zap,
   Copy,
+  Lock,
+  Unlock,
+  Link2,
+  Percent,
+  CalendarClock,
 } from 'lucide-react'
 import { useAuction } from '@/hooks/useAuction'
 import { useRecords } from '@/hooks/useRecords'
@@ -59,6 +64,14 @@ import TransactionLink from '@/components/shared/TransactionLink'
 import AuctionQR from '@/components/shared/AuctionQR'
 import FaucetBanner from '@/components/shared/FaucetBanner'
 import ShieldWalletBanner from '@/components/shared/ShieldWalletBanner'
+import PrivacyScore from '@/components/shared/PrivacyScore'
+import PublicComparison from '@/components/shared/PublicComparison'
+import PrivacyMonitor from '@/components/shared/PrivacyMonitor'
+import ReputationBadge from '@/components/shared/ReputationBadge'
+import TimeLockSection from '@/components/auction/TimeLockSection'
+import ProvenanceChain from '@/components/auction/ProvenanceChain'
+import RoyaltyDisplay from '@/components/auction/RoyaltyDisplay'
+import ScheduledBanner from '@/components/auction/ScheduledBanner'
 
 export default function AuctionDetail() {
   const { id } = useParams<{ id: string }>()
@@ -138,6 +151,9 @@ export default function AuctionDetail() {
         <span className="text-gray-400 text-sm font-mono">{truncateId(auction.auction_id, 12)}</span>
       </div>
 
+      {/* Scheduled auction banner */}
+      <ScheduledBanner auctionId={auction.auction_id} />
+
       {/* Animated state machine — prominent for judges */}
       <AuctionStateMachine currentStatus={auction.status} />
 
@@ -165,6 +181,13 @@ export default function AuctionDetail() {
                   <StatusBadge status={auction.status} />
                   <ModeBadge mode={auction.auction_mode} />
                   <span className="text-xs text-gray-500 bg-surface-800 px-2 py-0.5 rounded">{categoryLabel}</span>
+                  <PrivacyScore
+                    auctionMode={auction.auction_mode}
+                    tokenType={auction.token_type}
+                    isSettled={isSettled}
+                    isRevealed={!!winner}
+                    size="md"
+                  />
                 </div>
                 <h1 className="text-2xl font-bold text-white">
                   {auction.title || 'Auction ' + truncateId(auction.auction_id, 8)}
@@ -222,6 +245,46 @@ export default function AuctionDetail() {
           {/* Privacy Dashboard — the #1 differentiator */}
           <motion.div variants={fadeInUp}>
             <PrivacyDashboard status={auction.status} auctionMode={auction.auction_mode} />
+          </motion.div>
+
+          {/* Privacy Monitor — live 3-column visualization */}
+          <motion.div variants={fadeInUp}>
+            <PrivacyMonitor
+              auctionId={auction.auction_id}
+              bidCount={auction.bid_count}
+              status={auction.status}
+              auctionMode={auction.auction_mode}
+              highestBid={Number(highestBid)}
+              itemName={auction.title}
+              deadline={auction.deadline}
+            />
+          </motion.div>
+
+          {/* Public blockchain comparison toggle */}
+          <motion.div variants={fadeInUp}>
+            <PublicComparison
+              bidCount={auction.bid_count}
+              auctionMode={auction.auction_mode}
+              highestBid={Number(highestBid)}
+              status={auction.status}
+            />
+          </motion.div>
+
+          {/* Provenance Chain */}
+          <motion.div variants={fadeInUp}>
+            <ProvenanceChain auctionId={auction.auction_id} />
+          </motion.div>
+
+          {/* Time-Locked Results */}
+          {isSettled && (
+            <motion.div variants={fadeInUp}>
+              <TimeLockSection auctionId={auction.auction_id} />
+            </motion.div>
+          )}
+
+          {/* Royalty Display */}
+          <motion.div variants={fadeInUp}>
+            <RoyaltyDisplay auctionId={auction.auction_id} tokenType={auction.token_type} />
           </motion.div>
 
           {/* Bid summary (post-reveal only) */}
@@ -553,7 +616,13 @@ export default function AuctionDetail() {
             <div className="space-y-3">
               <InfoRow label="Auction ID" value={truncateId(auction.auction_id, 10)} mono />
               <InfoRow label="Item Hash" value={truncateId(auction.item_hash, 10)} mono />
-              <InfoRow label="Seller Hash" value={truncateId(auction.seller_hash, 10)} mono />
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">Seller</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-300 font-mono">{truncateId(auction.seller_hash, 10)}</span>
+                  <ReputationBadge sellerHash={auction.seller_hash} size="sm" />
+                </div>
+              </div>
               <InfoRow label="Bid Deadline" value={`#${auction.deadline.toLocaleString()}`} />
               {auction.reveal_deadline > 0 && (
                 <InfoRow label="Reveal Deadline" value={`#${auction.reveal_deadline.toLocaleString()}`} />

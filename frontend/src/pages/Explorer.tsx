@@ -25,13 +25,23 @@ export default function Explorer() {
   const [loading, setLoading] = useState(true)
   const [searchId, setSearchId] = useState('')
 
+  // Known testnet auction IDs for fallback when backend is down
+  const SEED_IDS = [
+    '3260538278553498539952032815960203938089422917682498124688254011404384920985',
+    '5765804604498146834891098015942662361794790965609988498577075879791498140950',
+    '4089622424271198767199887088832796800477901588084498908185006862177437037834',
+  ]
+
   const fetchData = async () => {
     setLoading(true)
     try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 5000)
       const [statsRes, auctionsRes] = await Promise.all([
-        fetch(`${config.backendApi}/api/stats/overview`),
-        fetch(`${config.backendApi}/api/auctions?limit=20`),
+        fetch(`${config.backendApi}/api/stats/overview`, { signal: controller.signal }),
+        fetch(`${config.backendApi}/api/auctions?limit=20`, { signal: controller.signal }),
       ])
+      clearTimeout(timeout)
       if (statsRes.ok) setStats(await statsRes.json())
       if (auctionsRes.ok) {
         const data = await auctionsRes.json()
@@ -47,7 +57,29 @@ export default function Explorer() {
           setAuctions(enriched.filter((a): a is AuctionData => a !== null))
         }
       }
-    } catch { /* silent */ }
+    } catch {
+      // Backend down — try loading seed auctions directly from chain
+      try {
+        const enriched = await Promise.all(
+          SEED_IDS.map(async (id) => {
+            const key = `${id}field`
+            const raw = await fetchMapping('auctions', key).catch(() => null)
+            if (raw) return parseAuctionData(raw, id)
+            return null
+          })
+        )
+        const valid = enriched.filter((a): a is AuctionData => a !== null)
+        if (valid.length > 0) {
+          setAuctions(valid)
+          setStats({
+            total_auctions: valid.length,
+            total_bids: valid.reduce((sum, a) => sum + (a.bid_count || 0), 0),
+            active_auctions: valid.filter(a => a.status === STATUS.ACTIVE).length,
+            settled_auctions: valid.filter(a => a.status === STATUS.SETTLED).length,
+          })
+        }
+      } catch { /* both failed */ }
+    }
     setLoading(false)
   }
 

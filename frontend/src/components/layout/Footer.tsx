@@ -22,6 +22,12 @@ export default function Footer() {
               <Link to="/browse" className="text-sm text-gray-500 hover:text-accent-400 transition-colors">
                 Browse
               </Link>
+              <Link to="/fixed-sales" className="text-sm text-gray-500 hover:text-accent-400 transition-colors">
+                Buy Now
+              </Link>
+              <Link to="/token-sale" className="text-sm text-gray-500 hover:text-accent-400 transition-colors">
+                Token Sales
+              </Link>
               <a
                 href="https://github.com/Ritik200238/obscura-auction"
                 target="_blank"
@@ -47,11 +53,11 @@ export default function Footer() {
             <div className="flex items-center gap-2 text-xs text-gray-600">
               <span className="font-mono text-gray-500">obscura_v4.aleo</span>
               <span className="text-surface-700">·</span>
-              <span>28 transitions</span>
+              <span>51 transitions</span>
               <span className="text-surface-700">·</span>
-              <span>5 records</span>
+              <span>8 records</span>
               <span className="text-surface-700">·</span>
-              <span>16 mappings</span>
+              <span>32 mappings</span>
             </div>
             <div className="flex items-center gap-3 text-xs text-gray-600">
               <span className="flex items-center gap-1">

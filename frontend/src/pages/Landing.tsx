@@ -624,7 +624,15 @@ function LiveActivityBar() {
       .catch(() => {})
   }, [])
 
-  if (!data || (data.auctions === 0 && data.bids === 0)) return null
+  // Always show the activity bar — even with zeros, it shows liveness
+  if (!data) return (
+    <section className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+      <div className="flex items-center justify-center gap-4 py-4 px-6 rounded-2xl bg-surface-900/60 border border-surface-700/30">
+        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+        <span className="text-xs text-gray-400">Live on Aleo Testnet · 51 transitions · Loading stats...</span>
+      </div>
+    </section>
+  )
 
   return (
     <section className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
@@ -754,20 +762,20 @@ export default function Landing() {
             transition={{ delay: 1.8, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed font-medium"
           >
-            Private auctions on Aleo. Four formats. Three tokens. Zero data leaks.
+            Private auctions on Aleo. Seven market types. Three tokens. Zero data leaks.
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 2.2, duration: 0.5 }}
+            transition={{ delay: 1.2, duration: 0.5 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10"
           >
-            <Link to="/create" className="btn-primary flex items-center gap-2 text-lg px-10 py-4 font-semibold">
+            <Link to="/create" className="btn-primary flex items-center justify-center gap-2 text-lg px-10 py-4 font-semibold w-full sm:w-auto">
               Start Your First Auction
               <ArrowRight className="w-5 h-5" />
             </Link>
-            <Link to="/browse" className="btn-secondary flex items-center gap-2 text-base px-8 py-3.5">
+            <Link to="/browse" className="btn-secondary flex items-center justify-center gap-2 text-base px-8 py-4 w-full sm:w-auto">
               Browse Auctions
               <ArrowRight className="w-4 h-4" />
             </Link>
@@ -777,8 +785,8 @@ export default function Landing() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 2.5, duration: 0.5 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 mt-8 text-xs text-gray-500"
+            transition={{ delay: 1.5, duration: 0.5 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 mt-8 text-sm text-gray-300"
           >
             <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-accent-500/20 text-accent-400 flex items-center justify-center text-[10px] font-bold">1</span> Connect Wallet</span>
             <span className="hidden sm:block text-surface-600">→</span>
@@ -1233,7 +1241,7 @@ export default function Landing() {
             >
               obscura_v4.aleo
             </a>{' '}
-            on Aleo Testnet · 28 transitions · 4 auction formats · Full escrow
+            on Aleo Testnet · 51 transitions · 7 market types · Full escrow
           </motion.p>
         </AnimatedSection>
       </section>

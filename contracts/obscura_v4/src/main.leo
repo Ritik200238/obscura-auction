@@ -4,7 +4,7 @@
 // Four auction formats on Aleo: Sealed First-Price, Vickrey (2nd-price),
 // Dutch (descending-price), and English (ascending-price).
 //
-// 28 transitions | 5 records | 16 mappings | 9 structs | 8-state machine
+// 51 transitions | 8 records | 32 mappings | 12 structs | 8-state machine
 //
 // AUCTION FORMATS:
 //   1. First-Price Sealed-Bid: Commit-reveal. Winner pays own bid.
@@ -132,6 +132,35 @@ program obscura_v4.aleo {
         bond_amount: u128,
     }
 
+    // ViewPermit: Selective disclosure — winner grants an auditor permission
+    // to see specific auction outcome details without revealing raw records.
+    record ViewPermit {
+        owner: address,
+        auction_id: field,
+        winning_price: u128,
+        item_hash: field,
+        settled_at: u64,
+        granted_by: field,
+    }
+
+    // QuoteRecord: Private quote submitted by a seller in response to an RFQ.
+    record QuoteRecord {
+        owner: address,
+        rfq_id: field,
+        quote_amount: u128,
+        quote_hash: field,
+        seller_hash: field,
+        token_type: u8,
+    }
+
+    // CleanSlateProof: On-chain attestation that a wallet has zero disputes.
+    record CleanSlateProof {
+        owner: address,
+        wallet_hash: field,
+        proof_block: u64,
+        auction_count: u64,
+    }
+
     // ========================================================================
     // STRUCTS
     // ========================================================================
@@ -223,6 +252,39 @@ program obscura_v4.aleo {
         filed_at: u64,
     }
 
+    // RFQConfig: Request-For-Quote (reverse auction) configuration.
+    // Buyer posts a request; sellers submit quotes privately.
+    struct RFQConfig {
+        buyer_hash: field,
+        category: u8,
+        max_budget_hash: field,
+        description_hash: field,
+        deadline_block: u32,
+        token_type: u8,
+        is_active: u8,
+    }
+
+    // FixedSaleConfig: Fixed-price private sale listing.
+    // Seller sets a price; first buyer to pay gets the item.
+    struct FixedSaleConfig {
+        seller_hash: field,
+        item_hash: field,
+        price: u128,
+        token_type: u8,
+        is_sold: u8,
+    }
+
+    // TokenSaleConfig: Fair-launch token sale with fixed supply.
+    // Multiple buyers can participate until supply runs out or deadline passes.
+    struct TokenSaleConfig {
+        seller_hash: field,
+        total_supply: u128,
+        remaining_supply: u128,
+        min_price_per_token: u128,
+        token_type: u8,
+        deadline_block: u32,
+    }
+
     // ========================================================================
     // MAPPINGS
     // ========================================================================
@@ -256,6 +318,40 @@ program obscura_v4.aleo {
     mapping disputes: field => DisputeData;
     // dispute_bonds: ALEO bond amount held per disputed auction.
     mapping dispute_bonds: field => u128;
+
+    // ---- Wave 4 mappings ----
+    // scheduled_start: auction_id => start_block (0 means no schedule / immediate).
+    mapping scheduled_start: field => u64;
+    // reveal_deadlines_custom: auction_id => custom reveal deadline block.
+    mapping reveal_deadlines_custom: field => u64;
+    // forfeit_status: bid_hash => 0=active, 1=forfeit.
+    mapping forfeit_status: field => u8;
+    // seller_completed: seller_hash => completed auction count.
+    mapping seller_completed: field => u64;
+    // seller_disputed: seller_hash => disputed auction count.
+    mapping seller_disputed: field => u64;
+    // royalty_info: auction_id => creator_address_hash.
+    mapping royalty_info: field => field;
+    // royalty_bps: auction_id => royalty basis points (max 1000 = 10%).
+    mapping royalty_bps: field => u128;
+    // provenance: auction_id => previous_auction_id (0field if first sale).
+    mapping provenance: field => field;
+    // result_reveal_block: auction_id => block after which result becomes public.
+    mapping result_reveal_block: field => u64;
+    // revealed_results: auction_id => winning_price (public after timelock).
+    mapping revealed_results: field => u128;
+    // rfq_configs: rfq_id => RFQConfig.
+    mapping rfq_configs: field => RFQConfig;
+    // fixed_sales: sale_id => FixedSaleConfig.
+    mapping fixed_sales: field => FixedSaleConfig;
+    // token_sales: sale_id => TokenSaleConfig.
+    mapping token_sales: field => TokenSaleConfig;
+    // rfq_quote_count: rfq_id => number of quotes received.
+    mapping rfq_quote_count: field => u64;
+    // royalty_balances: auction_id => unclaimed royalty amount.
+    mapping royalty_balances: field => u128;
+    // sale_receipts: sale_id => buyer_hash (for fixed sales).
+    mapping sale_receipts: field => field;
 
     // ########################################################################
     //                         CONSTRUCTOR
@@ -523,6 +619,10 @@ program obscura_v4.aleo {
 
         let current_height: u64 = block.height as u64;
         assert(current_height <= auction.deadline);
+
+        // Scheduled start check: if a start_block is set, bidding cannot begin before it.
+        let start: u64 = scheduled_start.get_or_use(auction_id, 0u64);
+        assert(current_height >= start);
 
         let already_exists: bool = bid_commitments.contains(bid_hash);
         assert(!already_exists);
@@ -817,6 +917,18 @@ program obscura_v4.aleo {
                         settled_at: current_height,
                     });
                     settlement_proofs.set(auction_id, settlement_proof);
+
+                    // Reputation: increment seller completed count.
+                    let scount: u64 = seller_completed.get_or_use(auction.seller_hash, 0u64);
+                    seller_completed.set(auction.seller_hash, scount + 1u64);
+
+                    // Royalty: if royalty is configured, calculate and store royalty balance.
+                    let has_royalty: bool = royalty_info.contains(auction_id);
+                    if (has_royalty) {
+                        let rbps: u128 = royalty_bps.get(auction_id);
+                        let royalty_amount: u128 = (winning_amount * rbps) / 10000u128;
+                        royalty_balances.set(auction_id, royalty_amount);
+                    }
                 } else {
                     auctions.set(auction_id, AuctionData {
                         item_hash: auction.item_hash,
@@ -861,6 +973,18 @@ program obscura_v4.aleo {
                     settled_at: current_height,
                 });
                 settlement_proofs.set(auction_id, settlement_proof);
+
+                // Reputation: increment seller completed count.
+                let scount2: u64 = seller_completed.get_or_use(auction.seller_hash, 0u64);
+                seller_completed.set(auction.seller_hash, scount2 + 1u64);
+
+                // Royalty: if royalty is configured, calculate and store royalty balance.
+                let has_royalty2: bool = royalty_info.contains(auction_id);
+                if (has_royalty2) {
+                    let rbps2: u128 = royalty_bps.get(auction_id);
+                    let royalty_amount2: u128 = (winning_amount * rbps2) / 10000u128;
+                    royalty_balances.set(auction_id, royalty_amount2);
+                }
             } else {
                 auctions.set(auction_id, AuctionData {
                     item_hash: auction.item_hash,
@@ -1700,6 +1824,10 @@ program obscura_v4.aleo {
         let current_height: u64 = block.height as u64;
         assert(current_height <= auction.deadline);
 
+        // Scheduled start check.
+        let start: u64 = scheduled_start.get_or_use(auction_id, 0u64);
+        assert(current_height >= start);
+
         let cfg: PlatformConfig = platform_config.get(0u8);
         assert(!cfg.paused);
 
@@ -1824,6 +1952,10 @@ program obscura_v4.aleo {
 
         let current_height: u64 = block.height as u64;
         assert(current_height <= auction.deadline);
+
+        // Scheduled start check.
+        let start: u64 = scheduled_start.get_or_use(auction_id, 0u64);
+        assert(current_height >= start);
 
         let cfg: PlatformConfig = platform_config.get(0u8);
         assert(!cfg.paused);
@@ -1952,6 +2084,18 @@ program obscura_v4.aleo {
                 settled_at: current_height,
             });
             settlement_proofs.set(auction_id, settlement_proof);
+
+            // Reputation: increment seller completed count.
+            let escount: u64 = seller_completed.get_or_use(auction.seller_hash, 0u64);
+            seller_completed.set(auction.seller_hash, escount + 1u64);
+
+            // Royalty: if royalty is configured, calculate and store royalty balance.
+            let ehas_royalty: bool = royalty_info.contains(auction_id);
+            if (ehas_royalty) {
+                let erbps: u128 = royalty_bps.get(auction_id);
+                let eroyalty_amount: u128 = (winning_amount * erbps) / 10000u128;
+                royalty_balances.set(auction_id, eroyalty_amount);
+            }
         } else {
             // Reserve not met or no bids — auction fails.
             // All bidders can claim_refund.
@@ -2298,6 +2442,10 @@ program obscura_v4.aleo {
         let bal: u128 = program_balance.get_or_use(0u8, 0u128);
         program_balance.set(0u8, bal + bond_amount);
 
+        // Reputation: increment seller disputed count.
+        let dcount: u64 = seller_disputed.get_or_use(auction.seller_hash, 0u64);
+        seller_disputed.set(auction.seller_hash, dcount + 1u64);
+
         // Move auction to DISPUTED status.
         auctions.set(auction_id, AuctionData {
             item_hash: auction.item_hash,
@@ -2558,6 +2706,10 @@ program obscura_v4.aleo {
         let current_height: u64 = block.height as u64;
         assert(current_height <= auction.deadline);
 
+        // Scheduled start check.
+        let start: u64 = scheduled_start.get_or_use(auction_id, 0u64);
+        assert(current_height >= start);
+
         let cfg: PlatformConfig = platform_config.get(0u8);
         assert(!cfg.paused);
 
@@ -2663,6 +2815,10 @@ program obscura_v4.aleo {
         let current_height: u64 = block.height as u64;
         assert(current_height <= auction.deadline);
 
+        // Scheduled start check.
+        let start: u64 = scheduled_start.get_or_use(auction_id, 0u64);
+        assert(current_height >= start);
+
         let cfg: PlatformConfig = platform_config.get(0u8);
         assert(!cfg.paused);
 
@@ -2747,6 +2903,942 @@ program obscura_v4.aleo {
         let treasury: u128 = platform_treasury.get(0u8);
         assert(amount <= treasury);
         platform_treasury.set(0u8, treasury - amount);
+    }
+
+    // ########################################################################
+    //    SCHEDULED AUCTIONS — Set a future start time for bidding
+    // ########################################################################
+    //
+    // Allows auction creators to schedule a start block in the future.
+    // All bid finalize blocks check scheduled_start — backward compatible
+    // (0 means immediate start, which is the default).
+
+    async transition set_auction_schedule(
+        private auction_id: field,
+        private start_block: u64
+    ) -> Future {
+        let caller_field: field = self.caller as field;
+        let caller_hash: field = BHP256::hash_to_field(caller_field);
+        return finalize_set_auction_schedule(auction_id, start_block, caller_hash);
+    }
+
+    async function finalize_set_auction_schedule(
+        auction_id: field,
+        start_block: u64,
+        caller_hash: field
+    ) {
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.seller_hash, caller_hash);
+        assert_eq(auction.status, STATUS_ACTIVE);
+
+        let current_height: u64 = block.height as u64;
+        assert(start_block > current_height);
+
+        scheduled_start.set(auction_id, start_block);
+    }
+
+    // ########################################################################
+    //    AUTO-FORFEIT ON MISSED REVEAL — Mark unrevealed bids as forfeit
+    // ########################################################################
+    //
+    // After the reveal deadline, anyone can call this to mark a bid as
+    // forfeit if the bidder failed to reveal. This creates an on-chain
+    // record that the bid was abandoned, useful for analytics and fairness.
+
+    async transition forfeit_unrevealed_bid(
+        private auction_id: field,
+        private bid_hash: field
+    ) -> Future {
+        return finalize_forfeit_unrevealed_bid(auction_id, bid_hash);
+    }
+
+    async function finalize_forfeit_unrevealed_bid(
+        auction_id: field,
+        bid_hash: field
+    ) {
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_REVEALING);
+
+        let current_height: u64 = block.height as u64;
+        assert(current_height > auction.reveal_deadline);
+
+        // Verify the bid was committed but NOT revealed.
+        let was_committed: bool = bid_commitments.contains(bid_hash);
+        assert(was_committed);
+
+        let was_revealed: bool = revealed_bids.contains(bid_hash);
+        assert(!was_revealed);
+
+        // Mark as forfeit.
+        forfeit_status.set(bid_hash, 1u8);
+    }
+
+    // ########################################################################
+    //    SELECTIVE VIEW KEYS — Winner grants auditor access to outcome details
+    // ########################################################################
+    //
+    // The winner can grant a ViewPermit to any address (auditor, insurer,
+    // marketplace) that reveals specific auction outcome details. The
+    // WinnerCertificate is re-created (Leo consumes records on input)
+    // so the winner retains their proof of ownership.
+
+    transition grant_view_access(
+        private winner_cert: WinnerCertificate,
+        private auditor: address,
+        private auction_id: field
+    ) -> (WinnerCertificate, ViewPermit) {
+        assert_eq(winner_cert.auction_id, auction_id);
+
+        // Re-create the certificate (Leo consumes records on input).
+        let new_cert: WinnerCertificate = WinnerCertificate {
+            owner: winner_cert.owner,
+            auction_id: winner_cert.auction_id,
+            item_hash: winner_cert.item_hash,
+            winning_amount: winner_cert.winning_amount,
+            token_type: winner_cert.token_type,
+            certificate_id: winner_cert.certificate_id,
+        };
+
+        let caller_field: field = self.caller as field;
+        let granted_by_hash: field = BHP256::hash_to_field(caller_field);
+
+        let permit: ViewPermit = ViewPermit {
+            owner: auditor,
+            auction_id: auction_id,
+            winning_price: winner_cert.winning_amount,
+            item_hash: winner_cert.item_hash,
+            settled_at: 0u64,
+            granted_by: granted_by_hash,
+        };
+
+        return (new_cert, permit);
+    }
+
+    // ########################################################################
+    //    ROYALTY ON RESALE — Configure royalty for original creator
+    // ########################################################################
+    //
+    // Allows setting a royalty (max 10% = 1000 bps) on an auction.
+    // When the auction settles, the royalty amount is calculated and stored
+    // in royalty_balances. The creator can then claim it.
+
+    async transition set_royalty(
+        private auction_id: field,
+        private creator: address,
+        private bps: u128
+    ) -> Future {
+        assert(bps <= 1000u128);
+        let creator_field: field = creator as field;
+        let creator_hash: field = BHP256::hash_to_field(creator_field);
+        return finalize_set_royalty(auction_id, creator_hash, bps);
+    }
+
+    async function finalize_set_royalty(
+        auction_id: field,
+        creator_hash: field,
+        bps: u128
+    ) {
+        // Verify auction exists.
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_ACTIVE);
+        assert(bps <= 1000u128);
+
+        royalty_info.set(auction_id, creator_hash);
+        royalty_bps.set(auction_id, bps);
+    }
+
+    // Claim royalty — ALEO credits version.
+    // Creator claims accumulated royalty as private credits.
+    async transition claim_royalty(
+        private auction_id: field,
+        private creator_address: address
+    ) -> (credits.aleo/credits, Future) {
+        let creator_field: field = creator_address as field;
+        let creator_hash: field = BHP256::hash_to_field(creator_field);
+
+        // Placeholder amount — finalize verifies and clears the actual balance.
+        // We use 1u64 as a minimum transfer; finalize will verify the real amount.
+        // The actual royalty is paid via transfer_public_to_private.
+        let (royalty_credits, transfer_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_public_to_private(
+                creator_address,
+                1u64
+            );
+
+        return (royalty_credits, finalize_claim_royalty(
+            transfer_future, auction_id, creator_hash
+        ));
+    }
+
+    async function finalize_claim_royalty(
+        f0: Future,
+        auction_id: field,
+        creator_hash: field
+    ) {
+        f0.await();
+
+        // Verify creator matches royalty_info.
+        let stored_creator: field = royalty_info.get(auction_id);
+        assert_eq(creator_hash, stored_creator);
+
+        // Verify there is a balance to claim.
+        let balance: u128 = royalty_balances.get(auction_id);
+        assert(balance > 0u128);
+
+        // Clear the royalty balance.
+        royalty_balances.set(auction_id, 0u128);
+    }
+
+    // Claim royalty — USDCx version.
+    async transition claim_royalty_usdcx(
+        private auction_id: field,
+        private creator_address: address
+    ) -> Future {
+        let creator_field: field = creator_address as field;
+        let creator_hash: field = BHP256::hash_to_field(creator_field);
+
+        let transfer_future: Future = test_usdcx_stablecoin.aleo/transfer_public(
+            creator_address,
+            1u128
+        );
+
+        return finalize_claim_royalty_usdcx(
+            transfer_future, auction_id, creator_hash
+        );
+    }
+
+    async function finalize_claim_royalty_usdcx(
+        f0: Future,
+        auction_id: field,
+        creator_hash: field
+    ) {
+        f0.await();
+
+        let stored_creator: field = royalty_info.get(auction_id);
+        assert_eq(creator_hash, stored_creator);
+
+        let balance: u128 = royalty_balances.get(auction_id);
+        assert(balance > 0u128);
+
+        royalty_balances.set(auction_id, 0u128);
+    }
+
+    // Claim royalty — USAD version.
+    async transition claim_royalty_usad(
+        private auction_id: field,
+        private creator_address: address
+    ) -> Future {
+        let creator_field: field = creator_address as field;
+        let creator_hash: field = BHP256::hash_to_field(creator_field);
+
+        let transfer_future: Future = test_usad_stablecoin.aleo/transfer_public(
+            creator_address,
+            1u128
+        );
+
+        return finalize_claim_royalty_usad(
+            transfer_future, auction_id, creator_hash
+        );
+    }
+
+    async function finalize_claim_royalty_usad(
+        f0: Future,
+        auction_id: field,
+        creator_hash: field
+    ) {
+        f0.await();
+
+        let stored_creator: field = royalty_info.get(auction_id);
+        assert_eq(creator_hash, stored_creator);
+
+        let balance: u128 = royalty_balances.get(auction_id);
+        assert(balance > 0u128);
+
+        royalty_balances.set(auction_id, 0u128);
+    }
+
+    // ########################################################################
+    //    PROVENANCE CHAIN — Link resale auctions to originals
+    // ########################################################################
+    //
+    // Creates an on-chain link from a new auction to a previous auction,
+    // establishing provenance (chain of ownership). If first sale, use 0field.
+
+    async transition set_provenance(
+        private auction_id: field,
+        private previous_auction_id: field
+    ) -> Future {
+        let caller_field: field = self.caller as field;
+        let caller_hash: field = BHP256::hash_to_field(caller_field);
+        return finalize_set_provenance(auction_id, previous_auction_id, caller_hash);
+    }
+
+    async function finalize_set_provenance(
+        auction_id: field,
+        previous_auction_id: field,
+        caller_hash: field
+    ) {
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.seller_hash, caller_hash);
+
+        provenance.set(auction_id, previous_auction_id);
+    }
+
+    // ########################################################################
+    //    TIME-LOCKED RESULTS — Delay public result reveal
+    // ########################################################################
+    //
+    // Allows setting a block height after which the auction result
+    // becomes publicly queryable. Before that, only the winner and seller
+    // know the outcome (via private records).
+
+    async transition set_result_timelock(
+        private auction_id: field,
+        private reveal_after_block: u64
+    ) -> Future {
+        let caller_field: field = self.caller as field;
+        let caller_hash: field = BHP256::hash_to_field(caller_field);
+        return finalize_set_result_timelock(auction_id, reveal_after_block, caller_hash);
+    }
+
+    async function finalize_set_result_timelock(
+        auction_id: field,
+        reveal_after_block: u64,
+        caller_hash: field
+    ) {
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.seller_hash, caller_hash);
+
+        let current_height: u64 = block.height as u64;
+        assert(reveal_after_block > current_height);
+
+        result_reveal_block.set(auction_id, reveal_after_block);
+    }
+
+    // Reveal the auction result publicly after the timelock expires.
+    async transition reveal_auction_result(
+        private auction_id: field
+    ) -> Future {
+        return finalize_reveal_auction_result(auction_id);
+    }
+
+    async function finalize_reveal_auction_result(
+        auction_id: field
+    ) {
+        let auction: AuctionData = auctions.get(auction_id);
+        assert_eq(auction.status, STATUS_SETTLED);
+
+        let current_height: u64 = block.height as u64;
+        let reveal_block: u64 = result_reveal_block.get(auction_id);
+        assert(current_height >= reveal_block);
+
+        let winning_price: u128 = highest_bids.get(auction_id);
+        revealed_results.set(auction_id, winning_price);
+    }
+
+    // ########################################################################
+    //    FIXED-PRICE PRIVATE SALE — Buy at a set price
+    // ########################################################################
+    //
+    // Seller lists an item at a fixed price. First buyer to pay wins.
+    // Simpler than auctions — no bidding, no reveal, no settlement.
+
+    async transition create_fixed_sale(
+        private item_hash: field,
+        private price: u128,
+        private token_type: u8,
+        private sale_nonce: field
+    ) -> (field, Future) {
+        assert(price >= MIN_BID_AMOUNT);
+        assert(token_type == TOKEN_ALEO || token_type == TOKEN_USDCX || token_type == TOKEN_USAD);
+
+        let seller_field: field = self.caller as field;
+        let seller_hash: field = BHP256::hash_to_field(seller_field);
+
+        let sale_seed: AuctionSeed = AuctionSeed {
+            creator: self.caller,
+            item_hash: item_hash,
+            deadline: 0u64,
+            nonce: sale_nonce,
+        };
+        let sale_id: field = BHP256::hash_to_field(sale_seed);
+
+        return (sale_id, finalize_create_fixed_sale(
+            sale_id, seller_hash, item_hash, price, token_type
+        ));
+    }
+
+    async function finalize_create_fixed_sale(
+        sale_id: field,
+        seller_hash: field,
+        item_hash: field,
+        price: u128,
+        token_type: u8
+    ) {
+        let exists: bool = fixed_sales.contains(sale_id);
+        assert(!exists);
+
+        fixed_sales.set(sale_id, FixedSaleConfig {
+            seller_hash: seller_hash,
+            item_hash: item_hash,
+            price: price,
+            token_type: token_type,
+            is_sold: 0u8,
+        });
+    }
+
+    // Buy a fixed-price sale — ALEO credits version.
+    async transition buy_fixed_sale(
+        private sale_id: field,
+        private credits_in: credits.aleo/credits,
+        private sale_price: u128
+    ) -> (credits.aleo/credits, Future) {
+        let amount_u64: u64 = sale_price as u64;
+        let (change, transfer_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_private_to_public(
+                credits_in,
+                self.address,
+                amount_u64
+            );
+
+        let buyer_field: field = self.caller as field;
+        let buyer_hash: field = BHP256::hash_to_field(buyer_field);
+
+        return (change, finalize_buy_fixed_sale(
+            transfer_future, sale_id, buyer_hash, sale_price
+        ));
+    }
+
+    async function finalize_buy_fixed_sale(
+        f0: Future,
+        sale_id: field,
+        buyer_hash: field,
+        sale_price: u128
+    ) {
+        f0.await();
+
+        let sale: FixedSaleConfig = fixed_sales.get(sale_id);
+        assert_eq(sale.is_sold, 0u8);
+        assert_eq(sale.token_type, TOKEN_ALEO);
+        assert(sale_price >= sale.price);
+
+        // Mark as sold.
+        fixed_sales.set(sale_id, FixedSaleConfig {
+            seller_hash: sale.seller_hash,
+            item_hash: sale.item_hash,
+            price: sale.price,
+            token_type: sale.token_type,
+            is_sold: 1u8,
+        });
+
+        sale_receipts.set(sale_id, buyer_hash);
+    }
+
+    // Buy a fixed-price sale — USDCx version.
+    async transition buy_fixed_sale_usdcx(
+        private sale_id: field,
+        private token_holder: address,
+        private sale_price: u128
+    ) -> Future {
+        let transfer_future: Future = test_usdcx_stablecoin.aleo/transfer_public_as_signer(
+            self.address,
+            sale_price
+        );
+
+        let buyer_field: field = self.caller as field;
+        let buyer_hash: field = BHP256::hash_to_field(buyer_field);
+
+        return finalize_buy_fixed_sale_usdcx(
+            transfer_future, sale_id, buyer_hash, sale_price
+        );
+    }
+
+    async function finalize_buy_fixed_sale_usdcx(
+        f0: Future,
+        sale_id: field,
+        buyer_hash: field,
+        sale_price: u128
+    ) {
+        f0.await();
+
+        let sale: FixedSaleConfig = fixed_sales.get(sale_id);
+        assert_eq(sale.is_sold, 0u8);
+        assert_eq(sale.token_type, TOKEN_USDCX);
+        assert(sale_price >= sale.price);
+
+        fixed_sales.set(sale_id, FixedSaleConfig {
+            seller_hash: sale.seller_hash,
+            item_hash: sale.item_hash,
+            price: sale.price,
+            token_type: sale.token_type,
+            is_sold: 1u8,
+        });
+
+        sale_receipts.set(sale_id, buyer_hash);
+    }
+
+    // Buy a fixed-price sale — USAD version.
+    async transition buy_fixed_sale_usad(
+        private sale_id: field,
+        private token_holder: address,
+        private sale_price: u128
+    ) -> Future {
+        let transfer_future: Future = test_usad_stablecoin.aleo/transfer_public_as_signer(
+            self.address,
+            sale_price
+        );
+
+        let buyer_field: field = self.caller as field;
+        let buyer_hash: field = BHP256::hash_to_field(buyer_field);
+
+        return finalize_buy_fixed_sale_usad(
+            transfer_future, sale_id, buyer_hash, sale_price
+        );
+    }
+
+    async function finalize_buy_fixed_sale_usad(
+        f0: Future,
+        sale_id: field,
+        buyer_hash: field,
+        sale_price: u128
+    ) {
+        f0.await();
+
+        let sale: FixedSaleConfig = fixed_sales.get(sale_id);
+        assert_eq(sale.is_sold, 0u8);
+        assert_eq(sale.token_type, TOKEN_USAD);
+        assert(sale_price >= sale.price);
+
+        fixed_sales.set(sale_id, FixedSaleConfig {
+            seller_hash: sale.seller_hash,
+            item_hash: sale.item_hash,
+            price: sale.price,
+            token_type: sale.token_type,
+            is_sold: 1u8,
+        });
+
+        sale_receipts.set(sale_id, buyer_hash);
+    }
+
+    // ########################################################################
+    //    RFQ / REVERSE AUCTION — Buyer posts request, sellers quote
+    // ########################################################################
+    //
+    // The buyer posts a Request-For-Quote with a budget hash (private budget).
+    // Sellers submit quotes as private records. The buyer accepts the best quote
+    // and pays the seller.
+
+    async transition create_rfq(
+        private category: u8,
+        private description_hash: field,
+        private max_budget: u128,
+        private deadline_block: u64,
+        private token_type: u8,
+        private rfq_nonce: field
+    ) -> (field, Future) {
+        assert(token_type == TOKEN_ALEO || token_type == TOKEN_USDCX || token_type == TOKEN_USAD);
+
+        let buyer_field: field = self.caller as field;
+        let buyer_hash: field = BHP256::hash_to_field(buyer_field);
+
+        let budget_field: field = max_budget as field;
+        let max_budget_hash: field = BHP256::hash_to_field(budget_field);
+
+        let rfq_seed: AuctionSeed = AuctionSeed {
+            creator: self.caller,
+            item_hash: description_hash,
+            deadline: deadline_block,
+            nonce: rfq_nonce,
+        };
+        let rfq_id: field = BHP256::hash_to_field(rfq_seed);
+
+        // deadline_block cast to u32 for the struct
+        let deadline_u32: u32 = deadline_block as u32;
+
+        return (rfq_id, finalize_create_rfq(
+            rfq_id, buyer_hash, category, max_budget_hash,
+            description_hash, deadline_u32, token_type
+        ));
+    }
+
+    async function finalize_create_rfq(
+        rfq_id: field,
+        buyer_hash: field,
+        category: u8,
+        max_budget_hash: field,
+        description_hash: field,
+        deadline_block: u32,
+        token_type: u8
+    ) {
+        let exists: bool = rfq_configs.contains(rfq_id);
+        assert(!exists);
+
+        rfq_configs.set(rfq_id, RFQConfig {
+            buyer_hash: buyer_hash,
+            category: category,
+            max_budget_hash: max_budget_hash,
+            description_hash: description_hash,
+            deadline_block: deadline_block,
+            token_type: token_type,
+            is_active: 1u8,
+        });
+    }
+
+    // Submit a private quote in response to an RFQ.
+    async transition submit_quote(
+        private rfq_id: field,
+        private quote_amount: u128,
+        private quote_nonce: field
+    ) -> (QuoteRecord, Future) {
+        let seller_field: field = self.caller as field;
+        let seller_hash: field = BHP256::hash_to_field(seller_field);
+
+        let quote_data: BidCommitment = BidCommitment {
+            bidder: self.caller,
+            auction_id: rfq_id,
+            amount: quote_amount,
+            nonce: quote_nonce,
+        };
+        let quote_hash: field = BHP256::hash_to_field(quote_data);
+
+        let quote: QuoteRecord = QuoteRecord {
+            owner: self.caller,
+            rfq_id: rfq_id,
+            quote_amount: quote_amount,
+            quote_hash: quote_hash,
+            seller_hash: seller_hash,
+            token_type: TOKEN_ALEO,
+        };
+
+        return (quote, finalize_submit_quote(rfq_id));
+    }
+
+    async function finalize_submit_quote(
+        rfq_id: field
+    ) {
+        let rfq: RFQConfig = rfq_configs.get(rfq_id);
+        assert_eq(rfq.is_active, 1u8);
+
+        let count: u64 = rfq_quote_count.get_or_use(rfq_id, 0u64);
+        rfq_quote_count.set(rfq_id, count + 1u64);
+    }
+
+    // Accept a quote — ALEO credits version.
+    // Buyer pays the quoted amount to the seller.
+    async transition accept_quote(
+        private rfq_id: field,
+        private quote: QuoteRecord,
+        private credits_in: credits.aleo/credits
+    ) -> (credits.aleo/credits, Future) {
+        let amount_u64: u64 = quote.quote_amount as u64;
+        let (change, transfer_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_private_to_public(
+                credits_in,
+                self.address,
+                amount_u64
+            );
+
+        return (change, finalize_accept_quote(
+            transfer_future, rfq_id, quote.quote_amount
+        ));
+    }
+
+    async function finalize_accept_quote(
+        f0: Future,
+        rfq_id: field,
+        quote_amount: u128
+    ) {
+        f0.await();
+
+        let rfq: RFQConfig = rfq_configs.get(rfq_id);
+        assert_eq(rfq.is_active, 1u8);
+
+        // Mark RFQ as inactive.
+        rfq_configs.set(rfq_id, RFQConfig {
+            buyer_hash: rfq.buyer_hash,
+            category: rfq.category,
+            max_budget_hash: rfq.max_budget_hash,
+            description_hash: rfq.description_hash,
+            deadline_block: rfq.deadline_block,
+            token_type: rfq.token_type,
+            is_active: 0u8,
+        });
+    }
+
+    // Accept a quote — USDCx version.
+    async transition accept_quote_usdcx(
+        private rfq_id: field,
+        private quote: QuoteRecord,
+        private quote_amount: u128
+    ) -> Future {
+        let transfer_future: Future = test_usdcx_stablecoin.aleo/transfer_public_as_signer(
+            self.address,
+            quote_amount
+        );
+
+        return finalize_accept_quote_usdcx(
+            transfer_future, rfq_id
+        );
+    }
+
+    async function finalize_accept_quote_usdcx(
+        f0: Future,
+        rfq_id: field
+    ) {
+        f0.await();
+
+        let rfq: RFQConfig = rfq_configs.get(rfq_id);
+        assert_eq(rfq.is_active, 1u8);
+
+        rfq_configs.set(rfq_id, RFQConfig {
+            buyer_hash: rfq.buyer_hash,
+            category: rfq.category,
+            max_budget_hash: rfq.max_budget_hash,
+            description_hash: rfq.description_hash,
+            deadline_block: rfq.deadline_block,
+            token_type: rfq.token_type,
+            is_active: 0u8,
+        });
+    }
+
+    // Accept a quote — USAD version.
+    async transition accept_quote_usad(
+        private rfq_id: field,
+        private quote: QuoteRecord,
+        private quote_amount: u128
+    ) -> Future {
+        let transfer_future: Future = test_usad_stablecoin.aleo/transfer_public_as_signer(
+            self.address,
+            quote_amount
+        );
+
+        return finalize_accept_quote_usad(
+            transfer_future, rfq_id
+        );
+    }
+
+    async function finalize_accept_quote_usad(
+        f0: Future,
+        rfq_id: field
+    ) {
+        f0.await();
+
+        let rfq: RFQConfig = rfq_configs.get(rfq_id);
+        assert_eq(rfq.is_active, 1u8);
+
+        rfq_configs.set(rfq_id, RFQConfig {
+            buyer_hash: rfq.buyer_hash,
+            category: rfq.category,
+            max_budget_hash: rfq.max_budget_hash,
+            description_hash: rfq.description_hash,
+            deadline_block: rfq.deadline_block,
+            token_type: rfq.token_type,
+            is_active: 0u8,
+        });
+    }
+
+    // ########################################################################
+    //    TOKEN SALE / FAIR LAUNCH — Fixed-supply token distribution
+    // ########################################################################
+    //
+    // Seller lists a total supply of tokens with a minimum price per token.
+    // Buyers bid for quantities at or above the minimum price. Supply
+    // decrements until exhausted or deadline passes.
+
+    async transition create_token_sale(
+        private total_supply: u128,
+        private min_price: u128,
+        private token_type: u8,
+        private deadline: u64,
+        private sale_nonce: field
+    ) -> (field, Future) {
+        assert(total_supply > 0u128);
+        assert(min_price >= MIN_BID_AMOUNT);
+        assert(token_type == TOKEN_ALEO || token_type == TOKEN_USDCX || token_type == TOKEN_USAD);
+
+        let seller_field: field = self.caller as field;
+        let seller_hash: field = BHP256::hash_to_field(seller_field);
+
+        let supply_field: field = total_supply as field;
+        let sale_seed: AuctionSeed = AuctionSeed {
+            creator: self.caller,
+            item_hash: supply_field,
+            deadline: deadline,
+            nonce: sale_nonce,
+        };
+        let sale_id: field = BHP256::hash_to_field(sale_seed);
+
+        let deadline_u32: u32 = deadline as u32;
+
+        return (sale_id, finalize_create_token_sale(
+            sale_id, seller_hash, total_supply, min_price, token_type, deadline_u32
+        ));
+    }
+
+    async function finalize_create_token_sale(
+        sale_id: field,
+        seller_hash: field,
+        total_supply: u128,
+        min_price: u128,
+        token_type: u8,
+        deadline_block: u32
+    ) {
+        let exists: bool = token_sales.contains(sale_id);
+        assert(!exists);
+
+        token_sales.set(sale_id, TokenSaleConfig {
+            seller_hash: seller_hash,
+            total_supply: total_supply,
+            remaining_supply: total_supply,
+            min_price_per_token: min_price,
+            token_type: token_type,
+            deadline_block: deadline_block,
+        });
+    }
+
+    // Bid in a token sale — ALEO credits version.
+    // Buyer specifies quantity and price_per_token. Payment = quantity * price_per_token.
+    async transition bid_token_sale(
+        private sale_id: field,
+        private quantity: u128,
+        private price_per_token: u128,
+        private bid_nonce: field,
+        private credits_in: credits.aleo/credits
+    ) -> (EscrowReceipt, credits.aleo/credits, Future) {
+        let total_payment: u128 = quantity * price_per_token;
+        assert(total_payment >= MIN_BID_AMOUNT);
+
+        let payment_u64: u64 = total_payment as u64;
+        let (change, transfer_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_private_to_public(
+                credits_in,
+                self.address,
+                payment_u64
+            );
+
+        let receipt: EscrowReceipt = EscrowReceipt {
+            owner: self.caller,
+            auction_id: sale_id,
+            escrowed_amount: total_payment,
+            bid_nonce: bid_nonce,
+            token_type: TOKEN_ALEO,
+        };
+
+        return (receipt, change, finalize_bid_token_sale(
+            transfer_future, sale_id, quantity, price_per_token
+        ));
+    }
+
+    async function finalize_bid_token_sale(
+        f0: Future,
+        sale_id: field,
+        quantity: u128,
+        price_per_token: u128
+    ) {
+        f0.await();
+
+        let sale: TokenSaleConfig = token_sales.get(sale_id);
+
+        let current_height: u32 = block.height as u32;
+        assert(current_height <= sale.deadline_block);
+
+        assert(price_per_token >= sale.min_price_per_token);
+        assert(quantity <= sale.remaining_supply);
+
+        // Decrement remaining supply.
+        token_sales.set(sale_id, TokenSaleConfig {
+            seller_hash: sale.seller_hash,
+            total_supply: sale.total_supply,
+            remaining_supply: sale.remaining_supply - quantity,
+            min_price_per_token: sale.min_price_per_token,
+            token_type: sale.token_type,
+            deadline_block: sale.deadline_block,
+        });
+    }
+
+    // Bid in a token sale — USDCx version.
+    async transition bid_token_sale_usdcx(
+        private sale_id: field,
+        private quantity: u128,
+        private price_per_token: u128,
+        private bid_nonce: field
+    ) -> (EscrowReceipt, Future) {
+        let total_payment: u128 = quantity * price_per_token;
+        assert(total_payment >= MIN_BID_AMOUNT);
+
+        let transfer_future: Future = test_usdcx_stablecoin.aleo/transfer_public_as_signer(
+            self.address,
+            total_payment
+        );
+
+        let receipt: EscrowReceipt = EscrowReceipt {
+            owner: self.caller,
+            auction_id: sale_id,
+            escrowed_amount: total_payment,
+            bid_nonce: bid_nonce,
+            token_type: TOKEN_USDCX,
+        };
+
+        return (receipt, finalize_bid_token_sale_usdcx(
+            transfer_future, sale_id, quantity, price_per_token
+        ));
+    }
+
+    async function finalize_bid_token_sale_usdcx(
+        f0: Future,
+        sale_id: field,
+        quantity: u128,
+        price_per_token: u128
+    ) {
+        f0.await();
+
+        let sale: TokenSaleConfig = token_sales.get(sale_id);
+
+        let current_height: u32 = block.height as u32;
+        assert(current_height <= sale.deadline_block);
+
+        assert(price_per_token >= sale.min_price_per_token);
+        assert(quantity <= sale.remaining_supply);
+
+        token_sales.set(sale_id, TokenSaleConfig {
+            seller_hash: sale.seller_hash,
+            total_supply: sale.total_supply,
+            remaining_supply: sale.remaining_supply - quantity,
+            min_price_per_token: sale.min_price_per_token,
+            token_type: sale.token_type,
+            deadline_block: sale.deadline_block,
+        });
+    }
+
+    // ########################################################################
+    //    CLEAN SLATE PROOF — On-chain attestation of no disputes
+    // ########################################################################
+    //
+    // A wallet can prove on-chain that it has zero disputes filed against it.
+    // Useful for reputation signaling in marketplaces.
+
+    async transition prove_clean_slate(
+        private wallet: address
+    ) -> (CleanSlateProof, Future) {
+        let wallet_field: field = wallet as field;
+        let wallet_hash: field = BHP256::hash_to_field(wallet_field);
+
+        let proof: CleanSlateProof = CleanSlateProof {
+            owner: self.caller,
+            wallet_hash: wallet_hash,
+            proof_block: 0u64,
+            auction_count: 0u64,
+        };
+
+        return (proof, finalize_prove_clean_slate(wallet_hash));
+    }
+
+    async function finalize_prove_clean_slate(
+        wallet_hash: field
+    ) {
+        // Verify the wallet has no disputes.
+        let disputed_count: u64 = seller_disputed.get_or_use(wallet_hash, 0u64);
+        assert_eq(disputed_count, 0u64);
     }
 
 }

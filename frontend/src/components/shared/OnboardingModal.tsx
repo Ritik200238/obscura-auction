@@ -9,7 +9,7 @@ const steps = [
   {
     icon: Wallet,
     title: 'Connect Your Wallet',
-    description: 'Use Shield Wallet (recommended) or any Aleo-compatible wallet. Click the wallet button in the top-right corner.',
+    description: 'Use Shield Wallet (recommended) for the best experience. Click the wallet button in the top-right corner.',
     color: 'text-accent-400 bg-accent-500/20',
   },
   {
@@ -21,7 +21,7 @@ const steps = [
   {
     icon: Gavel,
     title: 'Create or Browse',
-    description: 'Create your own auction or browse existing ones. Choose from 4 auction formats: Sealed, Vickrey, Dutch, or English.',
+    description: 'Create your own auction, browse listings, or buy instantly. 7 market types including fixed-price sales and procurement.',
     color: 'text-cyan-400 bg-cyan-500/20',
   },
 ]
@@ -63,9 +63,9 @@ export default function OnboardingModal() {
           >
             <button
               onClick={dismiss}
-              className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
+              className="absolute top-3 right-3 p-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
 
             <h2 className="text-lg font-bold text-white mb-1">Welcome to Obscura</h2>

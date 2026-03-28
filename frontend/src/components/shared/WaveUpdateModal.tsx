@@ -6,11 +6,11 @@ import { Link } from 'react-router-dom'
 const STORAGE_KEY = 'obscura_wave4_seen'
 
 const features = [
-  { icon: Gavel, label: '4 Auction Formats', desc: 'Sealed-Bid, Vickrey, Dutch, English — each with privacy controls', color: 'text-cyan-400' },
+  { icon: Gavel, label: '7 Market Types', desc: 'Sealed-Bid, Vickrey, Dutch, English, Fixed-Price, RFQ, Token Sales', color: 'text-cyan-400' },
   { icon: Lock, label: 'Triple Token Escrow', desc: 'ALEO Credits + USDCx + USAD with private record transfers', color: 'text-green-400' },
-  { icon: Shield, label: 'Dispute Resolution', desc: 'Bond-based challenges with 10% stake and admin resolution', color: 'text-accent-400' },
-  { icon: BarChart3, label: 'Auction Intelligence', desc: 'Real-time price tracking, anti-sniping alerts, settlement proofs', color: 'text-blue-400' },
-  { icon: Layers, label: 'Use Case Templates', desc: 'NFTs, token sales, procurement — one-click auction creation', color: 'text-purple-400' },
+  { icon: Shield, label: 'Dispute + Royalties', desc: 'Bond-based disputes, creator royalties, provenance chain tracking', color: 'text-accent-400' },
+  { icon: BarChart3, label: 'Seller Reputation', desc: 'On-chain completion rate, privacy scores, time-locked results', color: 'text-blue-400' },
+  { icon: Layers, label: '51 Transitions', desc: 'Most feature-rich Aleo program — 8 records, 32 mappings, live on testnet', color: 'text-purple-400' },
 ]
 
 export default function WaveUpdateModal() {
@@ -18,8 +18,11 @@ export default function WaveUpdateModal() {
 
   useEffect(() => {
     try {
-      if (!localStorage.getItem(STORAGE_KEY)) {
-        const t = setTimeout(() => setShow(true), 2000)
+      // Only show Wave 4 modal for RETURNING users (who already dismissed onboarding)
+      // This prevents the double-modal problem on first visit
+      const alreadyOnboarded = localStorage.getItem('obscura_onboarded')
+      if (alreadyOnboarded && !localStorage.getItem(STORAGE_KEY)) {
+        const t = setTimeout(() => setShow(true), 1000)
         return () => clearTimeout(t)
       }
     } catch { /* localStorage unavailable */ }
@@ -54,8 +57,8 @@ export default function WaveUpdateModal() {
             <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-40 h-40 bg-cyan-500/10 rounded-full blur-3xl" />
 
             {/* Close */}
-            <button onClick={dismiss} className="absolute top-4 right-4 text-gray-600 hover:text-white transition-colors z-10">
-              <X className="w-4 h-4" />
+            <button onClick={dismiss} className="absolute top-3 right-3 p-2 rounded-lg text-gray-600 hover:text-white hover:bg-white/10 transition-colors z-10 min-w-[44px] min-h-[44px] flex items-center justify-center">
+              <X className="w-5 h-5" />
             </button>
 
             <div className="relative p-6">
@@ -91,8 +94,7 @@ export default function WaveUpdateModal() {
               <Link
                 to="/browse"
                 onClick={dismiss}
-                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold transition-all"
-                style={{ background: 'linear-gradient(135deg, #06B6D4, #0891B2)', color: 'white' }}
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold btn-primary"
               >
                 Explore Wave 4
                 <ArrowRight className="w-4 h-4" />

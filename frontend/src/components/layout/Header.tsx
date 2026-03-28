@@ -1,7 +1,11 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { WalletMultiButton } from '@provablehq/aleo-wallet-adaptor-react-ui'
-import { Search, Plus, Activity, BookOpen, Menu, X, BarChart3, Lightbulb, Radar } from 'lucide-react'
+import {
+  Search, Plus, Activity, BookOpen, Menu, X, BarChart3,
+  Lightbulb, Radar, ShoppingBag, TrendingUp, FileText,
+  ChevronDown, MoreHorizontal
+} from 'lucide-react'
 import ObscuraLogo from '@/components/shared/ObscuraLogo'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import toast from 'react-hot-toast'
@@ -9,15 +13,24 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useWalletStore } from '@/stores/walletStore'
 import { fetchMapping } from '@/lib/aleo'
 
-const navLinks = [
+const primaryNav = [
   { to: '/browse', label: 'Browse', icon: Search },
   { to: '/create', label: 'Create', icon: Plus },
+  { to: '/fixed-sales', label: 'Buy Now', icon: ShoppingBag },
+  { to: '/token-sale', label: 'Token Sales', icon: TrendingUp },
+  { to: '/rfq', label: 'Procurement', icon: FileText },
   { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
+]
+
+const moreNav = [
   { to: '/my-activity', label: 'Activity', icon: Activity },
-  { to: '/learn', label: 'Learn', icon: Lightbulb },
   { to: '/docs', label: 'Docs', icon: BookOpen },
+  { to: '/learn', label: 'Learn', icon: Lightbulb },
   { to: '/explorer', label: 'Explorer', icon: Radar },
 ]
+
+// All nav for mobile
+const allNavLinks = [...primaryNav, ...moreNav]
 
 export default function Header() {
   const location = useLocation()
@@ -74,8 +87,8 @@ export default function Header() {
           </Link>
 
           {/* Nav Links - Desktop */}
-          <nav className="hidden md:flex items-center gap-0.5">
-            {navLinks.map(({ to, label, icon: Icon }) => {
+          <nav className="hidden lg:flex items-center gap-0.5">
+            {primaryNav.map(({ to, label, icon: Icon }) => {
               const isActive = location.pathname === to
               return (
                 <Link
@@ -95,6 +108,8 @@ export default function Header() {
                 </Link>
               )
             })}
+            {/* More dropdown */}
+            <MoreDropdown location={location} />
           </nav>
 
           {/* Wallet Button + Mobile Menu Toggle */}
@@ -104,7 +119,7 @@ export default function Header() {
             </div>
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden text-gray-400 hover:text-white p-2 rounded-lg hover:bg-surface-800/60 transition-colors"
+              className="lg:hidden text-gray-400 hover:text-white p-2 rounded-lg hover:bg-surface-800/60 transition-colors"
             >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -119,10 +134,10 @@ export default function Header() {
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              className="md:hidden overflow-hidden border-t border-surface-700/30 mt-2"
+              className="lg:hidden overflow-hidden border-t border-surface-700/30 mt-2"
             >
               <div className="pb-4 pt-3 space-y-1">
-                {navLinks.map(({ to, label, icon: Icon }, i) => (
+                {allNavLinks.map(({ to, label, icon: Icon }, i) => (
                   <motion.div
                     key={to}
                     initial={{ opacity: 0, x: -12 }}
@@ -132,7 +147,7 @@ export default function Header() {
                     <Link
                       to={to}
                       onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all min-h-[44px] ${
                         location.pathname === to
                           ? 'text-accent-400 bg-accent-500/10'
                           : 'text-gray-400 hover:text-white hover:bg-surface-800/60'
@@ -149,5 +164,70 @@ export default function Header() {
         </AnimatePresence>
       </div>
     </header>
+  )
+}
+
+function MoreDropdown({ location }: { location: { pathname: string } }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const isMoreActive = moreNav.some(n => n.to === location.pathname)
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-1 px-2.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+          isMoreActive
+            ? 'text-accent-400 bg-accent-500/10'
+            : 'text-gray-400 hover:text-white hover:bg-surface-800/60'
+        }`}
+      >
+        <MoreHorizontal className="w-4 h-4" />
+        More
+        <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.97 }}
+            transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute top-full right-0 mt-1 w-44 bg-surface-900 border border-surface-700/50 rounded-xl shadow-xl overflow-hidden z-50"
+          >
+            {moreNav.map(({ to, label, icon: Icon }) => (
+              <Link
+                key={to}
+                to={to}
+                onClick={() => setOpen(false)}
+                className={`flex items-center gap-2 px-3 py-2.5 text-sm font-medium transition-all ${
+                  location.pathname === to
+                    ? 'text-accent-400 bg-accent-500/10'
+                    : 'text-gray-400 hover:text-white hover:bg-surface-800/60'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </Link>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }
