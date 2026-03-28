@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import { logger } from './logger';
 
 const EXPLORER_API = process.env.EXPLORER_API || 'https://api.explorer.provable.com/v1';
-const PROGRAM_ID = process.env.PROGRAM_ID || 'obscura_v4.aleo';
+const PROGRAM_ID = process.env.PROGRAM_ID || 'obscura_v5.aleo';
 
 export async function fetchMapping(mapping: string, key: string): Promise<string | null> {
   try {

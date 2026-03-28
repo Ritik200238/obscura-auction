@@ -1,5 +1,5 @@
 export const config = {
-  programId: 'obscura_v4.aleo',
+  programId: 'obscura_v5.aleo',
   creditsProgram: 'credits.aleo',
   usdcxProgramId: 'test_usdcx_stablecoin.aleo',
   usadProgramId: 'test_usad_stablecoin.aleo',

@@ -1,7 +1,7 @@
 {
-  "program": "obscura_v5.aleo",
+  "program": "obscura_market_v1.aleo",
   "version": "0.1.0",
-  "description": "Multi-format privacy auction protocol: Sealed First-Price, Vickrey, Dutch, English — with triple token (ALEO + USDCx + USAD), dispute resolution, and settlement proofs",
+  "description": "Marketplace extensions for Obscura: fixed-price sales, RFQ reverse auctions, token sales, royalty claims, provenance, timelocked results, and reputation proofs",
   "license": "MIT",
   "dependencies": [
     {

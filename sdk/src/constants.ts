@@ -1,6 +1,6 @@
-// Mirrors the on-chain constants in obscura_v4.aleo exactly.
+// Mirrors the on-chain constants in obscura_v5.aleo exactly.
 
-export const PROGRAM_ID = 'obscura_v4.aleo';
+export const PROGRAM_ID = 'obscura_v5.aleo';
 
 export const STATUS = {
   ACTIVE: 1,
