@@ -135,17 +135,6 @@ program obscura_v5.aleo {
         bond_amount: u128,
     }
 
-    // ViewPermit: Selective disclosure — winner grants an auditor permission
-    // to see specific auction outcome details without revealing raw records.
-    record ViewPermit {
-        owner: address,
-        auction_id: field,
-        winning_price: u128,
-        item_hash: field,
-        settled_at: u64,
-        granted_by: field,
-    }
-
     // ========================================================================
     // STRUCTS
     // ========================================================================
@@ -249,19 +238,6 @@ program obscura_v5.aleo {
     // dispute_bonds: ALEO bond amount held per disputed auction.
     mapping dispute_bonds: field => u128;
 
-    // ---- Wave 4 mappings ----
-    // scheduled_start: auction_id => start_block (0 means no schedule / immediate).
-    mapping scheduled_start: field => u64;
-    // seller_completed: seller_hash => completed auction count.
-    mapping seller_completed: field => u64;
-    // seller_disputed: seller_hash => disputed auction count.
-    mapping seller_disputed: field => u64;
-    // royalty_info: auction_id => creator_address_hash.
-    mapping royalty_info: field => field;
-    // royalty_bps: auction_id => royalty basis points (max 1000 = 10%).
-    mapping royalty_bps: field => u128;
-    // royalty_balances: auction_id => unclaimed royalty amount.
-    mapping royalty_balances: field => u128;
 
     // ########################################################################
     //                         T1: INITIALIZE PLATFORM
@@ -505,8 +481,6 @@ program obscura_v5.aleo {
         assert(current_height <= auction.deadline);
 
         // Scheduled start check: if a start_block is set, bidding cannot begin before it.
-        let start: u64 = scheduled_start.get_or_use(auction_id, 0u64);
-        assert(current_height >= start);
 
         let already_exists: bool = bid_commitments.contains(bid_hash);
         assert(!already_exists);
@@ -843,17 +817,6 @@ program obscura_v5.aleo {
                     });
                     settlement_proofs.set(auction_id, settlement_proof);
 
-                    // Reputation: increment seller completed count.
-                    let scount: u64 = seller_completed.get_or_use(auction.seller_hash, 0u64);
-                    seller_completed.set(auction.seller_hash, scount + 1u64);
-
-                    // Royalty: if royalty is configured, calculate and store royalty balance.
-                    let has_royalty: bool = royalty_info.contains(auction_id);
-                    if (has_royalty) {
-                        let rbps: u128 = royalty_bps.get(auction_id);
-                        let royalty_amount: u128 = (winning_amount * rbps) / 10000u128;
-                        royalty_balances.set(auction_id, royalty_amount);
-                    }
                 } else {
                     auctions.set(auction_id, AuctionData {
                         item_hash: auction.item_hash,
@@ -897,17 +860,6 @@ program obscura_v5.aleo {
                 });
                 settlement_proofs.set(auction_id, settlement_proof);
 
-                // Reputation: increment seller completed count.
-                let scount2: u64 = seller_completed.get_or_use(auction.seller_hash, 0u64);
-                seller_completed.set(auction.seller_hash, scount2 + 1u64);
-
-                // Royalty: if royalty is configured, calculate and store royalty balance.
-                let has_royalty2: bool = royalty_info.contains(auction_id);
-                if (has_royalty2) {
-                    let rbps2: u128 = royalty_bps.get(auction_id);
-                    let royalty_amount2: u128 = (winning_amount * rbps2) / 10000u128;
-                    royalty_balances.set(auction_id, royalty_amount2);
-                }
             } else {
                 auctions.set(auction_id, AuctionData {
                     item_hash: auction.item_hash,
@@ -1795,8 +1747,6 @@ program obscura_v5.aleo {
         assert(current_height <= auction.deadline);
 
         // Scheduled start check.
-        let start: u64 = scheduled_start.get_or_use(auction_id, 0u64);
-        assert(current_height >= start);
 
         let cfg: PlatformConfig = platform_config.get(0u8);
         assert(!cfg.paused);
@@ -1902,8 +1852,6 @@ program obscura_v5.aleo {
         assert(current_height <= auction.deadline);
 
         // Scheduled start check.
-        let start: u64 = scheduled_start.get_or_use(auction_id, 0u64);
-        assert(current_height >= start);
 
         let cfg: PlatformConfig = platform_config.get(0u8);
         assert(!cfg.paused);
@@ -2015,8 +1963,6 @@ program obscura_v5.aleo {
         assert(current_height <= auction.deadline);
 
         // Scheduled start check.
-        let start: u64 = scheduled_start.get_or_use(auction_id, 0u64);
-        assert(current_height >= start);
 
         let cfg: PlatformConfig = platform_config.get(0u8);
         assert(!cfg.paused);
@@ -2122,8 +2068,6 @@ program obscura_v5.aleo {
         assert(current_height <= auction.deadline);
 
         // Scheduled start check.
-        let start: u64 = scheduled_start.get_or_use(auction_id, 0u64);
-        assert(current_height >= start);
 
         let cfg: PlatformConfig = platform_config.get(0u8);
         assert(!cfg.paused);
@@ -2237,17 +2181,6 @@ program obscura_v5.aleo {
             });
             settlement_proofs.set(auction_id, settlement_proof);
 
-            // Reputation: increment seller completed count.
-            let escount: u64 = seller_completed.get_or_use(auction.seller_hash, 0u64);
-            seller_completed.set(auction.seller_hash, escount + 1u64);
-
-            // Royalty: if royalty is configured, calculate and store royalty balance.
-            let ehas_royalty: bool = royalty_info.contains(auction_id);
-            if (ehas_royalty) {
-                let erbps: u128 = royalty_bps.get(auction_id);
-                let eroyalty_amount: u128 = (winning_amount * erbps) / 10000u128;
-                royalty_balances.set(auction_id, eroyalty_amount);
-            }
         } else {
             auctions.set(auction_id, AuctionData {
                 item_hash: auction.item_hash,
@@ -2334,10 +2267,6 @@ program obscura_v5.aleo {
 
         let bal: u128 = program_balance.get_or_use(0u8, 0u128);
         program_balance.set(0u8, bal + bond_amount);
-
-        // Reputation: increment seller disputed count.
-        let dcount: u64 = seller_disputed.get_or_use(auction.seller_hash, 0u64);
-        seller_disputed.set(auction.seller_hash, dcount + 1u64);
 
         auctions.set(auction_id, AuctionData {
             item_hash: auction.item_hash,
@@ -2540,101 +2469,6 @@ program obscura_v5.aleo {
         let treasury: u128 = platform_treasury.get(0u8);
         assert(amount <= treasury);
         platform_treasury.set(0u8, treasury - amount);
-    }
-
-    // ########################################################################
-    //              T29: SET AUCTION SCHEDULE
-    // ########################################################################
-
-    async transition set_auction_schedule(
-        private auction_id: field,
-        private start_block: u64
-    ) -> Future {
-        let caller_field: field = self.caller as field;
-        let caller_hash: field = BHP256::hash_to_field(caller_field);
-        return finalize_set_auction_schedule(auction_id, start_block, caller_hash);
-    }
-
-    async function finalize_set_auction_schedule(
-        auction_id: field,
-        start_block: u64,
-        caller_hash: field
-    ) {
-        let auction: AuctionData = auctions.get(auction_id);
-        assert_eq(auction.seller_hash, caller_hash);
-        assert_eq(auction.status, STATUS_ACTIVE);
-
-        let current_height: u64 = block.height as u64;
-        assert(start_block > current_height);
-
-        scheduled_start.set(auction_id, start_block);
-    }
-
-    // ########################################################################
-    //              T30: GRANT VIEW ACCESS — Selective Disclosure
-    // ########################################################################
-
-    transition grant_view_access(
-        private winner_cert: WinnerCertificate,
-        private auditor: address,
-        private auction_id: field
-    ) -> (WinnerCertificate, ViewPermit) {
-        assert_eq(winner_cert.auction_id, auction_id);
-
-        let new_cert: WinnerCertificate = WinnerCertificate {
-            owner: winner_cert.owner,
-            auction_id: winner_cert.auction_id,
-            item_hash: winner_cert.item_hash,
-            winning_amount: winner_cert.winning_amount,
-            token_type: winner_cert.token_type,
-            certificate_id: winner_cert.certificate_id,
-        };
-
-        let caller_field: field = self.caller as field;
-        let granted_by_hash: field = BHP256::hash_to_field(caller_field);
-
-        let permit: ViewPermit = ViewPermit {
-            owner: auditor,
-            auction_id: auction_id,
-            winning_price: winner_cert.winning_amount,
-            item_hash: winner_cert.item_hash,
-            settled_at: 0u64,
-            granted_by: granted_by_hash,
-        };
-
-        return (new_cert, permit);
-    }
-
-    // ########################################################################
-    //              T31: SET ROYALTY — Configure royalty for original creator
-    // ########################################################################
-    //
-    // Allows setting a royalty (max 10% = 1000 bps) on an auction.
-    // When the auction settles, the royalty amount is calculated and stored
-    // in royalty_balances. The creator can then claim it via the market program.
-
-    async transition set_royalty(
-        private auction_id: field,
-        private creator: address,
-        private bps: u128
-    ) -> Future {
-        assert(bps <= 1000u128);
-        let creator_field: field = creator as field;
-        let creator_hash: field = BHP256::hash_to_field(creator_field);
-        return finalize_set_royalty(auction_id, creator_hash, bps);
-    }
-
-    async function finalize_set_royalty(
-        auction_id: field,
-        creator_hash: field,
-        bps: u128
-    ) {
-        let auction: AuctionData = auctions.get(auction_id);
-        assert_eq(auction.status, STATUS_ACTIVE);
-        assert(bps <= 1000u128);
-
-        royalty_info.set(auction_id, creator_hash);
-        royalty_bps.set(auction_id, bps);
     }
 
 }
