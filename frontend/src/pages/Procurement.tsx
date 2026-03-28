@@ -162,7 +162,7 @@ export default function Procurement() {
     const deadlineHeight = currentHeight + durationToBlocks(rfqDeadline)
 
     const result = await execute({
-      program: 'obscura_market_v1.aleo',
+      program: 'obscura_v4.aleo',
       functionName: 'create_rfq',
       inputs: [
         `${rfqCategory}u8`,
@@ -192,7 +192,7 @@ export default function Procurement() {
     const key = rfqId.endsWith('field') ? rfqId : `${rfqId}field`
 
     await execute({
-      program: 'obscura_market_v1.aleo',
+      program: 'obscura_v4.aleo',
       functionName: 'submit_quote',
       inputs: [
         key,

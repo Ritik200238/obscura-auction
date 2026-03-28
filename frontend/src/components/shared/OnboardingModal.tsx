@@ -21,7 +21,7 @@ const steps = [
   {
     icon: Gavel,
     title: 'Create or Browse',
-    description: 'Create your own auction, browse listings, or buy instantly. 7 market types including fixed-price sales and procurement.',
+    description: 'Create your own auction, browse listings, or bid. 4 auction formats: Sealed-Bid, Vickrey, Dutch, and English.',
     color: 'text-cyan-400 bg-cyan-500/20',
   },
 ]

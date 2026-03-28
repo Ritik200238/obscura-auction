@@ -91,7 +91,7 @@ export default function Docs() {
       {/* Architecture */}
       <Section id="architecture" title="Architecture" icon={Layers}>
         <p className="text-gray-400 text-sm mb-4">
-          The protocol is a single Leo program (obscura_v5.aleo) with 28 transitions,
+          The protocol is a single Leo program (obscura_v4.aleo) with 28 transitions,
           forming an 8-state machine with 4 auction formats. All sensitive operations happen off-chain in ZK circuits.
         </p>
 
@@ -323,13 +323,11 @@ export default function Docs() {
           Interact with Obscura directly on Aleo Testnet. The core auction contract and marketplace contract are deployed and ready to use.
         </p>
         <div className="bg-surface-800/60 rounded-xl p-4 border border-surface-700 font-mono text-sm">
-          <p className="text-gray-500 mb-2"># Core auction contract</p>
-          <p className="text-accent-400 mb-2">obscura_v5.aleo — 31 transitions</p>
-          <p className="text-gray-500 mb-2"># Marketplace contract</p>
-          <p className="text-accent-400 mb-4">obscura_market_v1.aleo — 21 transitions</p>
+          <p className="text-gray-500 mb-2"># Auction contract (deployed on testnet)</p>
+          <p className="text-accent-400 mb-4">obscura_v4.aleo — 28 transitions, 5 records, 16 mappings</p>
           <p className="text-gray-500 mb-2"># Build from source</p>
           <div className="text-gray-300 space-y-1">
-            <p>cd contracts/obscura_v5</p>
+            <p>cd contracts/obscura_v4</p>
             <p>leo build --network testnet --endpoint https://api.explorer.provable.com/v1</p>
           </div>
         </div>

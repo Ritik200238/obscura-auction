@@ -4,7 +4,7 @@
 
 ## Project Identity
 - **Name:** Obscura
-- **Program ID:** `obscura_v5.aleo`
+- **Program ID:** `obscura_v4.aleo`
 - **Tagline:** Bids enter the dark chamber. Only at reveal does the picture become clear.
 - **Use Cases:** Private procurement, sealed tenders, NFT auctions, anonymous bidding, government contracts
 
@@ -25,16 +25,14 @@
 
 ---
 
-## Smart Contract: obscura_v5.aleo
+## Smart Contract: obscura_v4.aleo
 
 ### Final Metrics
 ```
-Core Transitions:  31
-Marketplace:       21 (obscura_market_v1.aleo)
-Total Transitions: 52
-Records:           6  (all private, proper UTXO)
-Mappings:          18
-Structs:           10
+Transitions:  28
+Records:      5  (all private, proper UTXO)
+Mappings:     16
+Structs:      9
 State Machine:     8 states
 Tokens:            credits.aleo + test_usdcx_stablecoin.aleo (USDCx) + test_usad_stablecoin.aleo (USAD)
 Novel:             Vickrey (second-price) + Dutch + English + anti-sniping + dispute resolution + settlement proofs + payment proofs + selective disclosure + marketplace
@@ -96,45 +94,7 @@ SELECTIVE DISCLOSURE (1):
   prove_won_auction                → ZK proof of winning (WinnerCertificate not consumed)
 ```
 
-### Marketplace Contract: obscura_market_v1.aleo (21 Transitions)
-
-```
-FIXED-PRICE SALES (5):
-  list_item                        → list item at fixed price (any token type)
-  buy_item                         → ALEO: purchase listed item
-  buy_item_usdcx                   → USDCx: purchase listed item
-  buy_item_usad                    → USAD: purchase listed item
-  delist_item                      → seller removes listing
-
-RFQ — REQUEST FOR QUOTE (4):
-  create_rfq                       → buyer posts a request for quotes
-  submit_quote                     → seller submits a private quote
-  accept_quote                     → buyer accepts a quote, triggers settlement
-  cancel_rfq                       → buyer cancels open RFQ
-
-TOKEN SALES (5):
-  create_token_sale                → create batch token sale (IDO-style)
-  participate_sale                 → ALEO: participate in token sale
-  participate_sale_usdcx           → USDCx: participate in token sale
-  finalize_sale                    → finalize and distribute tokens
-  claim_tokens                     → participants claim allocated tokens
-  refund_sale                      → refund if sale fails or is cancelled
-
-ROYALTIES (3):
-  set_royalty                      → creator sets royalty percentage for an item
-  claim_royalties                  → ALEO: creator claims accumulated royalties
-  claim_royalties_usdcx            → USDCx: creator claims accumulated royalties
-
-PROVENANCE (2):
-  register_provenance              → register initial ownership record
-  transfer_provenance              → transfer ownership with on-chain history
-
-TIMELOCKS (2):
-  create_timelock                  → create time-delayed escrow
-  release_timelock                 → release escrowed funds after timelock expires
-```
-
-### Records (6 — All Private)
+### Records (5 — All Private)
 ```
 SealedBid           → bidder's sealed commitment (consumed on reveal)
                       Fields: owner, auction_id, bid_amount, bid_nonce, token_type
@@ -151,8 +111,6 @@ SellerReceipt       → seller's proof of sale (kept forever)
 DisputeBond         → disputer's bond receipt (consumed on resolution)
                       Fields: owner, auction_id, bond_amount
 
-MarketReceipt       → buyer's proof of marketplace purchase (kept forever)
-                      Fields: owner, listing_id, item_hash, purchase_amount, token_type
 ```
 
 ### Mappings (16)
@@ -560,7 +518,7 @@ Backend:    Vercel Serverless (Express as serverless function)
             Upstash Redis for persistent storage
             Environment: ENCRYPTION_KEY, KV_REST_API_URL, KV_REST_API_TOKEN
 
-Contract:   Aleo Testnet (obscura_v5.aleo + obscura_market_v1.aleo)
+Contract:   Aleo Testnet (obscura_v4.aleo)
             Deployed via snarkos developer deploy
             Explorer API for read-only state queries
 ```

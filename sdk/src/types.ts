@@ -1,4 +1,4 @@
-// TypeScript interfaces mirroring every on-chain struct and record in obscura_v5.aleo.
+// TypeScript interfaces mirroring every on-chain struct and record in obscura_v4.aleo.
 
 /** On-chain AuctionData struct (stored in `auctions` mapping) */
 export interface AuctionData {

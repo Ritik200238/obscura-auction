@@ -13,8 +13,7 @@
 
 | Resource | URL |
 |----------|-----|
-| Smart Contract v5 | [`obscura_v5.aleo`](https://testnet.explorer.provable.com/program/obscura_v5.aleo) on Aleo Testnet |
-| Marketplace Contract | [`obscura_market_v1.aleo`](https://testnet.explorer.provable.com/program/obscura_market_v1.aleo) on Aleo Testnet |
+| Smart Contract v5 | [`obscura_v4.aleo`](https://testnet.explorer.provable.com/program/obscura_v4.aleo) on Aleo Testnet |
 | Deploy TX v5 | [`at1f3sxnlttr6spyvzgjhg7j9n40r088xuck04a9z5wxnuv9m09gc9suq928a`](https://testnet.explorer.provable.com/transaction/at1f3sxnlttr6spyvzgjhg7j9n40r088xuck04a9z5wxnuv9m09gc9suq928a) |
 | Smart Contract v2 | [`obscura_v2.aleo`](https://explorer.provable.com/transaction/at1qy5h67s6629k07rf0vp2f6jxrh5xhqpxm6td2c8cmsl0s7233cgsafp7hk) (superseded) |
 | Smart Contract v1 | [`obscura_auction.aleo`](https://explorer.provable.com/transaction/at1j58ds0rvhpwtspyvmr9wjxkrd2jq3xg2v25p8se4ezsv40a8xupswz58g4) (initial, superseded) |
@@ -65,7 +64,6 @@ Traditional on-chain auctions expose all bids publicly, enabling front-running a
 - **Selective Disclosure** -- prove_won_auction transition proves winning without revealing bid amount
 - **6 Record Types** -- SealedBid, EscrowReceipt, WinnerCertificate, SellerReceipt, DisputeBond, MarketReceipt
 - **18 Mappings** -- minimal public data, hashed identities
-- **Marketplace Contract** -- `obscura_market_v1.aleo` with 21 transitions for fixed-price sales, RFQ, token sales, royalties, provenance, and timelocks
 - **8-State Machine** -- Active -> Revealing -> Settled/Failed/Cancelled/Expired/Disputed
 
 ### Frontend

@@ -2,7 +2,7 @@
 
 > Every auction on Ethereum is a fishbowl. Bids are public. Bidders are doxxed. Front-runners extract value before the gavel falls. **Obscura makes auctions invisible.**
 
-**[Try the Live Demo](https://obscura-auction-95hm.vercel.app)** · **[Core Contract](https://testnet.explorer.provable.com/program/obscura_v5.aleo)** · **[Marketplace Contract](https://testnet.explorer.provable.com/program/obscura_market_v1.aleo)** · Shield Wallet Required
+**[Try the Live Demo](https://obscura-auction-95hm.vercel.app)** · **[Contract on Explorer](https://testnet.explorer.provable.com/program/obscura_v4.aleo)** · Shield Wallet Required
 
 ---
 
@@ -40,8 +40,8 @@ During Obscura's sealed phase, **no tokens move at all**. An observer watching `
 ### Three Token Types
 ALEO Credits (maximum privacy — private record transfers), USDCx stablecoin, USAD stablecoin. Every auction format works with every token.
 
-### Marketplace Extensions
-Fixed-price sales ("Buy Now"), RFQ/reverse auctions (buyers post requests, sellers compete), and token sales (batch distribution) — deployed as a companion contract `obscura_market_v1.aleo`.
+### Dispute Resolution
+Bond-based challenge mechanism — any revealed bidder can dispute within 100 blocks of settlement. 10% bond stake, admin resolution. Prevents post-settlement fraud.
 
 ---
 
@@ -79,10 +79,8 @@ When a new bid arrives, the network column shows a new hash appearing. The user 
 
 ## Contract Architecture
 
-Two programs deployed on Aleo Testnet:
-
-### `obscura_v5.aleo` — Core Auction Protocol
-28 transitions, 16 mappings, 5 private records, 53 KB compiled.
+### `obscura_v4.aleo` — Deployed on Aleo Testnet
+28 transitions, 16 mappings, 5 private records, 9 structs, 2,752 lines of Leo.
 
 | Group | What It Does |
 |-------|-------------|
@@ -97,16 +95,7 @@ Two programs deployed on Aleo Testnet:
 | **Dispute** (2) | Bond-based challenge (10% of highest bid) + admin resolution |
 | **ZK Proof** (1) | `prove_won_auction` — prove you won without revealing what you paid |
 
-### `obscura_market_v1.aleo` — Marketplace Extensions
-21 transitions for:
-- **Fixed-Price Sales** — list, buy (3 tokens), delist
-- **RFQ (Request for Quote)** — buyers post, sellers submit private quotes, buyer accepts
-- **Token Sales** — batch distribution with multiple participants
-- **Royalties** — creator royalty enforcement on secondary sales
-- **Provenance** — on-chain ownership history chain
-- **Timelocks** — time-delayed escrow for conditional sales
-
-**Total platform: 49 transitions across 2 programs.**
+Of these 28, 11 are token-variant transitions (same logic, different token path). The remaining 17 are unique logic: auction lifecycle, bidding, settlement, dispute resolution, and selective disclosure.
 
 ### Private Records (UTXO Model)
 
@@ -189,8 +178,7 @@ The app includes an **interactive Vickrey auction explainer** at `/learn` — a 
 
 | Field | Value |
 |-------|-------|
-| Core Program | [`obscura_v5.aleo`](https://testnet.explorer.provable.com/program/obscura_v5.aleo) |
-| Marketplace | [`obscura_market_v1.aleo`](https://testnet.explorer.provable.com/program/obscura_market_v1.aleo) |
+| Program | [`obscura_v4.aleo`](https://testnet.explorer.provable.com/program/obscura_v4.aleo) |
 | Network | Aleo Testnet |
 | Dependencies | `credits.aleo`, `test_usdcx_stablecoin.aleo`, `test_usad_stablecoin.aleo` |
 
@@ -214,7 +202,7 @@ The app includes an **interactive Vickrey auction explainer** at `/learn` — a 
 3. **Four auction formats in one contract** — no other Aleo program supports Sealed-Bid, Vickrey, Dutch, and English
 4. **Selective winner disclosure** — `prove_won_auction` lets winners prove they won without revealing what they paid
 5. **Anti-sniping on-chain** — 40-block deadline extension. Neither NullPay nor Veiled Markets implements this
-6. **Companion marketplace architecture** — two-program design (`obscura_v5` + `obscura_market_v1`) shows platform thinking, not demo thinking
+6. **Dispute resolution** — bond-based on-chain challenge mechanism with 10% bond stake, preventing post-settlement fraud
 7. **Privacy-first UX** — privacy score grades, Ethereum comparison toggle, real-time privacy monitor — privacy isn't just in the contract, it's in the user experience
 
 ---
@@ -223,7 +211,7 @@ The app includes an **interactive Vickrey auction explainer** at `/learn` — a 
 
 | Layer | Technology |
 |-------|-----------|
-| **Smart Contract** | Leo (Aleo) — 2 programs, 49 transitions |
+| **Smart Contract** | Leo (Aleo) — `obscura_v4.aleo`, 28 transitions, 4 auction formats |
 | **Frontend** | React 19 + TypeScript + Vite + Tailwind CSS + Framer Motion + Zustand |
 | **Backend** | Express + TypeScript + AES-256-GCM encryption + Supabase |
 | **Wallet** | Shield Wallet (delegated proving) via `@provablehq/aleo-wallet-adaptor-react` |
@@ -244,8 +232,7 @@ cd frontend && npm install --legacy-peer-deps && cp .env.example .env && npm run
 cd backend && npm install && cp .env.example .env && npm run dev
 
 # Build contracts
-cd contracts/obscura_v4 && leo build
-cd ../obscura_market && leo build
+cd contracts/obscura_v4 && leo build --network testnet --endpoint https://api.explorer.provable.com/v1
 ```
 
 ---

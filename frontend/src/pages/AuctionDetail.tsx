@@ -361,7 +361,7 @@ export default function AuctionDetail() {
               {/* Explorer QR for settled auctions */}
               <div className="mt-3 pt-3 border-t border-surface-700/30">
                 <AuctionQR
-                  value={`https://testnet.explorer.provable.com/program/obscura_v5.aleo`}
+                  value={`https://testnet.explorer.provable.com/program/obscura_v4.aleo`}
                   label="Verify on Explorer"
                   sublabel="Scan to verify this auction's settlement on Aleo Explorer"
                   size={100}
@@ -406,7 +406,7 @@ export default function AuctionDetail() {
                     Verified with zero-knowledge proofs on Aleo.
                   </p>
                   <div className="flex items-center gap-3 mt-4 pt-3 border-t border-white/5">
-                    <span className="text-[10px] text-gray-600 font-mono">obscura_v5.aleo</span>
+                    <span className="text-[10px] text-gray-600 font-mono">obscura_v4.aleo</span>
                     <span className="text-[10px] text-gray-700">·</span>
                     <span className="text-[10px] text-accent-400/60 font-mono">prove_won_auction</span>
                     <span className="text-[10px] text-gray-700">·</span>

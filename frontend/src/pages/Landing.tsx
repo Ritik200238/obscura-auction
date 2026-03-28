@@ -629,7 +629,7 @@ function LiveActivityBar() {
     <section className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
       <div className="flex items-center justify-center gap-4 py-4 px-6 rounded-2xl bg-surface-900/60 border border-surface-700/30">
         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-        <span className="text-xs text-gray-400">Live on Aleo Testnet · 51 transitions · Loading stats...</span>
+        <span className="text-xs text-gray-400">Live on Aleo Testnet · 28 transitions · Loading stats...</span>
       </div>
     </section>
   )
@@ -803,11 +803,11 @@ export default function Landing() {
           >
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-green-400 font-medium font-mono text-xs">obscura_v5.aleo</span>
+              <span className="text-green-400 font-medium font-mono text-xs">obscura_v4.aleo</span>
             </span>
             <span className="text-surface-600">|</span>
             <a
-              href="https://testnet.explorer.provable.com/program/obscura_v5.aleo"
+              href="https://testnet.explorer.provable.com/program/obscura_v4.aleo"
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent-400 hover:text-accent-300 transition-colors flex items-center gap-1 text-xs"
@@ -1234,14 +1234,14 @@ export default function Landing() {
           <motion.p variants={fadeInUp} className="text-center text-xs text-gray-600 font-mono">
             Deployed as{' '}
             <a
-              href="https://testnet.explorer.provable.com/program/obscura_v5.aleo"
+              href="https://testnet.explorer.provable.com/program/obscura_v4.aleo"
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent-400/70 hover:text-accent-400 transition-colors"
             >
-              obscura_v5.aleo
+              obscura_v4.aleo
             </a>{' '}
-            on Aleo Testnet · 51 transitions · 7 market types · Full escrow
+            on Aleo Testnet · 28 transitions · 4 auction formats · Full escrow
           </motion.p>
         </AnimatedSection>
       </section>
@@ -1305,7 +1305,7 @@ export default function Landing() {
 
             <div className="mt-5 pt-5 border-t border-surface-800 flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-xs text-gray-600">
-                Contract: <span className="font-mono text-accent-400/70">obscura_v5.aleo</span> ·
+                Contract: <span className="font-mono text-accent-400/70">obscura_v4.aleo</span> ·
                 Deploy TX: <span className="font-mono text-gray-500">at1f3sxnl...928a</span>
               </p>
               <Link to="/create" className="btn-primary text-sm flex items-center gap-2">
@@ -1359,7 +1359,7 @@ export default function Landing() {
                   <ExternalLink className="w-3 h-3" />
                 </a>
                 <a
-                  href="https://testnet.explorer.provable.com/program/obscura_v5.aleo"
+                  href="https://testnet.explorer.provable.com/program/obscura_v4.aleo"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-gray-300 transition-colors flex items-center gap-1"

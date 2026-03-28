@@ -150,7 +150,7 @@ export default function FixedSales() {
     const priceMicros = toMicrocredits(parseFloat(price))
 
     const result = await execute({
-      program: 'obscura_market_v1.aleo',
+      program: 'obscura_v4.aleo',
       functionName: 'create_fixed_sale',
       inputs: [
         itemHash,
@@ -189,7 +189,7 @@ export default function FixedSales() {
           return
         }
         await execute({
-          program: 'obscura_market_v1.aleo',
+          program: 'obscura_v4.aleo',
           functionName: 'buy_fixed_sale',
           inputs: [
             saleKey,
@@ -200,7 +200,7 @@ export default function FixedSales() {
         })
       } else if (sale.token_type === TOKEN_TYPE.USDCX) {
         await execute({
-          program: 'obscura_market_v1.aleo',
+          program: 'obscura_v4.aleo',
           functionName: 'buy_fixed_sale_usdcx',
           inputs: [
             saleKey,
@@ -210,7 +210,7 @@ export default function FixedSales() {
         })
       } else {
         await execute({
-          program: 'obscura_market_v1.aleo',
+          program: 'obscura_v4.aleo',
           functionName: 'buy_fixed_sale_usad',
           inputs: [
             saleKey,
