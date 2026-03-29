@@ -3,8 +3,7 @@ import { useWallet } from '@provablehq/aleo-wallet-adaptor-react'
 import { WalletMultiButton } from '@provablehq/aleo-wallet-adaptor-react-ui'
 import {
   Search, Plus, Activity, BookOpen, Menu, X, BarChart3,
-  Lightbulb, Radar, ShoppingBag, TrendingUp, FileText,
-  ChevronDown, MoreHorizontal
+  Lightbulb, Radar, ChevronDown, MoreHorizontal
 } from 'lucide-react'
 import ObscuraLogo from '@/components/shared/ObscuraLogo'
 import { useEffect, useState, useRef, useCallback } from 'react'
@@ -16,17 +15,14 @@ import { fetchMapping } from '@/lib/aleo'
 const primaryNav = [
   { to: '/browse', label: 'Browse', icon: Search },
   { to: '/create', label: 'Create', icon: Plus },
-  { to: '/fixed-sales', label: 'Buy Now', icon: ShoppingBag },
-  { to: '/token-sale', label: 'Token Sales', icon: TrendingUp },
-  { to: '/rfq', label: 'Procurement', icon: FileText },
   { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
+  { to: '/my-activity', label: 'Activity', icon: Activity },
+  { to: '/docs', label: 'Docs', icon: BookOpen },
+  { to: '/explorer', label: 'Explorer', icon: Radar },
 ]
 
 const moreNav = [
-  { to: '/my-activity', label: 'Activity', icon: Activity },
-  { to: '/docs', label: 'Docs', icon: BookOpen },
   { to: '/learn', label: 'Learn', icon: Lightbulb },
-  { to: '/explorer', label: 'Explorer', icon: Radar },
 ]
 
 // All nav for mobile
