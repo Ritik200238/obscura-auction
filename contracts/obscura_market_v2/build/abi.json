@@ -340,7 +340,7 @@
           "path": [
             "FixedSaleConfig"
           ],
-          "program": "obscura_market_v2"
+          "program": "obscura_market_v2.aleo"
         }
       }
     },
@@ -354,7 +354,7 @@
           "path": [
             "RFQConfig"
           ],
-          "program": "obscura_market_v2"
+          "program": "obscura_market_v2.aleo"
         }
       }
     },
@@ -379,7 +379,7 @@
           "path": [
             "TokenSaleConfig"
           ],
-          "program": "obscura_market_v2"
+          "program": "obscura_market_v2.aleo"
         }
       }
     },
@@ -402,7 +402,7 @@
           "path": [
             "RoyaltyInfo"
           ],
-          "program": "obscura_market_v2"
+          "program": "obscura_market_v2.aleo"
         }
       }
     },
@@ -456,10 +456,10 @@
     }
   ],
   "storage_variables": [],
-  "transitions": [
+  "functions": [
     {
       "name": "create_fixed_sale",
-      "is_async": true,
+      "is_final": true,
       "inputs": [
         {
           "name": "item_hash",
@@ -512,14 +512,14 @@
           "mode": "None"
         },
         {
-          "ty": "Future",
+          "ty": "Final",
           "mode": "None"
         }
       ]
     },
     {
       "name": "buy_fixed_sale",
-      "is_async": true,
+      "is_final": true,
       "inputs": [
         {
           "name": "listing_id",
@@ -557,7 +557,7 @@
               "path": [
                 "credits"
               ],
-              "program": "credits"
+              "program": "credits.aleo"
             }
           },
           "mode": "Private"
@@ -570,7 +570,7 @@
               "path": [
                 "MarketReceipt"
               ],
-              "program": "obscura_market_v2"
+              "program": "obscura_market_v2.aleo"
             }
           },
           "mode": "None"
@@ -581,20 +581,20 @@
               "path": [
                 "credits"
               ],
-              "program": "credits"
+              "program": "credits.aleo"
             }
           },
           "mode": "None"
         },
         {
-          "ty": "Future",
+          "ty": "Final",
           "mode": "None"
         }
       ]
     },
     {
       "name": "buy_fixed_sale_usdcx",
-      "is_async": true,
+      "is_final": true,
       "inputs": [
         {
           "name": "listing_id",
@@ -633,20 +633,20 @@
               "path": [
                 "MarketReceipt"
               ],
-              "program": "obscura_market_v2"
+              "program": "obscura_market_v2.aleo"
             }
           },
           "mode": "None"
         },
         {
-          "ty": "Future",
+          "ty": "Final",
           "mode": "None"
         }
       ]
     },
     {
       "name": "buy_fixed_sale_usad",
-      "is_async": true,
+      "is_final": true,
       "inputs": [
         {
           "name": "listing_id",
@@ -685,20 +685,20 @@
               "path": [
                 "MarketReceipt"
               ],
-              "program": "obscura_market_v2"
+              "program": "obscura_market_v2.aleo"
             }
           },
           "mode": "None"
         },
         {
-          "ty": "Future",
+          "ty": "Final",
           "mode": "None"
         }
       ]
     },
     {
       "name": "delist_item",
-      "is_async": true,
+      "is_final": true,
       "inputs": [
         {
           "name": "listing_id",
@@ -712,14 +712,14 @@
       ],
       "outputs": [
         {
-          "ty": "Future",
+          "ty": "Final",
           "mode": "None"
         }
       ]
     },
     {
       "name": "create_rfq",
-      "is_async": true,
+      "is_final": true,
       "inputs": [
         {
           "name": "category",
@@ -794,14 +794,14 @@
           "mode": "None"
         },
         {
-          "ty": "Future",
+          "ty": "Final",
           "mode": "None"
         }
       ]
     },
     {
       "name": "submit_quote",
-      "is_async": true,
+      "is_final": true,
       "inputs": [
         {
           "name": "rfq_id",
@@ -840,20 +840,20 @@
               "path": [
                 "QuoteRecord"
               ],
-              "program": "obscura_market_v2"
+              "program": "obscura_market_v2.aleo"
             }
           },
           "mode": "None"
         },
         {
-          "ty": "Future",
+          "ty": "Final",
           "mode": "None"
         }
       ]
     },
     {
       "name": "accept_quote",
-      "is_async": true,
+      "is_final": true,
       "inputs": [
         {
           "name": "rfq_id",
@@ -871,7 +871,7 @@
               "path": [
                 "QuoteRecord"
               ],
-              "program": "obscura_market_v2"
+              "program": "obscura_market_v2.aleo"
             }
           },
           "mode": "Private"
@@ -892,7 +892,7 @@
               "path": [
                 "credits"
               ],
-              "program": "credits"
+              "program": "credits.aleo"
             }
           },
           "mode": "Private"
@@ -905,7 +905,7 @@
               "path": [
                 "MarketReceipt"
               ],
-              "program": "obscura_market_v2"
+              "program": "obscura_market_v2.aleo"
             }
           },
           "mode": "None"
@@ -916,20 +916,20 @@
               "path": [
                 "credits"
               ],
-              "program": "credits"
+              "program": "credits.aleo"
             }
           },
           "mode": "None"
         },
         {
-          "ty": "Future",
+          "ty": "Final",
           "mode": "None"
         }
       ]
     },
     {
       "name": "accept_quote_usdcx",
-      "is_async": true,
+      "is_final": true,
       "inputs": [
         {
           "name": "rfq_id",
@@ -947,7 +947,7 @@
               "path": [
                 "QuoteRecord"
               ],
-              "program": "obscura_market_v2"
+              "program": "obscura_market_v2.aleo"
             }
           },
           "mode": "Private"
@@ -969,20 +969,20 @@
               "path": [
                 "MarketReceipt"
               ],
-              "program": "obscura_market_v2"
+              "program": "obscura_market_v2.aleo"
             }
           },
           "mode": "None"
         },
         {
-          "ty": "Future",
+          "ty": "Final",
           "mode": "None"
         }
       ]
     },
     {
       "name": "create_token_sale",
-      "is_async": true,
+      "is_final": true,
       "inputs": [
         {
           "name": "item_hash",
@@ -1057,14 +1057,14 @@
           "mode": "None"
         },
         {
-          "ty": "Future",
+          "ty": "Final",
           "mode": "None"
         }
       ]
     },
     {
       "name": "bid_token_sale",
-      "is_async": true,
+      "is_final": true,
       "inputs": [
         {
           "name": "sale_id",
@@ -1104,7 +1104,7 @@
               "path": [
                 "credits"
               ],
-              "program": "credits"
+              "program": "credits.aleo"
             }
           },
           "mode": "Private"
@@ -1117,7 +1117,7 @@
               "path": [
                 "MarketReceipt"
               ],
-              "program": "obscura_market_v2"
+              "program": "obscura_market_v2.aleo"
             }
           },
           "mode": "None"
@@ -1128,20 +1128,20 @@
               "path": [
                 "credits"
               ],
-              "program": "credits"
+              "program": "credits.aleo"
             }
           },
           "mode": "None"
         },
         {
-          "ty": "Future",
+          "ty": "Final",
           "mode": "None"
         }
       ]
     },
     {
       "name": "bid_token_sale_usdcx",
-      "is_async": true,
+      "is_final": true,
       "inputs": [
         {
           "name": "sale_id",
@@ -1182,20 +1182,20 @@
               "path": [
                 "MarketReceipt"
               ],
-              "program": "obscura_market_v2"
+              "program": "obscura_market_v2.aleo"
             }
           },
           "mode": "None"
         },
         {
-          "ty": "Future",
+          "ty": "Final",
           "mode": "None"
         }
       ]
     },
     {
       "name": "set_provenance",
-      "is_async": true,
+      "is_final": true,
       "inputs": [
         {
           "name": "auction_id",
@@ -1218,14 +1218,14 @@
       ],
       "outputs": [
         {
-          "ty": "Future",
+          "ty": "Final",
           "mode": "None"
         }
       ]
     },
     {
       "name": "set_royalty",
-      "is_async": true,
+      "is_final": true,
       "inputs": [
         {
           "name": "auction_id",
@@ -1250,14 +1250,14 @@
       ],
       "outputs": [
         {
-          "ty": "Future",
+          "ty": "Final",
           "mode": "None"
         }
       ]
     },
     {
       "name": "prove_won_auction",
-      "is_async": false,
+      "is_final": false,
       "inputs": [
         {
           "name": "cert",
@@ -1266,7 +1266,7 @@
               "path": [
                 "WinnerCertificate"
               ],
-              "program": "obscura_market_v2"
+              "program": "obscura_market_v2.aleo"
             }
           },
           "mode": "Private"
@@ -1288,7 +1288,7 @@
               "path": [
                 "WinnerCertificate"
               ],
-              "program": "obscura_market_v2"
+              "program": "obscura_market_v2.aleo"
             }
           },
           "mode": "None"

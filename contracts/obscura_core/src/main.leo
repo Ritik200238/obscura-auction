@@ -28,7 +28,7 @@
 program obscura_core.aleo {
 
     @noupgrade
-    async constructor() {}
+    constructor() {}
 
     // ========================================================================
     // CONSTANTS
@@ -225,36 +225,30 @@ program obscura_core.aleo {
     //              T1: INITIALIZE PLATFORM
     // ########################################################################
 
-    async transition initialize_platform(
+    fn initialize_platform(
         private admin_address: address,
         private fee_bps: u128,
         private bond_bps: u128
-    ) -> Future {
+    ) -> Final {
         let admin_field: field = admin_address as field;
         let admin_hash: field = BHP256::hash_to_field(admin_field);
-        return finalize_init(admin_hash, fee_bps, bond_bps);
-    }
-
-    async function finalize_init(
-        admin_hash: field,
-        fee_bps: u128,
-        bond_bps: u128
-    ) {
-        let already_init: bool = platform_config.contains(0u8);
-        assert(!already_init);
-        platform_config.set(0u8, PlatformConfig {
-            admin_hash: admin_hash,
-            fee_bps: fee_bps,
-            dispute_bond_bps: bond_bps,
-            paused: false,
-        });
+        return final {
+            let already_init: bool = platform_config.contains(0u8);
+            assert(!already_init);
+            platform_config.set(0u8, PlatformConfig {
+                admin_hash: admin_hash,
+                fee_bps: fee_bps,
+                dispute_bond_bps: bond_bps,
+                paused: false,
+            });
+        };
     }
 
     // ########################################################################
     //              T2: CREATE AUCTION (Sealed/Vickrey/English)
     // ########################################################################
 
-    async transition create_auction(
+    fn create_auction(
         private item_hash: field,
         private category: u8,
         private reserve_price: u128,
@@ -262,7 +256,7 @@ program obscura_core.aleo {
         private token_type: u8,
         private auction_nonce: field,
         public deadline: u64
-    ) -> (field, Future) {
+    ) -> (field, Final) {
         let seed: AuctionSeed = AuctionSeed {
             creator: self.caller,
             item_hash: item_hash,
@@ -289,44 +283,30 @@ program obscura_core.aleo {
             token_type == TOKEN_USAD
         );
 
-        return (auction_id, finalize_create_auction(
-            auction_id, item_hash, seller_hash, category,
-            token_type, auction_mode, deadline, reserve_hash
-        ));
-    }
+        return (auction_id, final {
+            let exists: bool = auctions.contains(auction_id);
+            assert(!exists);
 
-    async function finalize_create_auction(
-        auction_id: field,
-        item_hash: field,
-        seller_hash: field,
-        category: u8,
-        token_type: u8,
-        auction_mode: u8,
-        deadline: u64,
-        reserve_hash: field
-    ) {
-        let exists: bool = auctions.contains(auction_id);
-        assert(!exists);
+            let current_height: u64 = block.height as u64;
+            assert(deadline > current_height + MIN_AUCTION_DURATION);
 
-        let current_height: u64 = block.height as u64;
-        assert(deadline > current_height + MIN_AUCTION_DURATION);
+            let cfg: PlatformConfig = platform_config.get(0u8);
+            assert(!cfg.paused);
 
-        let cfg: PlatformConfig = platform_config.get(0u8);
-        assert(!cfg.paused);
-
-        auctions.set(auction_id, AuctionData {
-            item_hash: item_hash,
-            seller_hash: seller_hash,
-            category: category,
-            token_type: token_type,
-            auction_mode: auction_mode,
-            status: STATUS_ACTIVE,
-            deadline: deadline,
-            reveal_deadline: 0u64,
-            bid_count: 0u64,
-            reserve_price_hash: reserve_hash,
-            created_at: current_height,
-            dispute_deadline: 0u64,
+            auctions.set(auction_id, AuctionData {
+                item_hash: item_hash,
+                seller_hash: seller_hash,
+                category: category,
+                token_type: token_type,
+                auction_mode: auction_mode,
+                status: STATUS_ACTIVE,
+                deadline: deadline,
+                reveal_deadline: 0u64,
+                bid_count: 0u64,
+                reserve_price_hash: reserve_hash,
+                created_at: current_height,
+                dispute_deadline: 0u64,
+            });
         });
     }
 
@@ -334,7 +314,7 @@ program obscura_core.aleo {
     //              T3: CREATE DUTCH AUCTION
     // ########################################################################
 
-    async transition create_dutch_auction(
+    fn create_dutch_auction(
         private item_hash: field,
         private category: u8,
         private start_price: u128,
@@ -342,7 +322,7 @@ program obscura_core.aleo {
         private token_type: u8,
         private auction_nonce: field,
         public deadline: u64
-    ) -> (field, Future) {
+    ) -> (field, Final) {
         assert(start_price > end_price);
         assert(end_price >= MIN_BID_AMOUNT);
         assert(
@@ -365,50 +345,35 @@ program obscura_core.aleo {
         let seller_field: field = self.caller as field;
         let seller_hash: field = BHP256::hash_to_field(seller_field);
 
-        return (auction_id, finalize_create_dutch(
-            auction_id, item_hash, seller_hash, category,
-            token_type, deadline, reserve_hash, start_price, end_price
-        ));
-    }
+        return (auction_id, final {
+            let exists: bool = auctions.contains(auction_id);
+            assert(!exists);
 
-    async function finalize_create_dutch(
-        auction_id: field,
-        item_hash: field,
-        seller_hash: field,
-        category: u8,
-        token_type: u8,
-        deadline: u64,
-        reserve_hash: field,
-        start_price: u128,
-        end_price: u128
-    ) {
-        let exists: bool = auctions.contains(auction_id);
-        assert(!exists);
+            let current_height: u64 = block.height as u64;
+            assert(deadline > current_height + MIN_AUCTION_DURATION);
 
-        let current_height: u64 = block.height as u64;
-        assert(deadline > current_height + MIN_AUCTION_DURATION);
+            let cfg: PlatformConfig = platform_config.get(0u8);
+            assert(!cfg.paused);
 
-        let cfg: PlatformConfig = platform_config.get(0u8);
-        assert(!cfg.paused);
+            auctions.set(auction_id, AuctionData {
+                item_hash: item_hash,
+                seller_hash: seller_hash,
+                category: category,
+                token_type: token_type,
+                auction_mode: MODE_DUTCH,
+                status: STATUS_ACTIVE,
+                deadline: deadline,
+                reveal_deadline: 0u64,
+                bid_count: 0u64,
+                reserve_price_hash: reserve_hash,
+                created_at: current_height,
+                dispute_deadline: 0u64,
+            });
 
-        auctions.set(auction_id, AuctionData {
-            item_hash: item_hash,
-            seller_hash: seller_hash,
-            category: category,
-            token_type: token_type,
-            auction_mode: MODE_DUTCH,
-            status: STATUS_ACTIVE,
-            deadline: deadline,
-            reveal_deadline: 0u64,
-            bid_count: 0u64,
-            reserve_price_hash: reserve_hash,
-            created_at: current_height,
-            dispute_deadline: 0u64,
-        });
-
-        dutch_params.set(auction_id, DutchConfig {
-            start_price: start_price,
-            end_price: end_price,
+            dutch_params.set(auction_id, DutchConfig {
+                start_price: start_price,
+                end_price: end_price,
+            });
         });
     }
 
@@ -416,7 +381,7 @@ program obscura_core.aleo {
     //              T4: CREATE BUNDLE AUCTION (NEW — multi-item)
     // ########################################################################
 
-    async transition create_bundle_auction(
+    fn create_bundle_auction(
         private item_hash_1: field,
         private item_hash_2: field,
         private item_hash_3: field,
@@ -427,7 +392,7 @@ program obscura_core.aleo {
         private token_type: u8,
         private auction_nonce: field,
         public deadline: u64
-    ) -> (field, Future) {
+    ) -> (field, Final) {
         assert(item_count >= 2u8 && item_count <= MAX_BUNDLE_ITEMS);
         assert(total_reserve >= MIN_BID_AMOUNT);
         assert(
@@ -451,57 +416,39 @@ program obscura_core.aleo {
         let seller_field: field = self.caller as field;
         let seller_hash: field = BHP256::hash_to_field(seller_field);
 
-        return (auction_id, finalize_create_bundle(
-            auction_id, item_hash_1, seller_hash, category,
-            token_type, deadline, reserve_hash,
-            item_hash_1, item_hash_2, item_hash_3, item_hash_4,
-            item_count, total_reserve
-        ));
-    }
+        return (auction_id, final {
+            let exists: bool = auctions.contains(auction_id);
+            assert(!exists);
 
-    async function finalize_create_bundle(
-        auction_id: field,
-        item_hash: field,
-        seller_hash: field,
-        category: u8,
-        token_type: u8,
-        deadline: u64,
-        reserve_hash: field,
-        ih1: field, ih2: field, ih3: field, ih4: field,
-        item_count: u8,
-        total_reserve: u128
-    ) {
-        let exists: bool = auctions.contains(auction_id);
-        assert(!exists);
+            let current_height: u64 = block.height as u64;
+            assert(deadline > current_height + MIN_AUCTION_DURATION);
 
-        let current_height: u64 = block.height as u64;
-        assert(deadline > current_height + MIN_AUCTION_DURATION);
+            let cfg: PlatformConfig = platform_config.get(0u8);
+            assert(!cfg.paused);
 
-        let cfg: PlatformConfig = platform_config.get(0u8);
-        assert(!cfg.paused);
+            auctions.set(auction_id, AuctionData {
+                item_hash: item_hash_1,
+                seller_hash: seller_hash,
+                category: category,
+                token_type: token_type,
+                auction_mode: MODE_BUNDLE,
+                status: STATUS_ACTIVE,
+                deadline: deadline,
+                reveal_deadline: 0u64,
+                bid_count: 0u64,
+                reserve_price_hash: reserve_hash,
+                created_at: current_height,
+                dispute_deadline: 0u64,
+            });
 
-        auctions.set(auction_id, AuctionData {
-            item_hash: item_hash,
-            seller_hash: seller_hash,
-            category: category,
-            token_type: token_type,
-            auction_mode: MODE_BUNDLE,
-            status: STATUS_ACTIVE,
-            deadline: deadline,
-            reveal_deadline: 0u64,
-            bid_count: 0u64,
-            reserve_price_hash: reserve_hash,
-            created_at: current_height,
-            dispute_deadline: 0u64,
-        });
-
-        bundle_configs.set(auction_id, BundleConfig {
-            item_count: item_count,
-            item_hash_1: ih1,
-            item_hash_2: ih2,
-            item_hash_3: ih3,
-            item_hash_4: ih4,
-            total_reserve: total_reserve,
+            bundle_configs.set(auction_id, BundleConfig {
+                item_count: item_count,
+                item_hash_1: item_hash_1,
+                item_hash_2: item_hash_2,
+                item_hash_3: item_hash_3,
+                item_hash_4: item_hash_4,
+                total_reserve: total_reserve,
+            });
         });
     }
 
@@ -509,7 +456,7 @@ program obscura_core.aleo {
     //              T5: CREATE MULTI-UNIT AUCTION (NEW — N units)
     // ########################################################################
 
-    async transition create_multi_unit_auction(
+    fn create_multi_unit_auction(
         private item_hash: field,
         private category: u8,
         private total_units: u128,
@@ -517,7 +464,7 @@ program obscura_core.aleo {
         private token_type: u8,
         private auction_nonce: field,
         public deadline: u64
-    ) -> (field, Future) {
+    ) -> (field, Final) {
         assert(total_units > 0u128);
         assert(min_price_per_unit >= MIN_BID_AMOUNT);
         assert(
@@ -540,52 +487,36 @@ program obscura_core.aleo {
         let seller_field: field = self.caller as field;
         let seller_hash: field = BHP256::hash_to_field(seller_field);
 
-        return (auction_id, finalize_create_multi_unit(
-            auction_id, item_hash, seller_hash, category,
-            token_type, deadline, reserve_hash,
-            total_units, min_price_per_unit
-        ));
-    }
+        return (auction_id, final {
+            let exists: bool = auctions.contains(auction_id);
+            assert(!exists);
 
-    async function finalize_create_multi_unit(
-        auction_id: field,
-        item_hash: field,
-        seller_hash: field,
-        category: u8,
-        token_type: u8,
-        deadline: u64,
-        reserve_hash: field,
-        total_units: u128,
-        min_price_per_unit: u128
-    ) {
-        let exists: bool = auctions.contains(auction_id);
-        assert(!exists);
+            let current_height: u64 = block.height as u64;
+            assert(deadline > current_height + MIN_AUCTION_DURATION);
 
-        let current_height: u64 = block.height as u64;
-        assert(deadline > current_height + MIN_AUCTION_DURATION);
+            let cfg: PlatformConfig = platform_config.get(0u8);
+            assert(!cfg.paused);
 
-        let cfg: PlatformConfig = platform_config.get(0u8);
-        assert(!cfg.paused);
+            auctions.set(auction_id, AuctionData {
+                item_hash: item_hash,
+                seller_hash: seller_hash,
+                category: category,
+                token_type: token_type,
+                auction_mode: MODE_MULTI_UNIT,
+                status: STATUS_ACTIVE,
+                deadline: deadline,
+                reveal_deadline: 0u64,
+                bid_count: 0u64,
+                reserve_price_hash: reserve_hash,
+                created_at: current_height,
+                dispute_deadline: 0u64,
+            });
 
-        auctions.set(auction_id, AuctionData {
-            item_hash: item_hash,
-            seller_hash: seller_hash,
-            category: category,
-            token_type: token_type,
-            auction_mode: MODE_MULTI_UNIT,
-            status: STATUS_ACTIVE,
-            deadline: deadline,
-            reveal_deadline: 0u64,
-            bid_count: 0u64,
-            reserve_price_hash: reserve_hash,
-            created_at: current_height,
-            dispute_deadline: 0u64,
-        });
-
-        multi_unit_configs.set(auction_id, MultiUnitConfig {
-            total_units: total_units,
-            min_price_per_unit: min_price_per_unit,
-            filled_units: 0u128,
+            multi_unit_configs.set(auction_id, MultiUnitConfig {
+                total_units: total_units,
+                min_price_per_unit: min_price_per_unit,
+                filled_units: 0u128,
+            });
         });
     }
 
@@ -593,72 +524,24 @@ program obscura_core.aleo {
     //              T6: CANCEL AUCTION
     // ########################################################################
 
-    async transition cancel_auction(
+    fn cancel_auction(
         private auction_id: field
-    ) -> Future {
+    ) -> Final {
         let caller_field: field = self.caller as field;
         let caller_hash: field = BHP256::hash_to_field(caller_field);
-        return finalize_cancel_auction(auction_id, caller_hash);
-    }
+        return final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.seller_hash, caller_hash);
+            assert_eq(auction.status, STATUS_ACTIVE);
+            assert_eq(auction.bid_count, 0u64);
 
-    async function finalize_cancel_auction(
-        auction_id: field,
-        caller_hash: field
-    ) {
-        let auction: AuctionData = auctions.get(auction_id);
-        assert_eq(auction.seller_hash, caller_hash);
-        assert_eq(auction.status, STATUS_ACTIVE);
-        assert_eq(auction.bid_count, 0u64);
-
-        auctions.set(auction_id, AuctionData {
-            item_hash: auction.item_hash,
-            seller_hash: auction.seller_hash,
-            category: auction.category,
-            token_type: auction.token_type,
-            auction_mode: auction.auction_mode,
-            status: STATUS_CANCELLED,
-            deadline: auction.deadline,
-            reveal_deadline: auction.reveal_deadline,
-            bid_count: auction.bid_count,
-            reserve_price_hash: auction.reserve_price_hash,
-            created_at: auction.created_at,
-            dispute_deadline: auction.dispute_deadline,
-        });
-    }
-
-    // ########################################################################
-    //              T7: CLOSE BIDDING
-    // ########################################################################
-
-    async transition close_bidding(
-        private auction_id: field
-    ) -> Future {
-        return finalize_close_bidding(auction_id);
-    }
-
-    async function finalize_close_bidding(
-        auction_id: field
-    ) {
-        let auction: AuctionData = auctions.get(auction_id);
-        assert_eq(auction.status, STATUS_ACTIVE);
-        assert(
-            auction.auction_mode == MODE_FIRST_PRICE ||
-            auction.auction_mode == MODE_VICKREY ||
-            auction.auction_mode == MODE_BUNDLE ||
-            auction.auction_mode == MODE_MULTI_UNIT
-        );
-
-        let current_height: u64 = block.height as u64;
-        assert(current_height >= auction.deadline);
-
-        if (auction.bid_count == 0u64) {
             auctions.set(auction_id, AuctionData {
                 item_hash: auction.item_hash,
                 seller_hash: auction.seller_hash,
                 category: auction.category,
                 token_type: auction.token_type,
                 auction_mode: auction.auction_mode,
-                status: STATUS_EXPIRED,
+                status: STATUS_CANCELLED,
                 deadline: auction.deadline,
                 reveal_deadline: auction.reveal_deadline,
                 bid_count: auction.bid_count,
@@ -666,34 +549,73 @@ program obscura_core.aleo {
                 created_at: auction.created_at,
                 dispute_deadline: auction.dispute_deadline,
             });
-        } else {
-            auctions.set(auction_id, AuctionData {
-                item_hash: auction.item_hash,
-                seller_hash: auction.seller_hash,
-                category: auction.category,
-                token_type: auction.token_type,
-                auction_mode: auction.auction_mode,
-                status: STATUS_REVEALING,
-                deadline: auction.deadline,
-                reveal_deadline: current_height + REVEAL_WINDOW_BLOCKS,
-                bid_count: auction.bid_count,
-                reserve_price_hash: auction.reserve_price_hash,
-                created_at: auction.created_at,
-                dispute_deadline: auction.dispute_deadline,
-            });
-        }
+        };
+    }
+
+    // ########################################################################
+    //              T7: CLOSE BIDDING
+    // ########################################################################
+
+    fn close_bidding(
+        private auction_id: field
+    ) -> Final {
+        return final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.status, STATUS_ACTIVE);
+            assert(
+                auction.auction_mode == MODE_FIRST_PRICE ||
+                auction.auction_mode == MODE_VICKREY ||
+                auction.auction_mode == MODE_BUNDLE ||
+                auction.auction_mode == MODE_MULTI_UNIT
+            );
+
+            let current_height: u64 = block.height as u64;
+            assert(current_height >= auction.deadline);
+
+            if (auction.bid_count == 0u64) {
+                auctions.set(auction_id, AuctionData {
+                    item_hash: auction.item_hash,
+                    seller_hash: auction.seller_hash,
+                    category: auction.category,
+                    token_type: auction.token_type,
+                    auction_mode: auction.auction_mode,
+                    status: STATUS_EXPIRED,
+                    deadline: auction.deadline,
+                    reveal_deadline: auction.reveal_deadline,
+                    bid_count: auction.bid_count,
+                    reserve_price_hash: auction.reserve_price_hash,
+                    created_at: auction.created_at,
+                    dispute_deadline: auction.dispute_deadline,
+                });
+            } else {
+                auctions.set(auction_id, AuctionData {
+                    item_hash: auction.item_hash,
+                    seller_hash: auction.seller_hash,
+                    category: auction.category,
+                    token_type: auction.token_type,
+                    auction_mode: auction.auction_mode,
+                    status: STATUS_REVEALING,
+                    deadline: auction.deadline,
+                    reveal_deadline: current_height + REVEAL_WINDOW_BLOCKS,
+                    bid_count: auction.bid_count,
+                    reserve_price_hash: auction.reserve_price_hash,
+                    created_at: auction.created_at,
+                    dispute_deadline: auction.dispute_deadline,
+                });
+            }
+        };
     }
 
     // ########################################################################
     //              T8: PLACE BID — sealed commitment (no token transfer)
     // ########################################################################
 
-    async transition place_bid(
+    fn place_bid(
         private auction_id: field,
         private bid_amount: u128,
         private bid_nonce: field,
         private token_type: u8
-    ) -> (SealedBid, Future) {
+    ) -> (SealedBid, Final) {
         assert(bid_amount >= MIN_BID_AMOUNT);
         assert(
             token_type == TOKEN_ALEO ||
@@ -716,49 +638,43 @@ program obscura_core.aleo {
             nonce: bid_nonce,
         });
 
-        return (sealed, finalize_place_bid(auction_id, bid_hash, token_type));
-    }
+        return (sealed, final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.status, STATUS_ACTIVE);
+            assert_eq(auction.token_type, token_type);
+            assert(
+                auction.auction_mode == MODE_FIRST_PRICE ||
+                auction.auction_mode == MODE_VICKREY
+            );
 
-    async function finalize_place_bid(
-        auction_id: field,
-        bid_hash: field,
-        token_type: u8
-    ) {
-        let auction: AuctionData = auctions.get(auction_id);
-        assert_eq(auction.status, STATUS_ACTIVE);
-        assert_eq(auction.token_type, token_type);
-        assert(
-            auction.auction_mode == MODE_FIRST_PRICE ||
-            auction.auction_mode == MODE_VICKREY
-        );
+            let current_height: u64 = block.height as u64;
+            assert(current_height <= auction.deadline);
 
-        let current_height: u64 = block.height as u64;
-        assert(current_height <= auction.deadline);
+            // Merkle gating: if a root is set, the bid must have been verified
+            // in the transition body (off-chain ZK). Finalize only sees the bid_hash.
 
-        // Merkle gating: if a root is set, the bid must have been verified
-        // in the transition body (off-chain ZK). Finalize only sees the bid_hash.
+            let already_exists: bool = bid_commitments.contains(bid_hash);
+            assert(!already_exists);
 
-        let already_exists: bool = bid_commitments.contains(bid_hash);
-        assert(!already_exists);
+            let cfg: PlatformConfig = platform_config.get(0u8);
+            assert(!cfg.paused);
 
-        let cfg: PlatformConfig = platform_config.get(0u8);
-        assert(!cfg.paused);
+            bid_commitments.set(bid_hash, true);
 
-        bid_commitments.set(bid_hash, true);
-
-        auctions.set(auction_id, AuctionData {
-            item_hash: auction.item_hash,
-            seller_hash: auction.seller_hash,
-            category: auction.category,
-            token_type: auction.token_type,
-            auction_mode: auction.auction_mode,
-            status: auction.status,
-            deadline: auction.deadline,
-            reveal_deadline: auction.reveal_deadline,
-            bid_count: auction.bid_count + 1u64,
-            reserve_price_hash: auction.reserve_price_hash,
-            created_at: auction.created_at,
-            dispute_deadline: auction.dispute_deadline,
+            auctions.set(auction_id, AuctionData {
+                item_hash: auction.item_hash,
+                seller_hash: auction.seller_hash,
+                category: auction.category,
+                token_type: auction.token_type,
+                auction_mode: auction.auction_mode,
+                status: auction.status,
+                deadline: auction.deadline,
+                reveal_deadline: auction.reveal_deadline,
+                bid_count: auction.bid_count + 1u64,
+                reserve_price_hash: auction.reserve_price_hash,
+                created_at: auction.created_at,
+                dispute_deadline: auction.dispute_deadline,
+            });
         });
     }
 
@@ -766,12 +682,12 @@ program obscura_core.aleo {
     //              T9: PLACE BUNDLE BID (NEW — bid on whole bundle)
     // ########################################################################
 
-    async transition place_bundle_bid(
+    fn place_bundle_bid(
         private auction_id: field,
         private bid_amount: u128,
         private bid_nonce: field,
         private token_type: u8
-    ) -> (BundleBid, Future) {
+    ) -> (BundleBid, Final) {
         assert(bid_amount >= MIN_BID_AMOUNT);
 
         let bid: BundleBid = BundleBid {
@@ -789,43 +705,37 @@ program obscura_core.aleo {
             nonce: bid_nonce,
         });
 
-        return (bid, finalize_place_bundle_bid(auction_id, bid_hash, token_type));
-    }
+        return (bid, final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.status, STATUS_ACTIVE);
+            assert_eq(auction.auction_mode, MODE_BUNDLE);
+            assert_eq(auction.token_type, token_type);
 
-    async function finalize_place_bundle_bid(
-        auction_id: field,
-        bid_hash: field,
-        token_type: u8
-    ) {
-        let auction: AuctionData = auctions.get(auction_id);
-        assert_eq(auction.status, STATUS_ACTIVE);
-        assert_eq(auction.auction_mode, MODE_BUNDLE);
-        assert_eq(auction.token_type, token_type);
+            let current_height: u64 = block.height as u64;
+            assert(current_height <= auction.deadline);
 
-        let current_height: u64 = block.height as u64;
-        assert(current_height <= auction.deadline);
+            let already_exists: bool = bid_commitments.contains(bid_hash);
+            assert(!already_exists);
 
-        let already_exists: bool = bid_commitments.contains(bid_hash);
-        assert(!already_exists);
+            let cfg: PlatformConfig = platform_config.get(0u8);
+            assert(!cfg.paused);
 
-        let cfg: PlatformConfig = platform_config.get(0u8);
-        assert(!cfg.paused);
+            bid_commitments.set(bid_hash, true);
 
-        bid_commitments.set(bid_hash, true);
-
-        auctions.set(auction_id, AuctionData {
-            item_hash: auction.item_hash,
-            seller_hash: auction.seller_hash,
-            category: auction.category,
-            token_type: auction.token_type,
-            auction_mode: auction.auction_mode,
-            status: auction.status,
-            deadline: auction.deadline,
-            reveal_deadline: auction.reveal_deadline,
-            bid_count: auction.bid_count + 1u64,
-            reserve_price_hash: auction.reserve_price_hash,
-            created_at: auction.created_at,
-            dispute_deadline: auction.dispute_deadline,
+            auctions.set(auction_id, AuctionData {
+                item_hash: auction.item_hash,
+                seller_hash: auction.seller_hash,
+                category: auction.category,
+                token_type: auction.token_type,
+                auction_mode: auction.auction_mode,
+                status: auction.status,
+                deadline: auction.deadline,
+                reveal_deadline: auction.reveal_deadline,
+                bid_count: auction.bid_count + 1u64,
+                reserve_price_hash: auction.reserve_price_hash,
+                created_at: auction.created_at,
+                dispute_deadline: auction.dispute_deadline,
+            });
         });
     }
 
@@ -833,13 +743,13 @@ program obscura_core.aleo {
     //              T10: PLACE MULTI-UNIT BID (NEW — qty + price)
     // ########################################################################
 
-    async transition place_multi_unit_bid(
+    fn place_multi_unit_bid(
         private auction_id: field,
         private quantity: u128,
         private price_per_unit: u128,
         private bid_nonce: field,
         private token_type: u8
-    ) -> (MultiUnitBid, Future) {
+    ) -> (MultiUnitBid, Final) {
         assert(quantity > 0u128);
         assert(price_per_unit >= MIN_BID_AMOUNT);
 
@@ -861,43 +771,37 @@ program obscura_core.aleo {
             nonce: bid_nonce,
         });
 
-        return (bid, finalize_place_multi_unit_bid(auction_id, bid_hash, token_type));
-    }
+        return (bid, final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.status, STATUS_ACTIVE);
+            assert_eq(auction.auction_mode, MODE_MULTI_UNIT);
+            assert_eq(auction.token_type, token_type);
 
-    async function finalize_place_multi_unit_bid(
-        auction_id: field,
-        bid_hash: field,
-        token_type: u8
-    ) {
-        let auction: AuctionData = auctions.get(auction_id);
-        assert_eq(auction.status, STATUS_ACTIVE);
-        assert_eq(auction.auction_mode, MODE_MULTI_UNIT);
-        assert_eq(auction.token_type, token_type);
+            let current_height: u64 = block.height as u64;
+            assert(current_height <= auction.deadline);
 
-        let current_height: u64 = block.height as u64;
-        assert(current_height <= auction.deadline);
+            let already_exists: bool = bid_commitments.contains(bid_hash);
+            assert(!already_exists);
 
-        let already_exists: bool = bid_commitments.contains(bid_hash);
-        assert(!already_exists);
+            let cfg: PlatformConfig = platform_config.get(0u8);
+            assert(!cfg.paused);
 
-        let cfg: PlatformConfig = platform_config.get(0u8);
-        assert(!cfg.paused);
+            bid_commitments.set(bid_hash, true);
 
-        bid_commitments.set(bid_hash, true);
-
-        auctions.set(auction_id, AuctionData {
-            item_hash: auction.item_hash,
-            seller_hash: auction.seller_hash,
-            category: auction.category,
-            token_type: auction.token_type,
-            auction_mode: auction.auction_mode,
-            status: auction.status,
-            deadline: auction.deadline,
-            reveal_deadline: auction.reveal_deadline,
-            bid_count: auction.bid_count + 1u64,
-            reserve_price_hash: auction.reserve_price_hash,
-            created_at: auction.created_at,
-            dispute_deadline: auction.dispute_deadline,
+            auctions.set(auction_id, AuctionData {
+                item_hash: auction.item_hash,
+                seller_hash: auction.seller_hash,
+                category: auction.category,
+                token_type: auction.token_type,
+                auction_mode: auction.auction_mode,
+                status: auction.status,
+                deadline: auction.deadline,
+                reveal_deadline: auction.reveal_deadline,
+                bid_count: auction.bid_count + 1u64,
+                reserve_price_hash: auction.reserve_price_hash,
+                created_at: auction.created_at,
+                dispute_deadline: auction.dispute_deadline,
+            });
         });
     }
 
@@ -905,82 +809,114 @@ program obscura_core.aleo {
     //              T11: SET MERKLE ROOT (allowlist gating)
     // ########################################################################
 
-    async transition set_merkle_root(
+    fn set_merkle_root(
         private auction_id: field,
         private root: field
-    ) -> Future {
+    ) -> Final {
         let caller_field: field = self.caller as field;
         let caller_hash: field = BHP256::hash_to_field(caller_field);
-        return finalize_set_merkle_root(auction_id, caller_hash, root);
-    }
-
-    async function finalize_set_merkle_root(
-        auction_id: field,
-        caller_hash: field,
-        root: field
-    ) {
-        let auction: AuctionData = auctions.get(auction_id);
-        assert_eq(auction.seller_hash, caller_hash);
-        assert_eq(auction.status, STATUS_ACTIVE);
-        assert_eq(auction.bid_count, 0u64);
-        merkle_roots.set(auction_id, root);
+        return final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.seller_hash, caller_hash);
+            assert_eq(auction.status, STATUS_ACTIVE);
+            assert_eq(auction.bid_count, 0u64);
+            merkle_roots.set(auction_id, root);
+        };
     }
 
     // ########################################################################
     //              T12: FINALIZE AUCTION (sealed/Vickrey/bundle/multi-unit)
     // ########################################################################
 
-    async transition finalize_auction(
+    fn finalize_auction(
         private auction_id: field,
         private reserve_price: u128
-    ) -> Future {
+    ) -> Final {
         let caller_field: field = self.caller as field;
         let caller_hash: field = BHP256::hash_to_field(caller_field);
 
         let reserve_field: field = reserve_price as field;
         let reserve_hash: field = BHP256::hash_to_field(reserve_field);
 
-        return do_finalize_auction(auction_id, caller_hash, reserve_hash, reserve_price);
-    }
+        return final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.seller_hash, caller_hash);
+            assert_eq(auction.status, STATUS_REVEALING);
 
-    async function do_finalize_auction(
-        auction_id: field,
-        caller_hash: field,
-        reserve_hash: field,
-        reserve_price: u128
-    ) {
-        let auction: AuctionData = auctions.get(auction_id);
-        assert_eq(auction.seller_hash, caller_hash);
-        assert_eq(auction.status, STATUS_REVEALING);
+            let current_height: u64 = block.height as u64;
+            assert(current_height > auction.reveal_deadline);
 
-        let current_height: u64 = block.height as u64;
-        assert(current_height > auction.reveal_deadline);
+            assert_eq(reserve_hash, auction.reserve_price_hash);
 
-        assert_eq(reserve_hash, auction.reserve_price_hash);
+            let winning_amount: u128 = highest_bids.get_or_use(auction_id, 0u128);
+            let winner_bid_hash: field = auction_winners.get_or_use(auction_id, 0field);
+            let second_price: u128 = second_highest_bids.get_or_use(auction_id, 0u128);
 
-        let winning_amount: u128 = highest_bids.get_or_use(auction_id, 0u128);
-        let winner_bid_hash: field = auction_winners.get_or_use(auction_id, 0field);
-        let second_price: u128 = second_highest_bids.get_or_use(auction_id, 0u128);
+            if (auction.auction_mode == MODE_VICKREY) {
+                if (second_price == 0u128) {
+                    // Vickrey requires 2+ revealed bids
+                    auctions.set(auction_id, AuctionData {
+                        item_hash: auction.item_hash,
+                        seller_hash: auction.seller_hash,
+                        category: auction.category,
+                        token_type: auction.token_type,
+                        auction_mode: auction.auction_mode,
+                        status: STATUS_FAILED,
+                        deadline: auction.deadline,
+                        reveal_deadline: auction.reveal_deadline,
+                        bid_count: auction.bid_count,
+                        reserve_price_hash: auction.reserve_price_hash,
+                        created_at: auction.created_at,
+                        dispute_deadline: auction.dispute_deadline,
+                    });
+                } else {
+                    if (winning_amount >= reserve_price) {
+                        auctions.set(auction_id, AuctionData {
+                            item_hash: auction.item_hash,
+                            seller_hash: auction.seller_hash,
+                            category: auction.category,
+                            token_type: auction.token_type,
+                            auction_mode: auction.auction_mode,
+                            status: STATUS_SETTLED,
+                            deadline: auction.deadline,
+                            reveal_deadline: auction.reveal_deadline,
+                            bid_count: auction.bid_count,
+                            reserve_price_hash: auction.reserve_price_hash,
+                            created_at: auction.created_at,
+                            dispute_deadline: 0u64,
+                        });
+                        let sp: field = BHP256::hash_to_field(SettlementProof {
+                            auction_id: auction_id,
+                            highest_bid: winning_amount,
+                            second_highest: second_price,
+                            winner_bid_hash: winner_bid_hash,
+                            settled_at: current_height,
+                        });
+                        settlement_proofs.set(auction_id, sp);
 
-        if (auction.auction_mode == MODE_VICKREY) {
-            if (second_price == 0u128) {
-                // Vickrey requires 2+ revealed bids
-                auctions.set(auction_id, AuctionData {
-                    item_hash: auction.item_hash,
-                    seller_hash: auction.seller_hash,
-                    category: auction.category,
-                    token_type: auction.token_type,
-                    auction_mode: auction.auction_mode,
-                    status: STATUS_FAILED,
-                    deadline: auction.deadline,
-                    reveal_deadline: auction.reveal_deadline,
-                    bid_count: auction.bid_count,
-                    reserve_price_hash: auction.reserve_price_hash,
-                    created_at: auction.created_at,
-                    dispute_deadline: auction.dispute_deadline,
-                });
+                        // Reputation: increment seller completed count
+                        let completed: u64 = reputation_completed.get_or_use(auction.seller_hash, 0u64);
+                        reputation_completed.set(auction.seller_hash, completed + 1u64);
+                    } else {
+                        auctions.set(auction_id, AuctionData {
+                            item_hash: auction.item_hash,
+                            seller_hash: auction.seller_hash,
+                            category: auction.category,
+                            token_type: auction.token_type,
+                            auction_mode: auction.auction_mode,
+                            status: STATUS_FAILED,
+                            deadline: auction.deadline,
+                            reveal_deadline: auction.reveal_deadline,
+                            bid_count: auction.bid_count,
+                            reserve_price_hash: auction.reserve_price_hash,
+                            created_at: auction.created_at,
+                            dispute_deadline: 0u64,
+                        });
+                    }
+                }
             } else {
-                if (winning_amount >= reserve_price) {
+                // First-price, Bundle, Multi-Unit modes
+                if (winning_amount >= reserve_price && winning_amount > 0u128) {
                     auctions.set(auction_id, AuctionData {
                         item_hash: auction.item_hash,
                         seller_hash: auction.seller_hash,
@@ -1004,7 +940,6 @@ program obscura_core.aleo {
                     });
                     settlement_proofs.set(auction_id, sp);
 
-                    // Reputation: increment seller completed count
                     let completed: u64 = reputation_completed.get_or_use(auction.seller_hash, 0u64);
                     reputation_completed.set(auction.seller_hash, completed + 1u64);
                 } else {
@@ -1020,12 +955,41 @@ program obscura_core.aleo {
                         bid_count: auction.bid_count,
                         reserve_price_hash: auction.reserve_price_hash,
                         created_at: auction.created_at,
-                        dispute_deadline: 0u64,
+                        dispute_deadline: auction.dispute_deadline,
                     });
                 }
             }
-        } else {
-            // First-price, Bundle, Multi-Unit modes
+        };
+    }
+
+    // ########################################################################
+    //              T13: SETTLE ENGLISH
+    // ########################################################################
+
+    fn settle_english(
+        private auction_id: field,
+        private reserve_price: u128
+    ) -> Final {
+        let caller_field: field = self.caller as field;
+        let caller_hash: field = BHP256::hash_to_field(caller_field);
+
+        let reserve_field: field = reserve_price as field;
+        let reserve_hash: field = BHP256::hash_to_field(reserve_field);
+
+        return final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.seller_hash, caller_hash);
+            assert_eq(auction.status, STATUS_ACTIVE);
+            assert_eq(auction.auction_mode, MODE_ENGLISH);
+
+            let current_height: u64 = block.height as u64;
+            assert(current_height > auction.deadline);
+
+            assert_eq(reserve_hash, auction.reserve_price_hash);
+
+            let winning_amount: u128 = highest_bids.get_or_use(auction_id, 0u128);
+            let winner_bid_hash: field = auction_winners.get_or_use(auction_id, 0field);
+
             if (winning_amount >= reserve_price && winning_amount > 0u128) {
                 auctions.set(auction_id, AuctionData {
                     item_hash: auction.item_hash,
@@ -1035,12 +999,14 @@ program obscura_core.aleo {
                     auction_mode: auction.auction_mode,
                     status: STATUS_SETTLED,
                     deadline: auction.deadline,
-                    reveal_deadline: auction.reveal_deadline,
+                    reveal_deadline: 0u64,
                     bid_count: auction.bid_count,
                     reserve_price_hash: auction.reserve_price_hash,
                     created_at: auction.created_at,
                     dispute_deadline: 0u64,
                 });
+
+                let second_price: u128 = second_highest_bids.get_or_use(auction_id, 0u128);
                 let sp: field = BHP256::hash_to_field(SettlementProof {
                     auction_id: auction_id,
                     highest_bid: winning_amount,
@@ -1061,149 +1027,61 @@ program obscura_core.aleo {
                     auction_mode: auction.auction_mode,
                     status: STATUS_FAILED,
                     deadline: auction.deadline,
-                    reveal_deadline: auction.reveal_deadline,
+                    reveal_deadline: 0u64,
                     bid_count: auction.bid_count,
                     reserve_price_hash: auction.reserve_price_hash,
                     created_at: auction.created_at,
-                    dispute_deadline: auction.dispute_deadline,
+                    dispute_deadline: 0u64,
                 });
             }
-        }
-    }
-
-    // ########################################################################
-    //              T13: SETTLE ENGLISH
-    // ########################################################################
-
-    async transition settle_english(
-        private auction_id: field,
-        private reserve_price: u128
-    ) -> Future {
-        let caller_field: field = self.caller as field;
-        let caller_hash: field = BHP256::hash_to_field(caller_field);
-
-        let reserve_field: field = reserve_price as field;
-        let reserve_hash: field = BHP256::hash_to_field(reserve_field);
-
-        return finalize_settle_english(auction_id, caller_hash, reserve_hash, reserve_price);
-    }
-
-    async function finalize_settle_english(
-        auction_id: field,
-        caller_hash: field,
-        reserve_hash: field,
-        reserve_price: u128
-    ) {
-        let auction: AuctionData = auctions.get(auction_id);
-        assert_eq(auction.seller_hash, caller_hash);
-        assert_eq(auction.status, STATUS_ACTIVE);
-        assert_eq(auction.auction_mode, MODE_ENGLISH);
-
-        let current_height: u64 = block.height as u64;
-        assert(current_height > auction.deadline);
-
-        assert_eq(reserve_hash, auction.reserve_price_hash);
-
-        let winning_amount: u128 = highest_bids.get_or_use(auction_id, 0u128);
-        let winner_bid_hash: field = auction_winners.get_or_use(auction_id, 0field);
-
-        if (winning_amount >= reserve_price && winning_amount > 0u128) {
-            auctions.set(auction_id, AuctionData {
-                item_hash: auction.item_hash,
-                seller_hash: auction.seller_hash,
-                category: auction.category,
-                token_type: auction.token_type,
-                auction_mode: auction.auction_mode,
-                status: STATUS_SETTLED,
-                deadline: auction.deadline,
-                reveal_deadline: 0u64,
-                bid_count: auction.bid_count,
-                reserve_price_hash: auction.reserve_price_hash,
-                created_at: auction.created_at,
-                dispute_deadline: 0u64,
-            });
-
-            let second_price: u128 = second_highest_bids.get_or_use(auction_id, 0u128);
-            let sp: field = BHP256::hash_to_field(SettlementProof {
-                auction_id: auction_id,
-                highest_bid: winning_amount,
-                second_highest: second_price,
-                winner_bid_hash: winner_bid_hash,
-                settled_at: current_height,
-            });
-            settlement_proofs.set(auction_id, sp);
-
-            let completed: u64 = reputation_completed.get_or_use(auction.seller_hash, 0u64);
-            reputation_completed.set(auction.seller_hash, completed + 1u64);
-        } else {
-            auctions.set(auction_id, AuctionData {
-                item_hash: auction.item_hash,
-                seller_hash: auction.seller_hash,
-                category: auction.category,
-                token_type: auction.token_type,
-                auction_mode: auction.auction_mode,
-                status: STATUS_FAILED,
-                deadline: auction.deadline,
-                reveal_deadline: 0u64,
-                bid_count: auction.bid_count,
-                reserve_price_hash: auction.reserve_price_hash,
-                created_at: auction.created_at,
-                dispute_deadline: 0u64,
-            });
-        }
+        };
     }
 
     // ########################################################################
     //              T14: ADMIN EMERGENCY
     // ########################################################################
 
-    async transition admin_emergency(
+    fn admin_emergency(
         private action: u8,
         private auction_id: field
-    ) -> Future {
+    ) -> Final {
         let caller_field: field = self.caller as field;
         let caller_hash: field = BHP256::hash_to_field(caller_field);
-        return finalize_admin_emergency(action, auction_id, caller_hash);
-    }
+        return final {
+            if (action == 1u8) {
+                // Force-close stale reveal phase
+                let auction: AuctionData = auctions.get(auction_id);
+                assert_eq(auction.status, STATUS_REVEALING);
 
-    async function finalize_admin_emergency(
-        action: u8,
-        auction_id: field,
-        caller_hash: field
-    ) {
-        if (action == 1u8) {
-            // Force-close stale reveal phase
-            let auction: AuctionData = auctions.get(auction_id);
-            assert_eq(auction.status, STATUS_REVEALING);
+                let current_height: u64 = block.height as u64;
+                assert(current_height > auction.reveal_deadline + 100u64);
 
-            let current_height: u64 = block.height as u64;
-            assert(current_height > auction.reveal_deadline + 100u64);
+                auctions.set(auction_id, AuctionData {
+                    item_hash: auction.item_hash,
+                    seller_hash: auction.seller_hash,
+                    category: auction.category,
+                    token_type: auction.token_type,
+                    auction_mode: auction.auction_mode,
+                    status: STATUS_FAILED,
+                    deadline: auction.deadline,
+                    reveal_deadline: auction.reveal_deadline,
+                    bid_count: auction.bid_count,
+                    reserve_price_hash: auction.reserve_price_hash,
+                    created_at: auction.created_at,
+                    dispute_deadline: 0u64,
+                });
+            } else {
+                // Toggle platform pause
+                let cfg: PlatformConfig = platform_config.get(0u8);
+                assert_eq(caller_hash, cfg.admin_hash);
 
-            auctions.set(auction_id, AuctionData {
-                item_hash: auction.item_hash,
-                seller_hash: auction.seller_hash,
-                category: auction.category,
-                token_type: auction.token_type,
-                auction_mode: auction.auction_mode,
-                status: STATUS_FAILED,
-                deadline: auction.deadline,
-                reveal_deadline: auction.reveal_deadline,
-                bid_count: auction.bid_count,
-                reserve_price_hash: auction.reserve_price_hash,
-                created_at: auction.created_at,
-                dispute_deadline: 0u64,
-            });
-        } else {
-            // Toggle platform pause
-            let cfg: PlatformConfig = platform_config.get(0u8);
-            assert_eq(caller_hash, cfg.admin_hash);
-
-            platform_config.set(0u8, PlatformConfig {
-                admin_hash: cfg.admin_hash,
-                fee_bps: cfg.fee_bps,
-                dispute_bond_bps: cfg.dispute_bond_bps,
-                paused: !cfg.paused,
-            });
-        }
+                platform_config.set(0u8, PlatformConfig {
+                    admin_hash: cfg.admin_hash,
+                    fee_bps: cfg.fee_bps,
+                    dispute_bond_bps: cfg.dispute_bond_bps,
+                    paused: !cfg.paused,
+                });
+            }
+        };
     }
 }

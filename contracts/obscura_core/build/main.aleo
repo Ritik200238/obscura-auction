@@ -201,30 +201,30 @@ function create_auction:
     is.eq r4 3u8 into r21;
     or r20 r21 into r22;
     assert.eq r22 true;
-    async create_auction r8 r0 r12 r1 r4 r3 r6 r10 into r23;
+    async create_auction r8 r6 r0 r12 r1 r4 r3 r10 into r23;
     output r8 as field.private;
     output r23 as obscura_core.aleo/create_auction.future;
 
 finalize create_auction:
     input r0 as field.public;
-    input r1 as field.public;
+    input r1 as u64.public;
     input r2 as field.public;
-    input r3 as u8.public;
+    input r3 as field.public;
     input r4 as u8.public;
     input r5 as u8.public;
-    input r6 as u64.public;
+    input r6 as u8.public;
     input r7 as field.public;
     contains auctions[r0] into r8;
     not r8 into r9;
     assert.eq r9 true;
     cast block.height into r10 as u64;
     add r10 240u64 into r11;
-    gt r6 r11 into r12;
+    gt r1 r11 into r12;
     assert.eq r12 true;
     get platform_config[0u8] into r13;
     not r13.paused into r14;
     assert.eq r14 true;
-    cast r1 r2 r3 r4 r5 1u8 r6 0u64 0u64 r7 r10 0u64 into r15 as AuctionData;
+    cast r2 r3 r4 r5 r6 1u8 r1 0u64 0u64 r7 r10 0u64 into r15 as AuctionData;
     set r15 into auctions[r0];
 
 function create_dutch_auction:
@@ -251,17 +251,17 @@ function create_dutch_auction:
     hash.bhp256 r16 into r17 as field;
     cast self.caller into r18 as field;
     hash.bhp256 r18 into r19 as field;
-    async create_dutch_auction r15 r0 r19 r1 r4 r6 r17 r2 r3 into r20;
+    async create_dutch_auction r15 r6 r0 r19 r1 r4 r17 r2 r3 into r20;
     output r15 as field.private;
     output r20 as obscura_core.aleo/create_dutch_auction.future;
 
 finalize create_dutch_auction:
     input r0 as field.public;
-    input r1 as field.public;
+    input r1 as u64.public;
     input r2 as field.public;
-    input r3 as u8.public;
+    input r3 as field.public;
     input r4 as u8.public;
-    input r5 as u64.public;
+    input r5 as u8.public;
     input r6 as field.public;
     input r7 as u128.public;
     input r8 as u128.public;
@@ -270,12 +270,12 @@ finalize create_dutch_auction:
     assert.eq r10 true;
     cast block.height into r11 as u64;
     add r11 240u64 into r12;
-    gt r5 r12 into r13;
+    gt r1 r12 into r13;
     assert.eq r13 true;
     get platform_config[0u8] into r14;
     not r14.paused into r15;
     assert.eq r15 true;
-    cast r1 r2 r3 r4 3u8 1u8 r5 0u64 0u64 r6 r11 0u64 into r16 as AuctionData;
+    cast r2 r3 r4 r5 3u8 1u8 r1 0u64 0u64 r6 r11 0u64 into r16 as AuctionData;
     set r16 into auctions[r0];
     cast r7 r8 into r17 as DutchConfig;
     set r17 into dutch_params[r0];
@@ -309,38 +309,37 @@ function create_bundle_auction:
     hash.bhp256 r21 into r22 as field;
     cast self.caller into r23 as field;
     hash.bhp256 r23 into r24 as field;
-    async create_bundle_auction r20 r0 r24 r5 r7 r9 r22 r0 r1 r2 r3 r4 r6 into r25;
+    async create_bundle_auction r20 r9 r0 r24 r5 r7 r22 r4 r1 r2 r3 r6 into r25;
     output r20 as field.private;
     output r25 as obscura_core.aleo/create_bundle_auction.future;
 
 finalize create_bundle_auction:
     input r0 as field.public;
-    input r1 as field.public;
+    input r1 as u64.public;
     input r2 as field.public;
-    input r3 as u8.public;
+    input r3 as field.public;
     input r4 as u8.public;
-    input r5 as u64.public;
+    input r5 as u8.public;
     input r6 as field.public;
-    input r7 as field.public;
+    input r7 as u8.public;
     input r8 as field.public;
     input r9 as field.public;
     input r10 as field.public;
-    input r11 as u8.public;
-    input r12 as u128.public;
-    contains auctions[r0] into r13;
-    not r13 into r14;
-    assert.eq r14 true;
-    cast block.height into r15 as u64;
-    add r15 240u64 into r16;
-    gt r5 r16 into r17;
-    assert.eq r17 true;
-    get platform_config[0u8] into r18;
-    not r18.paused into r19;
-    assert.eq r19 true;
-    cast r1 r2 r3 r4 5u8 1u8 r5 0u64 0u64 r6 r15 0u64 into r20 as AuctionData;
-    set r20 into auctions[r0];
-    cast r11 r7 r8 r9 r10 r12 into r21 as BundleConfig;
-    set r21 into bundle_configs[r0];
+    input r11 as u128.public;
+    contains auctions[r0] into r12;
+    not r12 into r13;
+    assert.eq r13 true;
+    cast block.height into r14 as u64;
+    add r14 240u64 into r15;
+    gt r1 r15 into r16;
+    assert.eq r16 true;
+    get platform_config[0u8] into r17;
+    not r17.paused into r18;
+    assert.eq r18 true;
+    cast r2 r3 r4 r5 5u8 1u8 r1 0u64 0u64 r6 r14 0u64 into r19 as AuctionData;
+    set r19 into auctions[r0];
+    cast r7 r2 r8 r9 r10 r11 into r20 as BundleConfig;
+    set r20 into bundle_configs[r0];
 
 function create_multi_unit_auction:
     input r0 as field.private;
@@ -366,17 +365,17 @@ function create_multi_unit_auction:
     hash.bhp256 r16 into r17 as field;
     cast self.caller into r18 as field;
     hash.bhp256 r18 into r19 as field;
-    async create_multi_unit_auction r15 r0 r19 r1 r4 r6 r17 r2 r3 into r20;
+    async create_multi_unit_auction r15 r6 r0 r19 r1 r4 r17 r2 r3 into r20;
     output r15 as field.private;
     output r20 as obscura_core.aleo/create_multi_unit_auction.future;
 
 finalize create_multi_unit_auction:
     input r0 as field.public;
-    input r1 as field.public;
+    input r1 as u64.public;
     input r2 as field.public;
-    input r3 as u8.public;
+    input r3 as field.public;
     input r4 as u8.public;
-    input r5 as u64.public;
+    input r5 as u8.public;
     input r6 as field.public;
     input r7 as u128.public;
     input r8 as u128.public;
@@ -385,12 +384,12 @@ finalize create_multi_unit_auction:
     assert.eq r10 true;
     cast block.height into r11 as u64;
     add r11 240u64 into r12;
-    gt r5 r12 into r13;
+    gt r1 r12 into r13;
     assert.eq r13 true;
     get platform_config[0u8] into r14;
     not r14.paused into r15;
     assert.eq r15 true;
-    cast r1 r2 r3 r4 6u8 1u8 r5 0u64 0u64 r6 r11 0u64 into r16 as AuctionData;
+    cast r2 r3 r4 r5 6u8 1u8 r1 0u64 0u64 r6 r11 0u64 into r16 as AuctionData;
     set r16 into auctions[r0];
     cast r7 r8 0u128 into r17 as MultiUnitConfig;
     set r17 into multi_unit_configs[r0];
@@ -459,17 +458,17 @@ function place_bid:
     cast self.caller r0 r1 r2 r3 into r10 as SealedBid.record;
     cast self.caller r0 r1 r2 into r11 as BidCommitment;
     hash.bhp256 r11 into r12 as field;
-    async place_bid r0 r12 r3 into r13;
+    async place_bid r0 r3 r12 into r13;
     output r10 as SealedBid.record;
     output r13 as obscura_core.aleo/place_bid.future;
 
 finalize place_bid:
     input r0 as field.public;
-    input r1 as field.public;
-    input r2 as u8.public;
+    input r1 as u8.public;
+    input r2 as field.public;
     get auctions[r0] into r3;
     assert.eq r3.status 1u8;
-    assert.eq r3.token_type r2;
+    assert.eq r3.token_type r1;
     is.eq r3.auction_mode 1u8 into r4;
     is.eq r3.auction_mode 2u8 into r5;
     or r4 r5 into r6;
@@ -477,13 +476,13 @@ finalize place_bid:
     cast block.height into r7 as u64;
     lte r7 r3.deadline into r8;
     assert.eq r8 true;
-    contains bid_commitments[r1] into r9;
+    contains bid_commitments[r2] into r9;
     not r9 into r10;
     assert.eq r10 true;
     get platform_config[0u8] into r11;
     not r11.paused into r12;
     assert.eq r12 true;
-    set true into bid_commitments[r1];
+    set true into bid_commitments[r2];
     add r3.bid_count 1u64 into r13;
     cast r3.item_hash r3.seller_hash r3.category r3.token_type r3.auction_mode r3.status r3.deadline r3.reveal_deadline r13 r3.reserve_price_hash r3.created_at r3.dispute_deadline into r14 as AuctionData;
     set r14 into auctions[r0];
@@ -498,28 +497,28 @@ function place_bundle_bid:
     cast self.caller r0 r1 r2 r3 into r5 as BundleBid.record;
     cast self.caller r0 r1 r2 into r6 as BidCommitment;
     hash.bhp256 r6 into r7 as field;
-    async place_bundle_bid r0 r7 r3 into r8;
+    async place_bundle_bid r0 r3 r7 into r8;
     output r5 as BundleBid.record;
     output r8 as obscura_core.aleo/place_bundle_bid.future;
 
 finalize place_bundle_bid:
     input r0 as field.public;
-    input r1 as field.public;
-    input r2 as u8.public;
+    input r1 as u8.public;
+    input r2 as field.public;
     get auctions[r0] into r3;
     assert.eq r3.status 1u8;
     assert.eq r3.auction_mode 5u8;
-    assert.eq r3.token_type r2;
+    assert.eq r3.token_type r1;
     cast block.height into r4 as u64;
     lte r4 r3.deadline into r5;
     assert.eq r5 true;
-    contains bid_commitments[r1] into r6;
+    contains bid_commitments[r2] into r6;
     not r6 into r7;
     assert.eq r7 true;
     get platform_config[0u8] into r8;
     not r8.paused into r9;
     assert.eq r9 true;
-    set true into bid_commitments[r1];
+    set true into bid_commitments[r2];
     add r3.bid_count 1u64 into r10;
     cast r3.item_hash r3.seller_hash r3.category r3.token_type r3.auction_mode r3.status r3.deadline r3.reveal_deadline r10 r3.reserve_price_hash r3.created_at r3.dispute_deadline into r11 as AuctionData;
     set r11 into auctions[r0];
@@ -538,28 +537,28 @@ function place_multi_unit_bid:
     mul r1 r2 into r8;
     cast self.caller r0 r8 r3 into r9 as BidCommitment;
     hash.bhp256 r9 into r10 as field;
-    async place_multi_unit_bid r0 r10 r4 into r11;
+    async place_multi_unit_bid r0 r4 r10 into r11;
     output r7 as MultiUnitBid.record;
     output r11 as obscura_core.aleo/place_multi_unit_bid.future;
 
 finalize place_multi_unit_bid:
     input r0 as field.public;
-    input r1 as field.public;
-    input r2 as u8.public;
+    input r1 as u8.public;
+    input r2 as field.public;
     get auctions[r0] into r3;
     assert.eq r3.status 1u8;
     assert.eq r3.auction_mode 6u8;
-    assert.eq r3.token_type r2;
+    assert.eq r3.token_type r1;
     cast block.height into r4 as u64;
     lte r4 r3.deadline into r5;
     assert.eq r5 true;
-    contains bid_commitments[r1] into r6;
+    contains bid_commitments[r2] into r6;
     not r6 into r7;
     assert.eq r7 true;
     get platform_config[0u8] into r8;
     not r8.paused into r9;
     assert.eq r9 true;
-    set true into bid_commitments[r1];
+    set true into bid_commitments[r2];
     add r3.bid_count 1u64 into r10;
     cast r3.item_hash r3.seller_hash r3.category r3.token_type r3.auction_mode r3.status r3.deadline r3.reveal_deadline r10 r3.reserve_price_hash r3.created_at r3.dispute_deadline into r11 as AuctionData;
     set r11 into auctions[r0];

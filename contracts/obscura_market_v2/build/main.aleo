@@ -276,25 +276,25 @@ function create_rfq:
     hash.bhp256 r14 into r15 as field;
     cast r2 into r16 as field;
     hash.bhp256 r16 into r17 as field;
-    async create_rfq r13 r15 r0 r1 r17 r5 r3 into r18;
+    async create_rfq r13 r5 r15 r0 r1 r17 r3 into r18;
     output r13 as field.private;
     output r18 as obscura_market_v2.aleo/create_rfq.future;
 
 finalize create_rfq:
     input r0 as field.public;
-    input r1 as field.public;
-    input r2 as u8.public;
-    input r3 as field.public;
+    input r1 as u64.public;
+    input r2 as field.public;
+    input r3 as u8.public;
     input r4 as field.public;
-    input r5 as u64.public;
+    input r5 as field.public;
     input r6 as u8.public;
     contains rfq_configs[r0] into r7;
     not r7 into r8;
     assert.eq r8 true;
     cast block.height into r9 as u64;
-    gt r5 r9 into r10;
+    gt r1 r9 into r10;
     assert.eq r10 true;
-    cast r1 r2 r3 r4 r5 r6 1u8 into r11 as RFQConfig;
+    cast r2 r3 r4 r5 r1 r6 1u8 into r11 as RFQConfig;
     set r11 into rfq_configs[r0];
 
 function submit_quote:
@@ -384,25 +384,25 @@ function create_token_sale:
     hash.bhp256 r8 into r9 as field;
     cast self.caller into r10 as field;
     hash.bhp256 r10 into r11 as field;
-    async create_token_sale r9 r11 r0 r1 r2 r3 r5 into r12;
+    async create_token_sale r9 r5 r11 r0 r1 r2 r3 into r12;
     output r9 as field.private;
     output r12 as obscura_market_v2.aleo/create_token_sale.future;
 
 finalize create_token_sale:
     input r0 as field.public;
-    input r1 as field.public;
+    input r1 as u64.public;
     input r2 as field.public;
-    input r3 as u128.public;
+    input r3 as field.public;
     input r4 as u128.public;
-    input r5 as u8.public;
-    input r6 as u64.public;
+    input r5 as u128.public;
+    input r6 as u8.public;
     contains token_sales[r0] into r7;
     not r7 into r8;
     assert.eq r8 true;
     cast block.height into r9 as u64;
-    gt r6 r9 into r10;
+    gt r1 r9 into r10;
     assert.eq r10 true;
-    cast r1 r2 r3 r3 r4 r5 r6 into r11 as TokenSaleConfig;
+    cast r2 r3 r4 r4 r5 r6 r1 into r11 as TokenSaleConfig;
     set r11 into token_sales[r0];
 
 function bid_token_sale:
@@ -414,7 +414,7 @@ function bid_token_sale:
     cast r4 into r5 as u64;
     call credits.aleo/transfer_private_to_public r3 obscura_market_v2.aleo r5 into r6 r7;
     cast self.caller r0 0field r4 1u8 into r8 as MarketReceipt.record;
-    async bid_token_sale r7 r0 r1 r2 into r9;
+    async bid_token_sale r7 r0 r2 r1 r4 into r9;
     output r8 as MarketReceipt.record;
     output r6 as credits.aleo/credits.record;
     output r9 as obscura_market_v2.aleo/bid_token_sale.future;
@@ -424,25 +424,25 @@ finalize bid_token_sale:
     input r1 as field.public;
     input r2 as u128.public;
     input r3 as u128.public;
+    input r4 as u128.public;
     await r0;
-    get token_sales[r1] into r4;
-    assert.eq r4.token_type 1u8;
-    cast block.height into r5 as u64;
-    lte r5 r4.deadline into r6;
-    assert.eq r6 true;
-    gte r3 r4.min_price_per_unit into r7;
+    get token_sales[r1] into r5;
+    assert.eq r5.token_type 1u8;
+    cast block.height into r6 as u64;
+    lte r6 r5.deadline into r7;
     assert.eq r7 true;
-    lte r2 r4.remaining_supply into r8;
+    gte r2 r5.min_price_per_unit into r8;
     assert.eq r8 true;
-    sub r4.remaining_supply r2 into r9;
-    cast r4.seller_hash r4.item_hash r4.total_supply r9 r4.min_price_per_unit r4.token_type r4.deadline into r10 as TokenSaleConfig;
-    set r10 into token_sales[r1];
-    mul r2 r3 into r11;
+    lte r3 r5.remaining_supply into r9;
+    assert.eq r9 true;
+    sub r5.remaining_supply r3 into r10;
+    cast r5.seller_hash r5.item_hash r5.total_supply r10 r5.min_price_per_unit r5.token_type r5.deadline into r11 as TokenSaleConfig;
+    set r11 into token_sales[r1];
     get.or_use market_balance[0u8] 0u128 into r12;
-    add r12 r11 into r13;
+    add r12 r4 into r13;
     set r13 into market_balance[0u8];
     get.or_use sale_escrow[r1] 0u128 into r14;
-    add r14 r11 into r15;
+    add r14 r4 into r15;
     set r15 into sale_escrow[r1];
 
 function bid_token_sale_usdcx:
@@ -452,7 +452,7 @@ function bid_token_sale_usdcx:
     mul r1 r2 into r3;
     call test_usdcx_stablecoin.aleo/transfer_public_as_signer obscura_market_v2.aleo r3 into r4;
     cast self.caller r0 0field r3 2u8 into r5 as MarketReceipt.record;
-    async bid_token_sale_usdcx r4 r0 r1 r2 into r6;
+    async bid_token_sale_usdcx r4 r0 r2 r1 r3 into r6;
     output r5 as MarketReceipt.record;
     output r6 as obscura_market_v2.aleo/bid_token_sale_usdcx.future;
 
@@ -461,42 +461,40 @@ finalize bid_token_sale_usdcx:
     input r1 as field.public;
     input r2 as u128.public;
     input r3 as u128.public;
+    input r4 as u128.public;
     await r0;
-    get token_sales[r1] into r4;
-    assert.eq r4.token_type 2u8;
-    cast block.height into r5 as u64;
-    lte r5 r4.deadline into r6;
-    assert.eq r6 true;
-    gte r3 r4.min_price_per_unit into r7;
+    get token_sales[r1] into r5;
+    assert.eq r5.token_type 2u8;
+    cast block.height into r6 as u64;
+    lte r6 r5.deadline into r7;
     assert.eq r7 true;
-    lte r2 r4.remaining_supply into r8;
+    gte r2 r5.min_price_per_unit into r8;
     assert.eq r8 true;
-    sub r4.remaining_supply r2 into r9;
-    cast r4.seller_hash r4.item_hash r4.total_supply r9 r4.min_price_per_unit r4.token_type r4.deadline into r10 as TokenSaleConfig;
-    set r10 into token_sales[r1];
-    mul r2 r3 into r11;
+    lte r3 r5.remaining_supply into r9;
+    assert.eq r9 true;
+    sub r5.remaining_supply r3 into r10;
+    cast r5.seller_hash r5.item_hash r5.total_supply r10 r5.min_price_per_unit r5.token_type r5.deadline into r11 as TokenSaleConfig;
+    set r11 into token_sales[r1];
     get.or_use market_balance[1u8] 0u128 into r12;
-    add r12 r11 into r13;
+    add r12 r4 into r13;
     set r13 into market_balance[1u8];
     get.or_use sale_escrow[r1] 0u128 into r14;
-    add r14 r11 into r15;
+    add r14 r4 into r15;
     set r15 into sale_escrow[r1];
 
 function set_provenance:
     input r0 as field.private;
     input r1 as field.private;
     cast self.caller into r2 as field;
-    hash.bhp256 r2 into r3 as field;
-    async set_provenance r0 r1 r3 into r4;
-    output r4 as obscura_market_v2.aleo/set_provenance.future;
+    async set_provenance r0 r1 into r3;
+    output r3 as obscura_market_v2.aleo/set_provenance.future;
 
 finalize set_provenance:
     input r0 as field.public;
     input r1 as field.public;
-    input r2 as field.public;
-    contains provenance[r0] into r3;
-    not r3 into r4;
-    assert.eq r4 true;
+    contains provenance[r0] into r2;
+    not r2 into r3;
+    assert.eq r3 true;
     set r1 into provenance[r0];
 
 function set_royalty:
