@@ -38,7 +38,7 @@ export function ShimmerCard() {
       </div>
 
       {/* Stats row */}
-      <div className="pt-3 border-t border-surface-700/50 flex justify-between">
+      <div className="pt-3 border-t border-white/[0.04] flex justify-between">
         <ShimmerBlock className="h-3.5 w-20" />
         <ShimmerBlock className="h-3.5 w-24" />
       </div>

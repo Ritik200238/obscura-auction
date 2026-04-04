@@ -11,6 +11,10 @@
     padding: 0;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     font-family: 'DM Sans', system-ui, sans-serif;
     background-color: #03080f;
@@ -94,23 +98,22 @@
   }
 
   .card {
-    @apply bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6
-           shadow-lg shadow-cyan-500/[0.03]
-           hover:border-cyan-500/20 hover:shadow-cyan-500/[0.08]
+    @apply bg-white/[0.03] backdrop-blur-md border border-white/[0.06] rounded-xl p-6
            transition-all duration-300;
   }
 
   .card-hover {
-    @apply card hover:border-accent-500/30 hover:shadow-lg hover:shadow-accent-500/5
-           hover:translate-y-[-2px] cursor-pointer;
+    @apply card hover:border-accent-500/20 hover:translate-y-[-2px] cursor-pointer;
   }
 
   .btn-primary:hover:not(:disabled) {
-    transform: scale(1.02);
+    transform: scale(1.01);
+    filter: brightness(1.1);
   }
 
   .btn-secondary:hover:not(:disabled) {
-    transform: scale(1.02);
+    transform: scale(1.01);
+    filter: brightness(1.1);
   }
 
   .badge {
@@ -118,12 +121,11 @@
   }
 
   .glass {
-    @apply bg-surface-900/60 backdrop-blur-xl border border-surface-700/30;
+    @apply bg-white/[0.03] backdrop-blur-md border border-white/[0.06];
   }
 
   .glass-card {
-    @apply bg-gradient-to-br from-surface-900/90 to-surface-800/40
-           backdrop-blur-xl border border-surface-700/40 rounded-2xl;
+    @apply bg-white/[0.03] backdrop-blur-md border border-white/[0.06] rounded-xl;
   }
 
 }

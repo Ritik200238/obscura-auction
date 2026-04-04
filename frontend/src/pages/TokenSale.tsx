@@ -16,6 +16,7 @@ import toast from 'react-hot-toast'
 import { ShimmerCard } from '@/components/shared/Shimmer'
 import FaucetBanner from '@/components/shared/FaucetBanner'
 import TransactionProgress from '@/components/shared/TransactionProgress'
+import PlatformTabs from '@/components/shared/PlatformTabs'
 
 interface TokenSaleData {
   sale_id: string
@@ -221,14 +222,26 @@ export default function TokenSale() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Page header */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Marketplace</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Private auctions, fixed sales, and token offerings on Aleo.
+          </p>
+        </div>
+      </div>
+
+      <PlatformTabs />
+
       <FaucetBanner />
 
-      {/* Header */}
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+      {/* Section header */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Token Sales</h1>
-          <p className="text-gray-400">
-            Fair-launch token distributions. Participate in sales with fixed supply and minimum pricing.
+          <h2 className="text-xl font-semibold text-white">Token Sales</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Fair-launch token distributions with fixed supply and minimum pricing.
           </p>
         </div>
         <div className="flex items-center gap-3">
