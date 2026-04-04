@@ -5,7 +5,7 @@ import { useWalletStore } from '@/stores/walletStore'
 /**
  * Warning banner shown when Shield Wallet is not detected or a non-Shield wallet is connected.
  * Shield Wallet uses delegated proving (server-side), which is required for
- * obscura_core.aleo's 18 transitions. Other wallets do local WASM proving and fail.
+ * obscura_core_v2.aleo's 18 transitions. Other wallets do local WASM proving and fail.
  */
 export default function ShieldWalletBanner() {
   const { connected, walletType } = useWalletStore()

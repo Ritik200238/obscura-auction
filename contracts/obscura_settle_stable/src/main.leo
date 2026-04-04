@@ -2,7 +2,7 @@
 // OBSCURA SETTLE STABLE v1 — Settlement Layer for USDCx & USAD Stablecoins
 // ============================================================================
 // Stablecoin token settlement. ALEO credit paths live in obscura_settle.
-// Imports obscura_core.aleo for the SealedBid record type
+// Imports obscura_core_v2.aleo for the SealedBid record type
 // and test_usdcx_stablecoin.aleo / test_usad_stablecoin.aleo for transfers.
 //
 // 13 transitions | 3 records | 12 mappings | 5 structs
@@ -17,11 +17,11 @@
 //   T13:     withdraw_fees_usdcx (admin)
 // ============================================================================
 
-import obscura_core.aleo;
+import obscura_core_v2.aleo;
 import test_usdcx_stablecoin.aleo;
 import test_usad_stablecoin.aleo;
 
-program obscura_settle_stable.aleo {
+program obscura_settle_stable_v2.aleo {
 
     @noupgrade
     constructor() {}
@@ -142,7 +142,7 @@ program obscura_settle_stable.aleo {
     // ########################################################################
 
     fn reveal_bid_usdcx(
-        private bid: obscura_core.aleo::SealedBid
+        private bid: obscura_core_v2.aleo::SealedBid
     ) -> (EscrowReceipt, Final) {
         assert_eq(bid.token_type, TOKEN_USDCX);
 
@@ -206,7 +206,7 @@ program obscura_settle_stable.aleo {
     // ########################################################################
 
     fn reveal_bid_usad(
-        private bid: obscura_core.aleo::SealedBid
+        private bid: obscura_core_v2.aleo::SealedBid
     ) -> (EscrowReceipt, Final) {
         assert_eq(bid.token_type, TOKEN_USAD);
 

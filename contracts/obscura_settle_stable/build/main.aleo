@@ -1,4 +1,4 @@
-import obscura_core.aleo;
+import obscura_core_v2.aleo;
 import merkle_tree.aleo;
 import test_usdcx_multisig_core.aleo;
 import test_usdcx_freezelist.aleo;
@@ -6,7 +6,7 @@ import test_usdcx_stablecoin.aleo;
 import test_usad_multisig_core.aleo;
 import test_usad_freezelist.aleo;
 import test_usad_stablecoin.aleo;
-program obscura_settle_stable.aleo;
+program obscura_settle_stable_v2.aleo;
 
 record EscrowReceipt:
     owner as address.private;
@@ -103,15 +103,15 @@ mapping settle_status:
     value as u8.public;
 
 function reveal_bid_usdcx:
-    input r0 as obscura_core.aleo/SealedBid.record;
+    input r0 as obscura_core_v2.aleo/SealedBid.record;
     assert.eq r0.token_type 2u8;
     cast r0.owner r0.auction_id r0.bid_amount r0.bid_nonce into r1 as BidCommitment;
     hash.bhp256 r1 into r2 as field;
-    call test_usdcx_stablecoin.aleo/transfer_public_as_signer obscura_settle_stable.aleo r0.bid_amount into r3;
+    call test_usdcx_stablecoin.aleo/transfer_public_as_signer obscura_settle_stable_v2.aleo r0.bid_amount into r3;
     cast r0.owner r0.auction_id r0.bid_amount r0.bid_nonce 2u8 into r4 as EscrowReceipt.record;
     async reveal_bid_usdcx r3 r2 r0.bid_amount r0.auction_id into r5;
     output r4 as EscrowReceipt.record;
-    output r5 as obscura_settle_stable.aleo/reveal_bid_usdcx.future;
+    output r5 as obscura_settle_stable_v2.aleo/reveal_bid_usdcx.future;
 
 finalize reveal_bid_usdcx:
     input r0 as test_usdcx_stablecoin.aleo/transfer_public_as_signer.future;
@@ -132,30 +132,30 @@ finalize reveal_bid_usdcx:
     get.or_use highest_bids[r3] 0u128 into r10;
     get.or_use second_highest_bids[r3] 0u128 into r11;
     gt r2 r10 into r12;
-    branch.eq r12 false to end_then_0_14;
+    branch.eq r12 false to end_then_0_30;
     set r10 into second_highest_bids[r3];
     set r2 into highest_bids[r3];
     set r1 into auction_winners[r3];
-    branch.eq true true to end_otherwise_0_15;
-    position end_then_0_14;
+    branch.eq true true to end_otherwise_0_31;
+    position end_then_0_30;
     gt r2 r11 into r13;
-    branch.eq r13 false to end_then_1_16;
+    branch.eq r13 false to end_then_1_32;
     set r2 into second_highest_bids[r3];
-    branch.eq true true to end_otherwise_1_17;
-    position end_then_1_16;
-    position end_otherwise_1_17;
-    position end_otherwise_0_15;
+    branch.eq true true to end_otherwise_1_33;
+    position end_then_1_32;
+    position end_otherwise_1_33;
+    position end_otherwise_0_31;
 
 function reveal_bid_usad:
-    input r0 as obscura_core.aleo/SealedBid.record;
+    input r0 as obscura_core_v2.aleo/SealedBid.record;
     assert.eq r0.token_type 3u8;
     cast r0.owner r0.auction_id r0.bid_amount r0.bid_nonce into r1 as BidCommitment;
     hash.bhp256 r1 into r2 as field;
-    call test_usad_stablecoin.aleo/transfer_public_as_signer obscura_settle_stable.aleo r0.bid_amount into r3;
+    call test_usad_stablecoin.aleo/transfer_public_as_signer obscura_settle_stable_v2.aleo r0.bid_amount into r3;
     cast r0.owner r0.auction_id r0.bid_amount r0.bid_nonce 3u8 into r4 as EscrowReceipt.record;
     async reveal_bid_usad r3 r2 r0.bid_amount r0.auction_id into r5;
     output r4 as EscrowReceipt.record;
-    output r5 as obscura_settle_stable.aleo/reveal_bid_usad.future;
+    output r5 as obscura_settle_stable_v2.aleo/reveal_bid_usad.future;
 
 finalize reveal_bid_usad:
     input r0 as test_usad_stablecoin.aleo/transfer_public_as_signer.future;
@@ -176,19 +176,19 @@ finalize reveal_bid_usad:
     get.or_use highest_bids[r3] 0u128 into r10;
     get.or_use second_highest_bids[r3] 0u128 into r11;
     gt r2 r10 into r12;
-    branch.eq r12 false to end_then_0_18;
+    branch.eq r12 false to end_then_0_34;
     set r10 into second_highest_bids[r3];
     set r2 into highest_bids[r3];
     set r1 into auction_winners[r3];
-    branch.eq true true to end_otherwise_0_19;
-    position end_then_0_18;
+    branch.eq true true to end_otherwise_0_35;
+    position end_then_0_34;
     gt r2 r11 into r13;
-    branch.eq r13 false to end_then_1_20;
+    branch.eq r13 false to end_then_1_36;
     set r2 into second_highest_bids[r3];
-    branch.eq true true to end_otherwise_1_21;
-    position end_then_1_20;
-    position end_otherwise_1_21;
-    position end_otherwise_0_19;
+    branch.eq true true to end_otherwise_1_37;
+    position end_then_1_36;
+    position end_otherwise_1_37;
+    position end_otherwise_0_35;
 
 function claim_win_usdcx:
     input r0 as EscrowReceipt.record;
@@ -209,7 +209,7 @@ function claim_win_usdcx:
     async claim_win_usdcx r8 r0.auction_id r4 r0.escrowed_amount r6 r11 into r14;
     output r12 as WinnerCertificate.record;
     output r13 as SellerReceipt.record;
-    output r14 as obscura_settle_stable.aleo/claim_win_usdcx.future;
+    output r14 as obscura_settle_stable_v2.aleo/claim_win_usdcx.future;
 
 finalize claim_win_usdcx:
     input r0 as test_usdcx_stablecoin.aleo/transfer_public.future;
@@ -259,7 +259,7 @@ function claim_win_usad:
     async claim_win_usad r8 r0.auction_id r4 r0.escrowed_amount r6 r11 into r14;
     output r12 as WinnerCertificate.record;
     output r13 as SellerReceipt.record;
-    output r14 as obscura_settle_stable.aleo/claim_win_usad.future;
+    output r14 as obscura_settle_stable_v2.aleo/claim_win_usad.future;
 
 finalize claim_win_usad:
     input r0 as test_usad_stablecoin.aleo/transfer_public.future;
@@ -316,7 +316,7 @@ function claim_win_vickrey_usdcx:
     async claim_win_vickrey_usdcx r12 r13 r0.auction_id r3 r7 r0.escrowed_amount r9 r16 into r19;
     output r17 as WinnerCertificate.record;
     output r18 as SellerReceipt.record;
-    output r19 as obscura_settle_stable.aleo/claim_win_vickrey_usdcx.future;
+    output r19 as obscura_settle_stable_v2.aleo/claim_win_vickrey_usdcx.future;
 
 finalize claim_win_vickrey_usdcx:
     input r0 as test_usdcx_stablecoin.aleo/transfer_public.future;
@@ -378,7 +378,7 @@ function claim_win_vickrey_usad:
     async claim_win_vickrey_usad r12 r13 r0.auction_id r3 r7 r0.escrowed_amount r9 r16 into r19;
     output r17 as WinnerCertificate.record;
     output r18 as SellerReceipt.record;
-    output r19 as obscura_settle_stable.aleo/claim_win_vickrey_usad.future;
+    output r19 as obscura_settle_stable_v2.aleo/claim_win_vickrey_usad.future;
 
 finalize claim_win_vickrey_usad:
     input r0 as test_usad_stablecoin.aleo/transfer_public.future;
@@ -421,7 +421,7 @@ function claim_refund_usdcx:
     hash.bhp256 r1 into r2 as field;
     call test_usdcx_stablecoin.aleo/transfer_public self.caller r0.escrowed_amount into r3;
     async claim_refund_usdcx r3 r0.auction_id r2 r0.escrowed_amount into r4;
-    output r4 as obscura_settle_stable.aleo/claim_refund_usdcx.future;
+    output r4 as obscura_settle_stable_v2.aleo/claim_refund_usdcx.future;
 
 finalize claim_refund_usdcx:
     input r0 as test_usdcx_stablecoin.aleo/transfer_public.future;
@@ -449,7 +449,7 @@ function claim_refund_usad:
     hash.bhp256 r1 into r2 as field;
     call test_usad_stablecoin.aleo/transfer_public self.caller r0.escrowed_amount into r3;
     async claim_refund_usad r3 r0.auction_id r2 r0.escrowed_amount into r4;
-    output r4 as obscura_settle_stable.aleo/claim_refund_usad.future;
+    output r4 as obscura_settle_stable_v2.aleo/claim_refund_usad.future;
 
 finalize claim_refund_usad:
     input r0 as test_usad_stablecoin.aleo/transfer_public.future;
@@ -484,11 +484,11 @@ function bid_dutch_usdcx:
     assert.eq r8 true;
     cast self.caller r0 r1 r2 into r9 as BidCommitment;
     hash.bhp256 r9 into r10 as field;
-    call test_usdcx_stablecoin.aleo/transfer_public_as_signer obscura_settle_stable.aleo r1 into r11;
+    call test_usdcx_stablecoin.aleo/transfer_public_as_signer obscura_settle_stable_v2.aleo r1 into r11;
     cast self.caller r0 r1 r2 2u8 into r12 as EscrowReceipt.record;
     async bid_dutch_usdcx r11 r5 r6 r0 r3 r4 r1 r10 into r13;
     output r12 as EscrowReceipt.record;
-    output r13 as obscura_settle_stable.aleo/bid_dutch_usdcx.future;
+    output r13 as obscura_settle_stable_v2.aleo/bid_dutch_usdcx.future;
 
 finalize bid_dutch_usdcx:
     input r0 as test_usdcx_stablecoin.aleo/transfer_public_as_signer.future;
@@ -548,11 +548,11 @@ function bid_dutch_usad:
     assert.eq r8 true;
     cast self.caller r0 r1 r2 into r9 as BidCommitment;
     hash.bhp256 r9 into r10 as field;
-    call test_usad_stablecoin.aleo/transfer_public_as_signer obscura_settle_stable.aleo r1 into r11;
+    call test_usad_stablecoin.aleo/transfer_public_as_signer obscura_settle_stable_v2.aleo r1 into r11;
     cast self.caller r0 r1 r2 3u8 into r12 as EscrowReceipt.record;
     async bid_dutch_usad r11 r5 r6 r0 r3 r4 r1 r10 into r13;
     output r12 as EscrowReceipt.record;
-    output r13 as obscura_settle_stable.aleo/bid_dutch_usad.future;
+    output r13 as obscura_settle_stable_v2.aleo/bid_dutch_usad.future;
 
 finalize bid_dutch_usad:
     input r0 as test_usad_stablecoin.aleo/transfer_public_as_signer.future;
@@ -607,11 +607,11 @@ function bid_english_usdcx:
     assert.eq r4 true;
     cast self.caller r0 r1 r2 into r5 as BidCommitment;
     hash.bhp256 r5 into r6 as field;
-    call test_usdcx_stablecoin.aleo/transfer_public_as_signer obscura_settle_stable.aleo r1 into r7;
+    call test_usdcx_stablecoin.aleo/transfer_public_as_signer obscura_settle_stable_v2.aleo r1 into r7;
     cast self.caller r0 r1 r2 2u8 into r8 as EscrowReceipt.record;
     async bid_english_usdcx r7 r3 r6 r0 r1 into r9;
     output r8 as EscrowReceipt.record;
-    output r9 as obscura_settle_stable.aleo/bid_english_usdcx.future;
+    output r9 as obscura_settle_stable_v2.aleo/bid_english_usdcx.future;
 
 finalize bid_english_usdcx:
     input r0 as test_usdcx_stablecoin.aleo/transfer_public_as_signer.future;
@@ -628,24 +628,24 @@ finalize bid_english_usdcx:
     assert.eq r8 true;
     get.or_use highest_bids[r3] 0u128 into r9;
     gt r9 0u128 into r10;
-    branch.eq r10 false to end_then_0_22;
+    branch.eq r10 false to end_then_0_38;
     mul r9 500u128 into r11;
     div r11 10000u128 into r12;
     add r9 r12 into r13;
     gte r4 r13 into r14;
     assert.eq r14 true;
-    branch.eq true true to end_otherwise_0_23;
-    position end_then_0_22;
-    position end_otherwise_0_23;
+    branch.eq true true to end_otherwise_0_39;
+    position end_then_0_38;
+    position end_otherwise_0_39;
     set r4 into revealed_bids[r2];
     gt r4 r9 into r15;
-    branch.eq r15 false to end_then_0_24;
+    branch.eq r15 false to end_then_0_40;
     set r9 into second_highest_bids[r3];
     set r4 into highest_bids[r3];
     set r2 into auction_winners[r3];
-    branch.eq true true to end_otherwise_0_25;
-    position end_then_0_24;
-    position end_otherwise_0_25;
+    branch.eq true true to end_otherwise_0_41;
+    position end_then_0_40;
+    position end_otherwise_0_41;
     get.or_use auction_escrow[r3] 0u128 into r16;
     add r16 r4 into r17;
     set r17 into auction_escrow[r3];
@@ -662,11 +662,11 @@ function bid_english_usad:
     assert.eq r4 true;
     cast self.caller r0 r1 r2 into r5 as BidCommitment;
     hash.bhp256 r5 into r6 as field;
-    call test_usad_stablecoin.aleo/transfer_public_as_signer obscura_settle_stable.aleo r1 into r7;
+    call test_usad_stablecoin.aleo/transfer_public_as_signer obscura_settle_stable_v2.aleo r1 into r7;
     cast self.caller r0 r1 r2 3u8 into r8 as EscrowReceipt.record;
     async bid_english_usad r7 r3 r6 r0 r1 into r9;
     output r8 as EscrowReceipt.record;
-    output r9 as obscura_settle_stable.aleo/bid_english_usad.future;
+    output r9 as obscura_settle_stable_v2.aleo/bid_english_usad.future;
 
 finalize bid_english_usad:
     input r0 as test_usad_stablecoin.aleo/transfer_public_as_signer.future;
@@ -683,24 +683,24 @@ finalize bid_english_usad:
     assert.eq r8 true;
     get.or_use highest_bids[r3] 0u128 into r9;
     gt r9 0u128 into r10;
-    branch.eq r10 false to end_then_0_26;
+    branch.eq r10 false to end_then_0_42;
     mul r9 500u128 into r11;
     div r11 10000u128 into r12;
     add r9 r12 into r13;
     gte r4 r13 into r14;
     assert.eq r14 true;
-    branch.eq true true to end_otherwise_0_27;
-    position end_then_0_26;
-    position end_otherwise_0_27;
+    branch.eq true true to end_otherwise_0_43;
+    position end_then_0_42;
+    position end_otherwise_0_43;
     set r4 into revealed_bids[r2];
     gt r4 r9 into r15;
-    branch.eq r15 false to end_then_0_28;
+    branch.eq r15 false to end_then_0_44;
     set r9 into second_highest_bids[r3];
     set r4 into highest_bids[r3];
     set r2 into auction_winners[r3];
-    branch.eq true true to end_otherwise_0_29;
-    position end_then_0_28;
-    position end_otherwise_0_29;
+    branch.eq true true to end_otherwise_0_45;
+    position end_then_0_44;
+    position end_otherwise_0_45;
     get.or_use auction_escrow[r3] 0u128 into r16;
     add r16 r4 into r17;
     set r17 into auction_escrow[r3];
@@ -714,7 +714,7 @@ function withdraw_fees_usdcx:
     cast self.caller into r2 as field;
     call test_usdcx_stablecoin.aleo/transfer_public r1 r0 into r3;
     async withdraw_fees_usdcx r3 r0 into r4;
-    output r4 as obscura_settle_stable.aleo/withdraw_fees_usdcx.future;
+    output r4 as obscura_settle_stable_v2.aleo/withdraw_fees_usdcx.future;
 
 finalize withdraw_fees_usdcx:
     input r0 as test_usdcx_stablecoin.aleo/transfer_public.future;

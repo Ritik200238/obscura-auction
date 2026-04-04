@@ -1,7 +1,7 @@
 // 4-program architecture — verify all exist on testnet before submission (Rule 0)
-export const PROGRAM_ID = 'obscura_core.aleo'                       // Core auction engine
-export const SETTLE_PROGRAM_ID = 'obscura_settle.aleo'              // ALEO token settlement
-export const SETTLE_STABLE_PROGRAM_ID = 'obscura_settle_stable.aleo' // USDCx + USAD settlement
+export const PROGRAM_ID = 'obscura_core_v2.aleo'                       // Core auction engine
+export const SETTLE_PROGRAM_ID = 'obscura_settle_v2.aleo'              // ALEO token settlement
+export const SETTLE_STABLE_PROGRAM_ID = 'obscura_settle_stable_v2.aleo' // USDCx + USAD settlement
 export const MARKET_PROGRAM_ID = 'obscura_market_v2.aleo'           // Marketplace extensions
 
 export const STATUS = {
@@ -16,7 +16,11 @@ export const STATUS = {
 } as const
 
 export const TOKEN_TYPE = { ALEO: 1, USDCX: 2, USAD: 3 } as const
-export const AUCTION_MODE = { FIRST_PRICE: 1, VICKREY: 2, DUTCH: 3, ENGLISH: 4, BUNDLE: 5, MULTI_UNIT: 6 } as const
+export const AUCTION_MODE = {
+  FIRST_PRICE: 1, VICKREY: 2, DUTCH: 3, ENGLISH: 4,
+  BUNDLE: 5, MULTI_UNIT: 6, CANDLE: 7, REVERSE: 8,
+  BLIND_DUTCH: 9, TIMED_ESCALATION: 10,
+} as const
 
 export const CATEGORY_LABELS: Record<number, string> = {
   1: 'Art',
@@ -32,6 +36,10 @@ export const MODE_LABELS: Record<number, string> = {
   [AUCTION_MODE.ENGLISH]: 'English (Open Ascending Bids)',
   [AUCTION_MODE.BUNDLE]: 'Bundle (Multi-Item Package)',
   [AUCTION_MODE.MULTI_UNIT]: 'Multi-Unit (Batch Quantity + Price)',
+  [AUCTION_MODE.CANDLE]: 'Candle (Random End Time)',
+  [AUCTION_MODE.REVERSE]: 'Reverse (Lowest Bid Wins)',
+  [AUCTION_MODE.BLIND_DUTCH]: 'Blind Dutch (Sealed + Descending)',
+  [AUCTION_MODE.TIMED_ESCALATION]: 'Timed Escalation (Auto-Incrementing)',
 }
 
 export const MODE_DESCRIPTIONS: Record<number, string> = {
@@ -41,6 +49,10 @@ export const MODE_DESCRIPTIONS: Record<number, string> = {
   [AUCTION_MODE.ENGLISH]: 'Open ascending bids. Each bid must beat the previous. Highest bidder at deadline wins.',
   [AUCTION_MODE.BUNDLE]: 'Seller lists 2-4 items as a package. Bidders bid on the entire bundle. Sealed-bid with commit-reveal.',
   [AUCTION_MODE.MULTI_UNIT]: 'Seller lists N identical units. Bidders specify quantity and price per unit. Highest bidders get allocated first.',
+  [AUCTION_MODE.CANDLE]: 'Like English but ends at a random time. Bidders never know which block will count. Prevents sniping completely. Inspired by Polkadot parachain auctions.',
+  [AUCTION_MODE.REVERSE]: 'Buyer posts a request. Sellers compete by bidding DOWN. Lowest bid wins. Used for procurement and hiring.',
+  [AUCTION_MODE.BLIND_DUTCH]: 'Price drops every block but nobody sees it. Submit sealed bids guessing the current price. First correct guess wins. Novel privacy mechanism.',
+  [AUCTION_MODE.TIMED_ESCALATION]: 'Price auto-increments every 10 minutes. Bid above the current price to become the leader. Last bidder when clock expires wins.',
 }
 
 export const TOKEN_LABELS: Record<number, string> = {

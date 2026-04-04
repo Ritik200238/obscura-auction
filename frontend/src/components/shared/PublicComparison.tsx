@@ -197,7 +197,7 @@ export default function PublicComparison({
             <div className="flex items-center gap-2 pt-2 border-t border-accent-500/10">
               <ShieldCheck className="w-3 h-3 text-accent-400/50" />
               <span className="text-[10px] text-accent-400/50">
-                obscura_core.aleo — all bids sealed with encrypted commitments
+                obscura_core_v2.aleo — all bids sealed with encrypted commitments
               </span>
             </div>
           </motion.div>

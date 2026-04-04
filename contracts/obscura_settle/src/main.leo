@@ -2,7 +2,7 @@
 // OBSCURA SETTLE v2 — Settlement Layer for ALEO credits
 // ============================================================================
 // ALEO-only token settlement. Stablecoin paths live in obscura_settle_stable.
-// Imports obscura_core.aleo for the SealedBid record type
+// Imports obscura_core_v2.aleo for the SealedBid record type
 // and credits.aleo for ALEO token transfers.
 //
 // 10 transitions | 4 records | 14 mappings | 6 structs
@@ -20,10 +20,10 @@
 //   T10: prove_won_auction (selective disclosure)
 // ============================================================================
 
-import obscura_core.aleo;
+import obscura_core_v2.aleo;
 import credits.aleo;
 
-program obscura_settle.aleo {
+program obscura_settle_v2.aleo {
 
     @noupgrade
     constructor() {}
@@ -168,7 +168,7 @@ program obscura_settle.aleo {
     // ########################################################################
 
     fn reveal_bid(
-        private bid: obscura_core.aleo::SealedBid,
+        private bid: obscura_core_v2.aleo::SealedBid,
         private credits_in: credits.aleo::credits
     ) -> (EscrowReceipt, credits.aleo::credits, Final) {
         assert_eq(bid.token_type, TOKEN_ALEO);

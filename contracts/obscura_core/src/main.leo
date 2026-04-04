@@ -25,7 +25,7 @@
 //   Seller identity: BHP256(address as field) — never plaintext.
 // ============================================================================
 
-program obscura_core.aleo {
+program obscura_core_v2.aleo {
 
     @noupgrade
     constructor() {}
@@ -56,6 +56,10 @@ program obscura_core.aleo {
     const MODE_ENGLISH: u8 = 4u8;
     const MODE_BUNDLE: u8 = 5u8;
     const MODE_MULTI_UNIT: u8 = 6u8;
+    const MODE_CANDLE: u8 = 7u8;
+    const MODE_REVERSE: u8 = 8u8;
+    const MODE_BLIND_DUTCH: u8 = 9u8;
+    const MODE_TIMED_ESCALATION: u8 = 10u8;
 
     // Fees
     const PLATFORM_FEE_BPS: u128 = 100u128;
@@ -77,6 +81,10 @@ program obscura_core.aleo {
 
     // Bundle
     const MAX_BUNDLE_ITEMS: u8 = 4u8;
+
+    // Timed Escalation
+    const ESCALATION_INCREMENT_BPS: u128 = 200u128; // 2% auto-increment per period
+    const ESCALATION_PERIOD_BLOCKS: u64 = 40u64;    // auto-increment every ~10 min
 
     // ========================================================================
     // RECORDS (3 — all private UTXO)
@@ -189,6 +197,11 @@ program obscura_core.aleo {
         filled_units: u128,
     }
 
+    struct CandleConfig {
+        candle_start: u64,  // block where candle period begins
+        candle_end: u64,    // block where auction fully ends
+    }
+
     // Merkle proof — 8 levels supports 256 addresses
     struct MerkleProof8 {
         p0: field, p1: field, p2: field, p3: field,
@@ -220,6 +233,13 @@ program obscura_core.aleo {
     mapping multi_unit_configs: field => MultiUnitConfig;
     mapping multi_unit_highest: field => u128;
     mapping multi_unit_second: field => u128;
+
+    // Candle auction configs
+    mapping candle_configs: field => CandleConfig;
+    // Timed escalation current auto-incremented price
+    mapping escalation_prices: field => u128;
+    // Reverse auction lowest bids
+    mapping lowest_bids: field => u128;
 
     // ########################################################################
     //              T1: INITIALIZE PLATFORM
@@ -566,7 +586,10 @@ program obscura_core.aleo {
                 auction.auction_mode == MODE_FIRST_PRICE ||
                 auction.auction_mode == MODE_VICKREY ||
                 auction.auction_mode == MODE_BUNDLE ||
-                auction.auction_mode == MODE_MULTI_UNIT
+                auction.auction_mode == MODE_MULTI_UNIT ||
+                auction.auction_mode == MODE_CANDLE ||
+                auction.auction_mode == MODE_REVERSE ||
+                auction.auction_mode == MODE_BLIND_DUTCH
             );
 
             let current_height: u64 = block.height as u64;
@@ -915,48 +938,98 @@ program obscura_core.aleo {
                     }
                 }
             } else {
-                // First-price, Bundle, Multi-Unit modes
-                if (winning_amount >= reserve_price && winning_amount > 0u128) {
-                    auctions.set(auction_id, AuctionData {
-                        item_hash: auction.item_hash,
-                        seller_hash: auction.seller_hash,
-                        category: auction.category,
-                        token_type: auction.token_type,
-                        auction_mode: auction.auction_mode,
-                        status: STATUS_SETTLED,
-                        deadline: auction.deadline,
-                        reveal_deadline: auction.reveal_deadline,
-                        bid_count: auction.bid_count,
-                        reserve_price_hash: auction.reserve_price_hash,
-                        created_at: auction.created_at,
-                        dispute_deadline: 0u64,
-                    });
-                    let sp: field = BHP256::hash_to_field(SettlementProof {
-                        auction_id: auction_id,
-                        highest_bid: winning_amount,
-                        second_highest: second_price,
-                        winner_bid_hash: winner_bid_hash,
-                        settled_at: current_height,
-                    });
-                    settlement_proofs.set(auction_id, sp);
+                if (auction.auction_mode == MODE_REVERSE) {
+                    // Reverse auction: lowest bid wins (buyer created auction, sellers bid down)
+                    let lowest_amount: u128 = lowest_bids.get_or_use(auction_id, 0u128);
+                    let lowest_bid_hash: field = auction_winners.get_or_use(auction_id, 0field);
 
-                    let completed: u64 = reputation_completed.get_or_use(auction.seller_hash, 0u64);
-                    reputation_completed.set(auction.seller_hash, completed + 1u64);
+                    // In reverse: reserve_price is buyer's max budget. Lowest bid must be <= budget.
+                    if (lowest_amount > 0u128 && lowest_amount <= reserve_price) {
+                        auctions.set(auction_id, AuctionData {
+                            item_hash: auction.item_hash,
+                            seller_hash: auction.seller_hash,
+                            category: auction.category,
+                            token_type: auction.token_type,
+                            auction_mode: auction.auction_mode,
+                            status: STATUS_SETTLED,
+                            deadline: auction.deadline,
+                            reveal_deadline: auction.reveal_deadline,
+                            bid_count: auction.bid_count,
+                            reserve_price_hash: auction.reserve_price_hash,
+                            created_at: auction.created_at,
+                            dispute_deadline: 0u64,
+                        });
+                        let sp: field = BHP256::hash_to_field(SettlementProof {
+                            auction_id: auction_id,
+                            highest_bid: lowest_amount,
+                            second_highest: 0u128,
+                            winner_bid_hash: lowest_bid_hash,
+                            settled_at: current_height,
+                        });
+                        settlement_proofs.set(auction_id, sp);
+
+                        let completed: u64 = reputation_completed.get_or_use(auction.seller_hash, 0u64);
+                        reputation_completed.set(auction.seller_hash, completed + 1u64);
+                    } else {
+                        auctions.set(auction_id, AuctionData {
+                            item_hash: auction.item_hash,
+                            seller_hash: auction.seller_hash,
+                            category: auction.category,
+                            token_type: auction.token_type,
+                            auction_mode: auction.auction_mode,
+                            status: STATUS_FAILED,
+                            deadline: auction.deadline,
+                            reveal_deadline: auction.reveal_deadline,
+                            bid_count: auction.bid_count,
+                            reserve_price_hash: auction.reserve_price_hash,
+                            created_at: auction.created_at,
+                            dispute_deadline: 0u64,
+                        });
+                    }
                 } else {
-                    auctions.set(auction_id, AuctionData {
-                        item_hash: auction.item_hash,
-                        seller_hash: auction.seller_hash,
-                        category: auction.category,
-                        token_type: auction.token_type,
-                        auction_mode: auction.auction_mode,
-                        status: STATUS_FAILED,
-                        deadline: auction.deadline,
-                        reveal_deadline: auction.reveal_deadline,
-                        bid_count: auction.bid_count,
-                        reserve_price_hash: auction.reserve_price_hash,
-                        created_at: auction.created_at,
-                        dispute_deadline: auction.dispute_deadline,
-                    });
+                    // First-price, Bundle, Multi-Unit, Candle, Blind Dutch modes
+                    if (winning_amount >= reserve_price && winning_amount > 0u128) {
+                        auctions.set(auction_id, AuctionData {
+                            item_hash: auction.item_hash,
+                            seller_hash: auction.seller_hash,
+                            category: auction.category,
+                            token_type: auction.token_type,
+                            auction_mode: auction.auction_mode,
+                            status: STATUS_SETTLED,
+                            deadline: auction.deadline,
+                            reveal_deadline: auction.reveal_deadline,
+                            bid_count: auction.bid_count,
+                            reserve_price_hash: auction.reserve_price_hash,
+                            created_at: auction.created_at,
+                            dispute_deadline: 0u64,
+                        });
+                        let sp: field = BHP256::hash_to_field(SettlementProof {
+                            auction_id: auction_id,
+                            highest_bid: winning_amount,
+                            second_highest: second_price,
+                            winner_bid_hash: winner_bid_hash,
+                            settled_at: current_height,
+                        });
+                        settlement_proofs.set(auction_id, sp);
+
+                        let completed: u64 = reputation_completed.get_or_use(auction.seller_hash, 0u64);
+                        reputation_completed.set(auction.seller_hash, completed + 1u64);
+                    } else {
+                        auctions.set(auction_id, AuctionData {
+                            item_hash: auction.item_hash,
+                            seller_hash: auction.seller_hash,
+                            category: auction.category,
+                            token_type: auction.token_type,
+                            auction_mode: auction.auction_mode,
+                            status: STATUS_FAILED,
+                            deadline: auction.deadline,
+                            reveal_deadline: auction.reveal_deadline,
+                            bid_count: auction.bid_count,
+                            reserve_price_hash: auction.reserve_price_hash,
+                            created_at: auction.created_at,
+                            dispute_deadline: auction.dispute_deadline,
+                        });
+                    }
                 }
             }
         };
@@ -1083,5 +1156,751 @@ program obscura_core.aleo {
                 });
             }
         };
+    }
+
+    // ########################################################################
+    //              T15: CREATE CANDLE AUCTION
+    // ########################################################################
+    // Candle auctions end at an unpredictable point within a "candle period".
+    // Bids after candle_start are risky — the retroactive cutoff is unknown
+    // until after candle_end. Settlement picks the highest revealed bid.
+
+    fn create_candle_auction(
+        private item_hash: field,
+        private category: u8,
+        private reserve_price: u128,
+        private token_type: u8,
+        private auction_nonce: field,
+        public deadline: u64,
+        private candle_start_offset: u64
+    ) -> (field, Final) {
+        assert(candle_start_offset > 0u64);
+        assert(reserve_price >= MIN_BID_AMOUNT);
+        assert(
+            token_type == TOKEN_ALEO ||
+            token_type == TOKEN_USDCX ||
+            token_type == TOKEN_USAD
+        );
+
+        let seed: AuctionSeed = AuctionSeed {
+            creator: self.caller,
+            item_hash: item_hash,
+            deadline: deadline,
+            nonce: auction_nonce,
+        };
+        let auction_id: field = BHP256::hash_to_field(seed);
+
+        let reserve_field: field = reserve_price as field;
+        let reserve_hash: field = BHP256::hash_to_field(reserve_field);
+
+        let seller_field: field = self.caller as field;
+        let seller_hash: field = BHP256::hash_to_field(seller_field);
+
+        let candle_start: u64 = deadline - candle_start_offset;
+
+        return (auction_id, final {
+            let exists: bool = auctions.contains(auction_id);
+            assert(!exists);
+
+            let current_height: u64 = block.height as u64;
+            // candle_start must be far enough in the future
+            assert(candle_start > current_height + MIN_AUCTION_DURATION);
+
+            let cfg: PlatformConfig = platform_config.get(0u8);
+            assert(!cfg.paused);
+
+            auctions.set(auction_id, AuctionData {
+                item_hash: item_hash,
+                seller_hash: seller_hash,
+                category: category,
+                token_type: token_type,
+                auction_mode: MODE_CANDLE,
+                status: STATUS_ACTIVE,
+                deadline: deadline,
+                reveal_deadline: 0u64,
+                bid_count: 0u64,
+                reserve_price_hash: reserve_hash,
+                created_at: current_height,
+                dispute_deadline: 0u64,
+            });
+
+            candle_configs.set(auction_id, CandleConfig {
+                candle_start: candle_start,
+                candle_end: deadline,
+            });
+        });
+    }
+
+    // ########################################################################
+    //              T16: PLACE CANDLE BID
+    // ########################################################################
+    // Sealed bid for candle auctions. Bids accepted until candle_end.
+    // Bids placed after candle_start carry risk — retroactive cutoff unknown.
+
+    fn place_candle_bid(
+        private auction_id: field,
+        private bid_amount: u128,
+        private bid_nonce: field,
+        private token_type: u8
+    ) -> (SealedBid, Final) {
+        assert(bid_amount >= MIN_BID_AMOUNT);
+        assert(
+            token_type == TOKEN_ALEO ||
+            token_type == TOKEN_USDCX ||
+            token_type == TOKEN_USAD
+        );
+
+        let sealed: SealedBid = SealedBid {
+            owner: self.caller,
+            auction_id: auction_id,
+            bid_amount: bid_amount,
+            bid_nonce: bid_nonce,
+            token_type: token_type,
+        };
+
+        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: self.caller,
+            auction_id: auction_id,
+            amount: bid_amount,
+            nonce: bid_nonce,
+        });
+
+        return (sealed, final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.status, STATUS_ACTIVE);
+            assert_eq(auction.auction_mode, MODE_CANDLE);
+            assert_eq(auction.token_type, token_type);
+
+            // Bids accepted until candle_end (the full deadline)
+            let current_height: u64 = block.height as u64;
+            assert(current_height <= auction.deadline);
+
+            let already_exists: bool = bid_commitments.contains(bid_hash);
+            assert(!already_exists);
+
+            let cfg: PlatformConfig = platform_config.get(0u8);
+            assert(!cfg.paused);
+
+            bid_commitments.set(bid_hash, true);
+
+            auctions.set(auction_id, AuctionData {
+                item_hash: auction.item_hash,
+                seller_hash: auction.seller_hash,
+                category: auction.category,
+                token_type: auction.token_type,
+                auction_mode: auction.auction_mode,
+                status: auction.status,
+                deadline: auction.deadline,
+                reveal_deadline: auction.reveal_deadline,
+                bid_count: auction.bid_count + 1u64,
+                reserve_price_hash: auction.reserve_price_hash,
+                created_at: auction.created_at,
+                dispute_deadline: auction.dispute_deadline,
+            });
+        });
+    }
+
+    // ########################################################################
+    //              T17: SETTLE CANDLE
+    // ########################################################################
+    // After candle_end, the seller settles. The candle mechanism's randomness
+    // is in the social layer: bidders didn't know which block would be the
+    // retroactive cutoff, so late bids were risky. Settlement picks the
+    // highest revealed bid (same as first-price after reveal).
+
+    fn settle_candle(
+        private auction_id: field,
+        private reserve_price: u128
+    ) -> Final {
+        let caller_field: field = self.caller as field;
+        let caller_hash: field = BHP256::hash_to_field(caller_field);
+
+        let reserve_field: field = reserve_price as field;
+        let reserve_hash: field = BHP256::hash_to_field(reserve_field);
+
+        return final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.seller_hash, caller_hash);
+            assert_eq(auction.auction_mode, MODE_CANDLE);
+            assert_eq(auction.status, STATUS_REVEALING);
+
+            let current_height: u64 = block.height as u64;
+            assert(current_height > auction.reveal_deadline);
+
+            assert_eq(reserve_hash, auction.reserve_price_hash);
+
+            let candle: CandleConfig = candle_configs.get(auction_id);
+            assert(current_height > candle.candle_end);
+
+            let winning_amount: u128 = highest_bids.get_or_use(auction_id, 0u128);
+            let winner_bid_hash: field = auction_winners.get_or_use(auction_id, 0field);
+            let second_price: u128 = second_highest_bids.get_or_use(auction_id, 0u128);
+
+            if (winning_amount >= reserve_price && winning_amount > 0u128) {
+                auctions.set(auction_id, AuctionData {
+                    item_hash: auction.item_hash,
+                    seller_hash: auction.seller_hash,
+                    category: auction.category,
+                    token_type: auction.token_type,
+                    auction_mode: auction.auction_mode,
+                    status: STATUS_SETTLED,
+                    deadline: auction.deadline,
+                    reveal_deadline: auction.reveal_deadline,
+                    bid_count: auction.bid_count,
+                    reserve_price_hash: auction.reserve_price_hash,
+                    created_at: auction.created_at,
+                    dispute_deadline: 0u64,
+                });
+
+                let sp: field = BHP256::hash_to_field(SettlementProof {
+                    auction_id: auction_id,
+                    highest_bid: winning_amount,
+                    second_highest: second_price,
+                    winner_bid_hash: winner_bid_hash,
+                    settled_at: current_height,
+                });
+                settlement_proofs.set(auction_id, sp);
+
+                let completed: u64 = reputation_completed.get_or_use(auction.seller_hash, 0u64);
+                reputation_completed.set(auction.seller_hash, completed + 1u64);
+            } else {
+                auctions.set(auction_id, AuctionData {
+                    item_hash: auction.item_hash,
+                    seller_hash: auction.seller_hash,
+                    category: auction.category,
+                    token_type: auction.token_type,
+                    auction_mode: auction.auction_mode,
+                    status: STATUS_FAILED,
+                    deadline: auction.deadline,
+                    reveal_deadline: auction.reveal_deadline,
+                    bid_count: auction.bid_count,
+                    reserve_price_hash: auction.reserve_price_hash,
+                    created_at: auction.created_at,
+                    dispute_deadline: 0u64,
+                });
+            }
+        };
+    }
+
+    // ########################################################################
+    //              T18: CREATE REVERSE AUCTION
+    // ########################################################################
+    // Buyer creates a request. Sellers bid DOWN to offer the lowest price.
+    // The "seller_hash" field stores the BUYER's hash (buyer creates it).
+
+    fn create_reverse_auction(
+        private item_hash: field,
+        private category: u8,
+        private max_budget: u128,
+        private token_type: u8,
+        private auction_nonce: field,
+        public deadline: u64
+    ) -> (field, Final) {
+        assert(max_budget >= MIN_BID_AMOUNT);
+        assert(
+            token_type == TOKEN_ALEO ||
+            token_type == TOKEN_USDCX ||
+            token_type == TOKEN_USAD
+        );
+
+        let seed: AuctionSeed = AuctionSeed {
+            creator: self.caller,
+            item_hash: item_hash,
+            deadline: deadline,
+            nonce: auction_nonce,
+        };
+        let auction_id: field = BHP256::hash_to_field(seed);
+
+        let budget_field: field = max_budget as field;
+        let reserve_hash: field = BHP256::hash_to_field(budget_field);
+
+        // Buyer's hash stored as seller_hash (creator of the reverse auction)
+        let buyer_field: field = self.caller as field;
+        let buyer_hash: field = BHP256::hash_to_field(buyer_field);
+
+        return (auction_id, final {
+            let exists: bool = auctions.contains(auction_id);
+            assert(!exists);
+
+            let current_height: u64 = block.height as u64;
+            assert(deadline > current_height + MIN_AUCTION_DURATION);
+
+            let cfg: PlatformConfig = platform_config.get(0u8);
+            assert(!cfg.paused);
+
+            auctions.set(auction_id, AuctionData {
+                item_hash: item_hash,
+                seller_hash: buyer_hash,
+                category: category,
+                token_type: token_type,
+                auction_mode: MODE_REVERSE,
+                status: STATUS_ACTIVE,
+                deadline: deadline,
+                reveal_deadline: 0u64,
+                bid_count: 0u64,
+                reserve_price_hash: reserve_hash,
+                created_at: current_height,
+                dispute_deadline: 0u64,
+            });
+        });
+    }
+
+    // ########################################################################
+    //              T19: PLACE REVERSE BID
+    // ########################################################################
+    // Seller submits a sealed offer. In settlement, lowest bid wins.
+
+    fn place_reverse_bid(
+        private auction_id: field,
+        private bid_amount: u128,
+        private bid_nonce: field,
+        private token_type: u8
+    ) -> (SealedBid, Final) {
+        assert(bid_amount >= MIN_BID_AMOUNT);
+        assert(
+            token_type == TOKEN_ALEO ||
+            token_type == TOKEN_USDCX ||
+            token_type == TOKEN_USAD
+        );
+
+        let sealed: SealedBid = SealedBid {
+            owner: self.caller,
+            auction_id: auction_id,
+            bid_amount: bid_amount,
+            bid_nonce: bid_nonce,
+            token_type: token_type,
+        };
+
+        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: self.caller,
+            auction_id: auction_id,
+            amount: bid_amount,
+            nonce: bid_nonce,
+        });
+
+        return (sealed, final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.status, STATUS_ACTIVE);
+            assert_eq(auction.auction_mode, MODE_REVERSE);
+            assert_eq(auction.token_type, token_type);
+
+            let current_height: u64 = block.height as u64;
+            assert(current_height <= auction.deadline);
+
+            let already_exists: bool = bid_commitments.contains(bid_hash);
+            assert(!already_exists);
+
+            let cfg: PlatformConfig = platform_config.get(0u8);
+            assert(!cfg.paused);
+
+            bid_commitments.set(bid_hash, true);
+
+            auctions.set(auction_id, AuctionData {
+                item_hash: auction.item_hash,
+                seller_hash: auction.seller_hash,
+                category: auction.category,
+                token_type: auction.token_type,
+                auction_mode: auction.auction_mode,
+                status: auction.status,
+                deadline: auction.deadline,
+                reveal_deadline: auction.reveal_deadline,
+                bid_count: auction.bid_count + 1u64,
+                reserve_price_hash: auction.reserve_price_hash,
+                created_at: auction.created_at,
+                dispute_deadline: auction.dispute_deadline,
+            });
+        });
+    }
+
+    // ########################################################################
+    //              T20: SETTLE REVERSE
+    // ########################################################################
+    // Lowest revealed bid wins. If lowest <= max_budget, auction settles.
+
+    fn settle_reverse(
+        private auction_id: field,
+        private max_budget: u128
+    ) -> Final {
+        let caller_field: field = self.caller as field;
+        let caller_hash: field = BHP256::hash_to_field(caller_field);
+
+        let budget_field: field = max_budget as field;
+        let reserve_hash: field = BHP256::hash_to_field(budget_field);
+
+        return final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.seller_hash, caller_hash);
+            assert_eq(auction.auction_mode, MODE_REVERSE);
+            assert_eq(auction.status, STATUS_REVEALING);
+
+            let current_height: u64 = block.height as u64;
+            assert(current_height > auction.reveal_deadline);
+
+            assert_eq(reserve_hash, auction.reserve_price_hash);
+
+            let lowest_amount: u128 = lowest_bids.get_or_use(auction_id, 0u128);
+            let winner_bid_hash: field = auction_winners.get_or_use(auction_id, 0field);
+
+            if (lowest_amount > 0u128 && lowest_amount <= max_budget) {
+                auctions.set(auction_id, AuctionData {
+                    item_hash: auction.item_hash,
+                    seller_hash: auction.seller_hash,
+                    category: auction.category,
+                    token_type: auction.token_type,
+                    auction_mode: auction.auction_mode,
+                    status: STATUS_SETTLED,
+                    deadline: auction.deadline,
+                    reveal_deadline: auction.reveal_deadline,
+                    bid_count: auction.bid_count,
+                    reserve_price_hash: auction.reserve_price_hash,
+                    created_at: auction.created_at,
+                    dispute_deadline: 0u64,
+                });
+
+                let sp: field = BHP256::hash_to_field(SettlementProof {
+                    auction_id: auction_id,
+                    highest_bid: lowest_amount,
+                    second_highest: 0u128,
+                    winner_bid_hash: winner_bid_hash,
+                    settled_at: current_height,
+                });
+                settlement_proofs.set(auction_id, sp);
+
+                let completed: u64 = reputation_completed.get_or_use(auction.seller_hash, 0u64);
+                reputation_completed.set(auction.seller_hash, completed + 1u64);
+            } else {
+                auctions.set(auction_id, AuctionData {
+                    item_hash: auction.item_hash,
+                    seller_hash: auction.seller_hash,
+                    category: auction.category,
+                    token_type: auction.token_type,
+                    auction_mode: auction.auction_mode,
+                    status: STATUS_FAILED,
+                    deadline: auction.deadline,
+                    reveal_deadline: auction.reveal_deadline,
+                    bid_count: auction.bid_count,
+                    reserve_price_hash: auction.reserve_price_hash,
+                    created_at: auction.created_at,
+                    dispute_deadline: 0u64,
+                });
+            }
+        };
+    }
+
+    // ########################################################################
+    //              T21: CREATE BLIND DUTCH AUCTION
+    // ########################################################################
+    // Dutch auction with sealed bids. Bidders submit sealed bids without
+    // seeing others' bids or the exact current price. At settlement, highest
+    // sealed bid above the floor price (end_price) wins.
+
+    fn create_blind_dutch(
+        private item_hash: field,
+        private category: u8,
+        private start_price: u128,
+        private end_price: u128,
+        private token_type: u8,
+        private auction_nonce: field,
+        public deadline: u64
+    ) -> (field, Final) {
+        assert(start_price > end_price);
+        assert(end_price >= MIN_BID_AMOUNT);
+        assert(
+            token_type == TOKEN_ALEO ||
+            token_type == TOKEN_USDCX ||
+            token_type == TOKEN_USAD
+        );
+
+        let seed: AuctionSeed = AuctionSeed {
+            creator: self.caller,
+            item_hash: item_hash,
+            deadline: deadline,
+            nonce: auction_nonce,
+        };
+        let auction_id: field = BHP256::hash_to_field(seed);
+
+        let end_field: field = end_price as field;
+        let reserve_hash: field = BHP256::hash_to_field(end_field);
+
+        let seller_field: field = self.caller as field;
+        let seller_hash: field = BHP256::hash_to_field(seller_field);
+
+        return (auction_id, final {
+            let exists: bool = auctions.contains(auction_id);
+            assert(!exists);
+
+            let current_height: u64 = block.height as u64;
+            assert(deadline > current_height + MIN_AUCTION_DURATION);
+
+            let cfg: PlatformConfig = platform_config.get(0u8);
+            assert(!cfg.paused);
+
+            auctions.set(auction_id, AuctionData {
+                item_hash: item_hash,
+                seller_hash: seller_hash,
+                category: category,
+                token_type: token_type,
+                auction_mode: MODE_BLIND_DUTCH,
+                status: STATUS_ACTIVE,
+                deadline: deadline,
+                reveal_deadline: 0u64,
+                bid_count: 0u64,
+                reserve_price_hash: reserve_hash,
+                created_at: current_height,
+                dispute_deadline: 0u64,
+            });
+
+            dutch_params.set(auction_id, DutchConfig {
+                start_price: start_price,
+                end_price: end_price,
+            });
+        });
+    }
+
+    // ########################################################################
+    //              T22: PLACE BLIND DUTCH BID
+    // ########################################################################
+    // Bidder submits a sealed bid during the Dutch period. They don't see
+    // other bids or the exact current price. At settlement, highest bid
+    // above the floor price wins.
+
+    fn place_blind_dutch_bid(
+        private auction_id: field,
+        private bid_amount: u128,
+        private bid_nonce: field,
+        private token_type: u8
+    ) -> (SealedBid, Final) {
+        assert(bid_amount >= MIN_BID_AMOUNT);
+        assert(
+            token_type == TOKEN_ALEO ||
+            token_type == TOKEN_USDCX ||
+            token_type == TOKEN_USAD
+        );
+
+        let sealed: SealedBid = SealedBid {
+            owner: self.caller,
+            auction_id: auction_id,
+            bid_amount: bid_amount,
+            bid_nonce: bid_nonce,
+            token_type: token_type,
+        };
+
+        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: self.caller,
+            auction_id: auction_id,
+            amount: bid_amount,
+            nonce: bid_nonce,
+        });
+
+        return (sealed, final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.status, STATUS_ACTIVE);
+            assert_eq(auction.auction_mode, MODE_BLIND_DUTCH);
+            assert_eq(auction.token_type, token_type);
+
+            let current_height: u64 = block.height as u64;
+            assert(current_height <= auction.deadline);
+
+            let already_exists: bool = bid_commitments.contains(bid_hash);
+            assert(!already_exists);
+
+            let cfg: PlatformConfig = platform_config.get(0u8);
+            assert(!cfg.paused);
+
+            bid_commitments.set(bid_hash, true);
+
+            auctions.set(auction_id, AuctionData {
+                item_hash: auction.item_hash,
+                seller_hash: auction.seller_hash,
+                category: auction.category,
+                token_type: auction.token_type,
+                auction_mode: auction.auction_mode,
+                status: auction.status,
+                deadline: auction.deadline,
+                reveal_deadline: auction.reveal_deadline,
+                bid_count: auction.bid_count + 1u64,
+                reserve_price_hash: auction.reserve_price_hash,
+                created_at: auction.created_at,
+                dispute_deadline: auction.dispute_deadline,
+            });
+        });
+    }
+
+    // ########################################################################
+    //              T23: CREATE TIMED ESCALATION AUCTION
+    // ########################################################################
+    // Like English but the minimum bid auto-increments by ESCALATION_INCREMENT_BPS
+    // every ESCALATION_PERIOD_BLOCKS. Creates urgency — wait too long and the
+    // minimum price rises. Open bids with anti-sniping.
+
+    fn create_timed_escalation(
+        private item_hash: field,
+        private category: u8,
+        private starting_price: u128,
+        private token_type: u8,
+        private auction_nonce: field,
+        public deadline: u64
+    ) -> (field, Final) {
+        assert(starting_price >= MIN_BID_AMOUNT);
+        assert(
+            token_type == TOKEN_ALEO ||
+            token_type == TOKEN_USDCX ||
+            token_type == TOKEN_USAD
+        );
+
+        let seed: AuctionSeed = AuctionSeed {
+            creator: self.caller,
+            item_hash: item_hash,
+            deadline: deadline,
+            nonce: auction_nonce,
+        };
+        let auction_id: field = BHP256::hash_to_field(seed);
+
+        let reserve_field: field = starting_price as field;
+        let reserve_hash: field = BHP256::hash_to_field(reserve_field);
+
+        let seller_field: field = self.caller as field;
+        let seller_hash: field = BHP256::hash_to_field(seller_field);
+
+        return (auction_id, final {
+            let exists: bool = auctions.contains(auction_id);
+            assert(!exists);
+
+            let current_height: u64 = block.height as u64;
+            assert(deadline > current_height + MIN_AUCTION_DURATION);
+
+            let cfg: PlatformConfig = platform_config.get(0u8);
+            assert(!cfg.paused);
+
+            auctions.set(auction_id, AuctionData {
+                item_hash: item_hash,
+                seller_hash: seller_hash,
+                category: category,
+                token_type: token_type,
+                auction_mode: MODE_TIMED_ESCALATION,
+                status: STATUS_ACTIVE,
+                deadline: deadline,
+                reveal_deadline: 0u64,
+                bid_count: 0u64,
+                reserve_price_hash: reserve_hash,
+                created_at: current_height,
+                dispute_deadline: 0u64,
+            });
+
+            escalation_prices.set(auction_id, starting_price);
+        });
+    }
+
+    // ########################################################################
+    //              T24: BID TIMED ESCALATION
+    // ########################################################################
+    // Open bid with auto-incrementing minimum. The minimum price rises by
+    // ESCALATION_INCREMENT_BPS (2%) every ESCALATION_PERIOD_BLOCKS (~10 min).
+    // Anti-sniping: deadline extends if bid arrives in last 40 blocks.
+
+    fn bid_timed_escalation(
+        private auction_id: field,
+        private bid_amount: u128,
+        private bid_nonce: field,
+        private token_type: u8
+    ) -> (SealedBid, Final) {
+        assert(bid_amount >= MIN_BID_AMOUNT);
+        assert(
+            token_type == TOKEN_ALEO ||
+            token_type == TOKEN_USDCX ||
+            token_type == TOKEN_USAD
+        );
+
+        let sealed: SealedBid = SealedBid {
+            owner: self.caller,
+            auction_id: auction_id,
+            bid_amount: bid_amount,
+            bid_nonce: bid_nonce,
+            token_type: token_type,
+        };
+
+        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: self.caller,
+            auction_id: auction_id,
+            amount: bid_amount,
+            nonce: bid_nonce,
+        });
+
+        return (sealed, final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.status, STATUS_ACTIVE);
+            assert_eq(auction.auction_mode, MODE_TIMED_ESCALATION);
+            assert_eq(auction.token_type, token_type);
+
+            let current_height: u64 = block.height as u64;
+            assert(current_height <= auction.deadline);
+
+            let cfg: PlatformConfig = platform_config.get(0u8);
+            assert(!cfg.paused);
+
+            // Compute auto-incrementing minimum price
+            let base_price: u128 = escalation_prices.get(auction_id);
+            let elapsed: u64 = current_height - auction.created_at;
+            let periods: u64 = elapsed / ESCALATION_PERIOD_BLOCKS;
+            let periods_128: u128 = periods as u128;
+            let increment: u128 = base_price * ESCALATION_INCREMENT_BPS * periods_128 / FEE_DENOMINATOR;
+            let current_min_price: u128 = base_price + increment;
+
+            assert(bid_amount >= current_min_price);
+
+            // Track highest / second-highest bids (open English-style)
+            let current_highest: u128 = highest_bids.get_or_use(auction_id, 0u128);
+
+            if (bid_amount > current_highest) {
+                if (current_highest > 0u128) {
+                    second_highest_bids.set(auction_id, current_highest);
+                }
+                highest_bids.set(auction_id, bid_amount);
+                auction_winners.set(auction_id, bid_hash);
+            } else {
+                let current_second: u128 = second_highest_bids.get_or_use(auction_id, 0u128);
+                if (bid_amount > current_second) {
+                    second_highest_bids.set(auction_id, bid_amount);
+                }
+            }
+
+            // Update escalation price to current computed price
+            escalation_prices.set(auction_id, current_min_price);
+
+            // Anti-sniping: extend deadline if bid in last SNIPE_WINDOW_BLOCKS
+            let time_left: u64 = auction.deadline - current_height;
+            if (time_left <= SNIPE_WINDOW_BLOCKS) {
+                let extended: u64 = auction.deadline + SNIPE_EXTENSION_BLOCKS;
+                auctions.set(auction_id, AuctionData {
+                    item_hash: auction.item_hash,
+                    seller_hash: auction.seller_hash,
+                    category: auction.category,
+                    token_type: auction.token_type,
+                    auction_mode: auction.auction_mode,
+                    status: auction.status,
+                    deadline: extended,
+                    reveal_deadline: auction.reveal_deadline,
+                    bid_count: auction.bid_count + 1u64,
+                    reserve_price_hash: auction.reserve_price_hash,
+                    created_at: auction.created_at,
+                    dispute_deadline: auction.dispute_deadline,
+                });
+            } else {
+                auctions.set(auction_id, AuctionData {
+                    item_hash: auction.item_hash,
+                    seller_hash: auction.seller_hash,
+                    category: auction.category,
+                    token_type: auction.token_type,
+                    auction_mode: auction.auction_mode,
+                    status: auction.status,
+                    deadline: auction.deadline,
+                    reveal_deadline: auction.reveal_deadline,
+                    bid_count: auction.bid_count + 1u64,
+                    reserve_price_hash: auction.reserve_price_hash,
+                    created_at: auction.created_at,
+                    dispute_deadline: auction.dispute_deadline,
+                });
+            }
+        });
     }
 }
