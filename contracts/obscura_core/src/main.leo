@@ -228,11 +228,13 @@ program obscura_core_v2.aleo {
         candle_end: u64,    // block where auction fully ends
     }
 
-    // Merkle proof — 8 levels supports 256 addresses
-    struct MerkleProof8 {
+    // Merkle proof — 16 levels supports 65,536 addresses
+    struct MerkleProof16 {
         p0: field, p1: field, p2: field, p3: field,
         p4: field, p5: field, p6: field, p7: field,
-        indices: u8,
+        p8: field, p9: field, p10: field, p11: field,
+        p12: field, p13: field, p14: field, p15: field,
+        indices: u16,
     }
 
     // ========================================================================
