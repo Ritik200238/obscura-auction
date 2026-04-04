@@ -51,7 +51,7 @@ export default function Footer() {
           {/* Bottom row */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-surface-800/50">
             <div className="flex items-center gap-2 text-xs text-gray-600">
-              <span className="font-mono text-gray-500">3 programs</span>
+              <span className="font-mono text-gray-500">4 programs</span>
               <span className="text-surface-700">·</span>
               <span>52 transitions</span>
               <span className="text-surface-700">·</span>

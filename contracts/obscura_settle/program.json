@@ -1,7 +1,7 @@
 {
   "program": "obscura_settle.aleo",
   "version": "0.1.0",
-  "description": "Obscura Settlement Layer — all token movement for auctions",
+  "description": "Obscura Settlement Layer — ALEO credits token movement for auctions",
   "license": "MIT",
   "leo": "4.0.0",
   "dependencies": [
@@ -12,18 +12,6 @@
     },
     {
       "name": "credits.aleo",
-      "location": "network",
-      "network": "testnet",
-      "path": null
-    },
-    {
-      "name": "test_usdcx_stablecoin.aleo",
-      "location": "network",
-      "network": "testnet",
-      "path": null
-    },
-    {
-      "name": "test_usad_stablecoin.aleo",
       "location": "network",
       "network": "testnet",
       "path": null

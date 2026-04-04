@@ -1,5 +1,5 @@
 {
-  "program": "obscura_settle.aleo",
+  "program": "obscura_settle_stable.aleo",
   "structs": [
     {
       "path": [
@@ -30,41 +30,6 @@
         },
         {
           "name": "settled_at",
-          "ty": {
-            "Primitive": {
-              "UInt": "U64"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "path": [
-        "DisputeData"
-      ],
-      "fields": [
-        {
-          "name": "disputer_hash",
-          "ty": {
-            "Primitive": "Field"
-          }
-        },
-        {
-          "name": "bond_amount",
-          "ty": {
-            "Primitive": {
-              "UInt": "U128"
-            }
-          }
-        },
-        {
-          "name": "reason_hash",
-          "ty": {
-            "Primitive": "Field"
-          }
-        },
-        {
-          "name": "filed_at",
           "ty": {
             "Primitive": {
               "UInt": "U64"
@@ -251,36 +216,6 @@
           "mode": "None"
         }
       ]
-    },
-    {
-      "path": [
-        "DisputeBond"
-      ],
-      "fields": [
-        {
-          "name": "owner",
-          "ty": {
-            "Primitive": "Address"
-          },
-          "mode": "None"
-        },
-        {
-          "name": "auction_id",
-          "ty": {
-            "Primitive": "Field"
-          },
-          "mode": "None"
-        },
-        {
-          "name": "bond_amount",
-          "ty": {
-            "Primitive": {
-              "UInt": "U128"
-            }
-          },
-          "mode": "None"
-        }
-      ]
     }
   ],
   "mappings": [
@@ -373,7 +308,7 @@
           "path": [
             "SettlementData"
           ],
-          "program": "obscura_settle.aleo"
+          "program": "obscura_settle_stable.aleo"
         }
       }
     },
@@ -405,7 +340,7 @@
           "path": [
             "DutchConfig"
           ],
-          "program": "obscura_settle.aleo"
+          "program": "obscura_settle_stable.aleo"
         }
       }
     },
@@ -419,37 +354,12 @@
           "UInt": "U8"
         }
       }
-    },
-    {
-      "name": "disputes",
-      "key": {
-        "Primitive": "Field"
-      },
-      "value": {
-        "Struct": {
-          "path": [
-            "DisputeData"
-          ],
-          "program": "obscura_settle.aleo"
-        }
-      }
-    },
-    {
-      "name": "dispute_bonds",
-      "key": {
-        "Primitive": "Field"
-      },
-      "value": {
-        "Primitive": {
-          "UInt": "U128"
-        }
-      }
     }
   ],
   "storage_variables": [],
   "functions": [
     {
-      "name": "reveal_bid",
+      "name": "reveal_bid_usdcx",
       "is_final": true,
       "inputs": [
         {
@@ -463,15 +373,38 @@
             }
           },
           "mode": "Private"
-        },
+        }
+      ],
+      "outputs": [
         {
-          "name": "credits_in",
           "ty": {
             "Record": {
               "path": [
-                "credits"
+                "EscrowReceipt"
               ],
-              "program": "credits.aleo"
+              "program": "obscura_settle_stable.aleo"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": "Final",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "reveal_bid_usad",
+      "is_final": true,
+      "inputs": [
+        {
+          "name": "bid",
+          "ty": {
+            "Record": {
+              "path": [
+                "SealedBid"
+              ],
+              "program": "obscura_core.aleo"
             }
           },
           "mode": "Private"
@@ -484,18 +417,7 @@
               "path": [
                 "EscrowReceipt"
               ],
-              "program": "obscura_settle.aleo"
-            }
-          },
-          "mode": "None"
-        },
-        {
-          "ty": {
-            "Record": {
-              "path": [
-                "credits"
-              ],
-              "program": "credits.aleo"
+              "program": "obscura_settle_stable.aleo"
             }
           },
           "mode": "None"
@@ -507,7 +429,7 @@
       ]
     },
     {
-      "name": "claim_win",
+      "name": "claim_win_usdcx",
       "is_final": true,
       "inputs": [
         {
@@ -517,7 +439,7 @@
               "path": [
                 "EscrowReceipt"
               ],
-              "program": "obscura_settle.aleo"
+              "program": "obscura_settle_stable.aleo"
             }
           },
           "mode": "Private"
@@ -548,7 +470,7 @@
               "path": [
                 "WinnerCertificate"
               ],
-              "program": "obscura_settle.aleo"
+              "program": "obscura_settle_stable.aleo"
             }
           },
           "mode": "None"
@@ -559,18 +481,7 @@
               "path": [
                 "SellerReceipt"
               ],
-              "program": "obscura_settle.aleo"
-            }
-          },
-          "mode": "None"
-        },
-        {
-          "ty": {
-            "Record": {
-              "path": [
-                "credits"
-              ],
-              "program": "credits.aleo"
+              "program": "obscura_settle_stable.aleo"
             }
           },
           "mode": "None"
@@ -582,7 +493,7 @@
       ]
     },
     {
-      "name": "claim_win_vickrey",
+      "name": "claim_win_usad",
       "is_final": true,
       "inputs": [
         {
@@ -592,7 +503,71 @@
               "path": [
                 "EscrowReceipt"
               ],
-              "program": "obscura_settle.aleo"
+              "program": "obscura_settle_stable.aleo"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "seller_address",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Address"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "item_hash",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "WinnerCertificate"
+              ],
+              "program": "obscura_settle_stable.aleo"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "SellerReceipt"
+              ],
+              "program": "obscura_settle_stable.aleo"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": "Final",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "claim_win_vickrey_usdcx",
+      "is_final": true,
+      "inputs": [
+        {
+          "name": "receipt",
+          "ty": {
+            "Record": {
+              "path": [
+                "EscrowReceipt"
+              ],
+              "program": "obscura_settle_stable.aleo"
             }
           },
           "mode": "Private"
@@ -634,7 +609,7 @@
               "path": [
                 "WinnerCertificate"
               ],
-              "program": "obscura_settle.aleo"
+              "program": "obscura_settle_stable.aleo"
             }
           },
           "mode": "None"
@@ -645,29 +620,7 @@
               "path": [
                 "SellerReceipt"
               ],
-              "program": "obscura_settle.aleo"
-            }
-          },
-          "mode": "None"
-        },
-        {
-          "ty": {
-            "Record": {
-              "path": [
-                "credits"
-              ],
-              "program": "credits.aleo"
-            }
-          },
-          "mode": "None"
-        },
-        {
-          "ty": {
-            "Record": {
-              "path": [
-                "credits"
-              ],
-              "program": "credits.aleo"
+              "program": "obscura_settle_stable.aleo"
             }
           },
           "mode": "None"
@@ -679,7 +632,7 @@
       ]
     },
     {
-      "name": "claim_refund",
+      "name": "claim_win_vickrey_usad",
       "is_final": true,
       "inputs": [
         {
@@ -689,7 +642,36 @@
               "path": [
                 "EscrowReceipt"
               ],
-              "program": "obscura_settle.aleo"
+              "program": "obscura_settle_stable.aleo"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "seller_address",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Address"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "item_hash",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "claimed_second_price",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
             }
           },
           "mode": "Private"
@@ -700,9 +682,20 @@
           "ty": {
             "Record": {
               "path": [
-                "credits"
+                "WinnerCertificate"
               ],
-              "program": "credits.aleo"
+              "program": "obscura_settle_stable.aleo"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "SellerReceipt"
+              ],
+              "program": "obscura_settle_stable.aleo"
             }
           },
           "mode": "None"
@@ -714,7 +707,55 @@
       ]
     },
     {
-      "name": "bid_dutch",
+      "name": "claim_refund_usdcx",
+      "is_final": true,
+      "inputs": [
+        {
+          "name": "receipt",
+          "ty": {
+            "Record": {
+              "path": [
+                "EscrowReceipt"
+              ],
+              "program": "obscura_settle_stable.aleo"
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": "Final",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "claim_refund_usad",
+      "is_final": true,
+      "inputs": [
+        {
+          "name": "receipt",
+          "ty": {
+            "Record": {
+              "path": [
+                "EscrowReceipt"
+              ],
+              "program": "obscura_settle_stable.aleo"
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": "Final",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "bid_dutch_usdcx",
       "is_final": true,
       "inputs": [
         {
@@ -742,18 +783,6 @@
           "ty": {
             "Plaintext": {
               "Primitive": "Field"
-            }
-          },
-          "mode": "Private"
-        },
-        {
-          "name": "credits_in",
-          "ty": {
-            "Record": {
-              "path": [
-                "credits"
-              ],
-              "program": "credits.aleo"
             }
           },
           "mode": "Private"
@@ -810,18 +839,7 @@
               "path": [
                 "EscrowReceipt"
               ],
-              "program": "obscura_settle.aleo"
-            }
-          },
-          "mode": "None"
-        },
-        {
-          "ty": {
-            "Record": {
-              "path": [
-                "credits"
-              ],
-              "program": "credits.aleo"
+              "program": "obscura_settle_stable.aleo"
             }
           },
           "mode": "None"
@@ -833,7 +851,7 @@
       ]
     },
     {
-      "name": "bid_english",
+      "name": "bid_dutch_usad",
       "is_final": true,
       "inputs": [
         {
@@ -866,13 +884,97 @@
           "mode": "Private"
         },
         {
-          "name": "credits_in",
+          "name": "start_price",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "end_price",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "created_at",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U64"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "deadline",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U64"
+              }
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
           "ty": {
             "Record": {
               "path": [
-                "credits"
+                "EscrowReceipt"
               ],
-              "program": "credits.aleo"
+              "program": "obscura_settle_stable.aleo"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": "Final",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "bid_english_usdcx",
+      "is_final": true,
+      "inputs": [
+        {
+          "name": "auction_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "bid_amount",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "bid_nonce",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
             }
           },
           "mode": "Private"
@@ -896,18 +998,7 @@
               "path": [
                 "EscrowReceipt"
               ],
-              "program": "obscura_settle.aleo"
-            }
-          },
-          "mode": "None"
-        },
-        {
-          "ty": {
-            "Record": {
-              "path": [
-                "credits"
-              ],
-              "program": "credits.aleo"
+              "program": "obscura_settle_stable.aleo"
             }
           },
           "mode": "None"
@@ -919,7 +1010,7 @@
       ]
     },
     {
-      "name": "dispute_auction",
+      "name": "bid_english_usad",
       "is_final": true,
       "inputs": [
         {
@@ -932,19 +1023,7 @@
           "mode": "Private"
         },
         {
-          "name": "bond_credits",
-          "ty": {
-            "Record": {
-              "path": [
-                "credits"
-              ],
-              "program": "credits.aleo"
-            }
-          },
-          "mode": "Private"
-        },
-        {
-          "name": "bond_amount",
+          "name": "bid_amount",
           "ty": {
             "Plaintext": {
               "Primitive": {
@@ -955,50 +1034,7 @@
           "mode": "Private"
         },
         {
-          "name": "reason_hash",
-          "ty": {
-            "Plaintext": {
-              "Primitive": "Field"
-            }
-          },
-          "mode": "Private"
-        }
-      ],
-      "outputs": [
-        {
-          "ty": {
-            "Record": {
-              "path": [
-                "DisputeBond"
-              ],
-              "program": "obscura_settle.aleo"
-            }
-          },
-          "mode": "None"
-        },
-        {
-          "ty": {
-            "Record": {
-              "path": [
-                "credits"
-              ],
-              "program": "credits.aleo"
-            }
-          },
-          "mode": "None"
-        },
-        {
-          "ty": "Final",
-          "mode": "None"
-        }
-      ]
-    },
-    {
-      "name": "resolve_dispute",
-      "is_final": true,
-      "inputs": [
-        {
-          "name": "auction_id",
+          "name": "bid_nonce",
           "ty": {
             "Plaintext": {
               "Primitive": "Field"
@@ -1007,68 +1043,7 @@
           "mode": "Private"
         },
         {
-          "name": "dispute_valid",
-          "ty": {
-            "Plaintext": {
-              "Primitive": "Boolean"
-            }
-          },
-          "mode": "Private"
-        },
-        {
-          "name": "disputer_address",
-          "ty": {
-            "Plaintext": {
-              "Primitive": "Address"
-            }
-          },
-          "mode": "Private"
-        },
-        {
-          "name": "bond_amount",
-          "ty": {
-            "Plaintext": {
-              "Primitive": {
-                "UInt": "U128"
-              }
-            }
-          },
-          "mode": "Private"
-        },
-        {
-          "name": "admin_address",
-          "ty": {
-            "Plaintext": {
-              "Primitive": "Address"
-            }
-          },
-          "mode": "Private"
-        }
-      ],
-      "outputs": [
-        {
-          "ty": {
-            "Record": {
-              "path": [
-                "credits"
-              ],
-              "program": "credits.aleo"
-            }
-          },
-          "mode": "None"
-        },
-        {
-          "ty": "Final",
-          "mode": "None"
-        }
-      ]
-    },
-    {
-      "name": "withdraw_fees",
-      "is_final": true,
-      "inputs": [
-        {
-          "name": "amount",
+          "name": "auction_deadline",
           "ty": {
             "Plaintext": {
               "Primitive": {
@@ -1084,9 +1059,9 @@
           "ty": {
             "Record": {
               "path": [
-                "credits"
+                "EscrowReceipt"
               ],
-              "program": "credits.aleo"
+              "program": "obscura_settle_stable.aleo"
             }
           },
           "mode": "None"
@@ -1098,49 +1073,33 @@
       ]
     },
     {
-      "name": "prove_won_auction",
-      "is_final": false,
+      "name": "withdraw_fees_usdcx",
+      "is_final": true,
       "inputs": [
         {
-          "name": "cert",
+          "name": "amount",
           "ty": {
-            "Record": {
-              "path": [
-                "WinnerCertificate"
-              ],
-              "program": "obscura_settle.aleo"
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
             }
           },
           "mode": "Private"
         },
         {
-          "name": "auction_id",
+          "name": "recipient",
           "ty": {
             "Plaintext": {
-              "Primitive": "Field"
+              "Primitive": "Address"
             }
           },
-          "mode": "Public"
+          "mode": "Private"
         }
       ],
       "outputs": [
         {
-          "ty": {
-            "Record": {
-              "path": [
-                "WinnerCertificate"
-              ],
-              "program": "obscura_settle.aleo"
-            }
-          },
-          "mode": "None"
-        },
-        {
-          "ty": {
-            "Plaintext": {
-              "Primitive": "Boolean"
-            }
-          },
+          "ty": "Final",
           "mode": "None"
         }
       ]

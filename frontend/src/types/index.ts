@@ -1,7 +1,8 @@
-// 3-program architecture — verify all exist on testnet before submission (Rule 0)
-export const PROGRAM_ID = 'obscura_core.aleo'            // Core auction engine
-export const SETTLE_PROGRAM_ID = 'obscura_settle.aleo'   // Token settlement
-export const MARKET_PROGRAM_ID = 'obscura_market_v2.aleo' // Marketplace extensions
+// 4-program architecture — verify all exist on testnet before submission (Rule 0)
+export const PROGRAM_ID = 'obscura_core.aleo'                       // Core auction engine
+export const SETTLE_PROGRAM_ID = 'obscura_settle.aleo'              // ALEO token settlement
+export const SETTLE_STABLE_PROGRAM_ID = 'obscura_settle_stable.aleo' // USDCx + USAD settlement
+export const MARKET_PROGRAM_ID = 'obscura_market_v2.aleo'           // Marketplace extensions
 
 export const STATUS = {
   ACTIVE: 1,

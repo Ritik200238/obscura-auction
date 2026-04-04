@@ -1,8 +1,9 @@
 export const config = {
-  // 3-program architecture
-  programId: 'obscura_core.aleo',             // Core: auction lifecycle + bidding
-  settleProgramId: 'obscura_settle.aleo',     // Settle: token movement + claims
-  marketProgramId: 'obscura_market_v2.aleo',  // Market: fixed sales + RFQ + token sales
+  // 4-program architecture
+  programId: 'obscura_core.aleo',                        // Core: auction lifecycle + bidding
+  settleProgramId: 'obscura_settle.aleo',                // Settle: ALEO token paths
+  settleStableProgramId: 'obscura_settle_stable.aleo',   // Settle: USDCx + USAD paths
+  marketProgramId: 'obscura_market_v2.aleo',             // Market: fixed sales + RFQ + token sales
 
   // Token programs
   creditsProgram: 'credits.aleo',

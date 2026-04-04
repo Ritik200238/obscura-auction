@@ -263,7 +263,7 @@ function SettleVisual() {
    ───────────────────────────────────────────── */
 
 const stats = [
-  { label: 'Programs', value: 3, detail: 'Core · Settle · Market' },
+  { label: 'Programs', value: 4, detail: 'Core · Settle · Stable · Market' },
   { label: 'Transitions', value: 52, detail: 'Across 3 deployed programs' },
   { label: 'Auction Types', value: 6, detail: 'Sealed · Vickrey · Dutch · English · Bundle · Multi-Unit' },
   { label: 'Records', value: 10, detail: 'Private UTXO records' },
@@ -629,7 +629,7 @@ function LiveActivityBar() {
     <section className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
       <div className="flex items-center justify-center gap-4 py-4 px-6 rounded-2xl bg-surface-900/60 border border-surface-700/30">
         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-        <span className="text-xs text-gray-400">Live on Aleo Testnet · 3 programs · 52 transitions · Loading stats...</span>
+        <span className="text-xs text-gray-400">Live on Aleo Testnet · 4 programs · 52 transitions · Loading stats...</span>
       </div>
     </section>
   )
@@ -1241,7 +1241,7 @@ export default function Landing() {
             >
               obscura_core.aleo
             </a>{' '}
-            on Aleo Testnet · 3 programs · 52 transitions · 6 auction formats
+            on Aleo Testnet · 4 programs · 52 transitions · 6 auction formats
           </motion.p>
         </AnimatedSection>
       </section>

@@ -1,0 +1,15 @@
+{
+  "program": "test_cpi_v4.aleo",
+  "version": "0.1.0",
+  "description": "CPI test for Leo 4.0",
+  "license": "MIT",
+  "leo": "4.0.0",
+  "dependencies": [
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    }
+  ]
+}

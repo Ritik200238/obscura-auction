@@ -1,0 +1,26 @@
+{
+  "program": "obscura_settle_stable.aleo",
+  "version": "0.1.0",
+  "description": "Obscura Settlement Layer — USDCx & USAD stablecoin token movement for auctions",
+  "license": "MIT",
+  "leo": "4.0.0",
+  "dependencies": [
+    {
+      "name": "obscura_core.aleo",
+      "location": "local",
+      "path": "../obscura_core"
+    },
+    {
+      "name": "test_usdcx_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    },
+    {
+      "name": "test_usad_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    }
+  ]
+}

@@ -1,46 +1,27 @@
 // ============================================================================
-// OBSCURA SETTLE v1 — Settlement Layer for Obscura Auction Protocol
+// OBSCURA SETTLE v2 — Settlement Layer for ALEO credits
 // ============================================================================
-// ALL token movement for the Obscura auction ecosystem lives here.
-// This program imports obscura_core.aleo for the SealedBid record type
-// and imports credits.aleo, test_usdcx_stablecoin.aleo, test_usad_stablecoin.aleo
-// for token transfers.
+// ALEO-only token settlement. Stablecoin paths live in obscura_settle_stable.
+// Imports obscura_core.aleo for the SealedBid record type
+// and credits.aleo for ALEO token transfers.
 //
-// CRITICAL: This program's finalize blocks CANNOT read obscura_core.aleo's
-// mappings. It maintains its OWN copies of all escrow-related state.
-// The SealedBid record itself is the cryptographic proof of a valid bid
-// (Aleo records are unforgeable), so the settle program trusts the record.
-//
-// 23 transitions | 4 records | 14 mappings | 6 structs
+// 10 transitions | 4 records | 14 mappings | 6 structs
 //
 // TRANSITIONS:
-//   T1-T3:   reveal_bid (ALEO/USDCx/USAD) — escrow tokens on reveal
-//   T4-T6:   claim_win first-price (ALEO/USDCx/USAD)
-//   T7-T9:   claim_win_vickrey second-price (ALEO/USDCx/USAD)
-//   T10-T12: claim_refund (ALEO/USDCx/USAD)
-//   T13-T15: bid_dutch instant-settle (ALEO/USDCx/USAD)
-//   T16-T18: bid_english ascending (ALEO/USDCx/USAD)
-//   T19:     dispute_auction (ALEO bond)
-//   T20:     resolve_dispute (admin)
-//   T21:     withdraw_fees (ALEO, admin)
-//   T22:     withdraw_fees_usdcx (admin)
-//   T23:     prove_won_auction (selective disclosure)
-//
-// TOKEN CONVENTION:
-//   ALEO:  credits.aleo — private deposit (transfer_private_to_public),
-//          private payout (transfer_public_to_private)
-//   USDCx: test_usdcx_stablecoin.aleo — public deposit (transfer_public_as_signer),
-//          public payout (transfer_public)
-//   USAD:  test_usad_stablecoin.aleo — same pattern as USDCx
-//
-// BALANCE KEYS: program_balance & platform_treasury use:
-//   0u8 = ALEO, 1u8 = USDCx, 2u8 = USAD
+//   T1:  reveal_bid (ALEO) — escrow tokens on reveal
+//   T2:  claim_win first-price (ALEO)
+//   T3:  claim_win_vickrey second-price (ALEO)
+//   T4:  claim_refund (ALEO)
+//   T5:  bid_dutch instant-settle (ALEO)
+//   T6:  bid_english ascending (ALEO)
+//   T7:  dispute_auction (ALEO bond)
+//   T8:  resolve_dispute (admin)
+//   T9:  withdraw_fees (ALEO, admin)
+//   T10: prove_won_auction (selective disclosure)
 // ============================================================================
 
 import obscura_core.aleo;
 import credits.aleo;
-import test_usdcx_stablecoin.aleo;
-import test_usad_stablecoin.aleo;
 
 program obscura_settle.aleo {
 
@@ -52,11 +33,6 @@ program obscura_settle.aleo {
     // ========================================================================
 
     const TOKEN_ALEO: u8 = 1u8;
-    const TOKEN_USDCX: u8 = 2u8;
-    const TOKEN_USAD: u8 = 3u8;
-
-    const MODE_DUTCH: u8 = 3u8;
-    const MODE_ENGLISH: u8 = 4u8;
 
     // Fees (basis points: 100 = 1%)
     const PLATFORM_FEE_BPS: u128 = 100u128;
@@ -171,8 +147,8 @@ program obscura_settle.aleo {
 
     // Escrow accounting
     mapping auction_escrow: field => u128;
-    mapping program_balance: u8 => u128;     // 0=ALEO, 1=USDCx, 2=USAD
-    mapping platform_treasury: u8 => u128;   // 0=ALEO, 1=USDCx, 2=USAD
+    mapping program_balance: u8 => u128;     // 0=ALEO
+    mapping platform_treasury: u8 => u128;   // 0=ALEO
 
     // Settlement tracking
     mapping settlements: field => SettlementData;
@@ -259,135 +235,7 @@ program obscura_settle.aleo {
     }
 
     // ########################################################################
-    //              T2: REVEAL BID + ESCROW — USDCx
-    // ########################################################################
-
-    fn reveal_bid_usdcx(
-        private bid: obscura_core.aleo::SealedBid
-    ) -> (EscrowReceipt, Final) {
-        assert_eq(bid.token_type, TOKEN_USDCX);
-
-        // Extract record fields before final block
-        let bid_auction_id: field = bid.auction_id;
-        let bid_amount: u128 = bid.bid_amount;
-        let bid_nonce: field = bid.bid_nonce;
-        let bid_owner: address = bid.owner;
-
-        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
-            bidder: bid_owner,
-            auction_id: bid_auction_id,
-            amount: bid_amount,
-            nonce: bid_nonce,
-        });
-
-        let transfer_final: Final = test_usdcx_stablecoin.aleo::transfer_public_as_signer(
-            self.address,
-            bid_amount
-        );
-
-        let receipt: EscrowReceipt = EscrowReceipt {
-            owner: bid_owner,
-            auction_id: bid_auction_id,
-            escrowed_amount: bid_amount,
-            bid_nonce: bid_nonce,
-            token_type: TOKEN_USDCX,
-        };
-
-        return (receipt, final {
-            transfer_final.run();
-
-            let already_revealed: bool = revealed_bids.contains(bid_hash);
-            assert(!already_revealed);
-
-            revealed_bids.set(bid_hash, bid_amount);
-
-            let current_escrow: u128 = auction_escrow.get_or_use(bid_auction_id, 0u128);
-            auction_escrow.set(bid_auction_id, current_escrow + bid_amount);
-
-            let current_bal: u128 = program_balance.get_or_use(1u8, 0u128);
-            program_balance.set(1u8, current_bal + bid_amount);
-
-            let current_high: u128 = highest_bids.get_or_use(bid_auction_id, 0u128);
-            let current_second: u128 = second_highest_bids.get_or_use(bid_auction_id, 0u128);
-
-            if (bid_amount > current_high) {
-                second_highest_bids.set(bid_auction_id, current_high);
-                highest_bids.set(bid_auction_id, bid_amount);
-                auction_winners.set(bid_auction_id, bid_hash);
-            } else {
-                if (bid_amount > current_second) {
-                    second_highest_bids.set(bid_auction_id, bid_amount);
-                }
-            }
-        });
-    }
-
-    // ########################################################################
-    //              T3: REVEAL BID + ESCROW — USAD
-    // ########################################################################
-
-    fn reveal_bid_usad(
-        private bid: obscura_core.aleo::SealedBid
-    ) -> (EscrowReceipt, Final) {
-        assert_eq(bid.token_type, TOKEN_USAD);
-
-        // Extract record fields before final block
-        let bid_auction_id: field = bid.auction_id;
-        let bid_amount: u128 = bid.bid_amount;
-        let bid_nonce: field = bid.bid_nonce;
-        let bid_owner: address = bid.owner;
-
-        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
-            bidder: bid_owner,
-            auction_id: bid_auction_id,
-            amount: bid_amount,
-            nonce: bid_nonce,
-        });
-
-        let transfer_final: Final = test_usad_stablecoin.aleo::transfer_public_as_signer(
-            self.address,
-            bid_amount
-        );
-
-        let receipt: EscrowReceipt = EscrowReceipt {
-            owner: bid_owner,
-            auction_id: bid_auction_id,
-            escrowed_amount: bid_amount,
-            bid_nonce: bid_nonce,
-            token_type: TOKEN_USAD,
-        };
-
-        return (receipt, final {
-            transfer_final.run();
-
-            let already_revealed: bool = revealed_bids.contains(bid_hash);
-            assert(!already_revealed);
-
-            revealed_bids.set(bid_hash, bid_amount);
-
-            let current_escrow: u128 = auction_escrow.get_or_use(bid_auction_id, 0u128);
-            auction_escrow.set(bid_auction_id, current_escrow + bid_amount);
-
-            let current_bal: u128 = program_balance.get_or_use(2u8, 0u128);
-            program_balance.set(2u8, current_bal + bid_amount);
-
-            let current_high: u128 = highest_bids.get_or_use(bid_auction_id, 0u128);
-            let current_second: u128 = second_highest_bids.get_or_use(bid_auction_id, 0u128);
-
-            if (bid_amount > current_high) {
-                second_highest_bids.set(bid_auction_id, current_high);
-                highest_bids.set(bid_auction_id, bid_amount);
-                auction_winners.set(bid_auction_id, bid_hash);
-            } else {
-                if (bid_amount > current_second) {
-                    second_highest_bids.set(bid_auction_id, bid_amount);
-                }
-            }
-        });
-    }
-
-    // ########################################################################
-    //              T4: CLAIM WIN — first-price settlement (ALEO)
+    //              T2: CLAIM WIN — first-price settlement (ALEO)
     // ########################################################################
 
     fn claim_win(
@@ -478,179 +326,7 @@ program obscura_settle.aleo {
     }
 
     // ########################################################################
-    //              T5: CLAIM WIN — USDCx first-price settlement
-    // ########################################################################
-
-    fn claim_win_usdcx(
-        private receipt: EscrowReceipt,
-        private seller_address: address,
-        private item_hash: field
-    ) -> (WinnerCertificate, SellerReceipt, Final) {
-        assert_eq(receipt.token_type, TOKEN_USDCX);
-
-        // Extract record fields before final block
-        let r_auction_id: field = receipt.auction_id;
-        let r_amount: u128 = receipt.escrowed_amount;
-        let r_nonce: field = receipt.bid_nonce;
-        let r_owner: address = receipt.owner;
-
-        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
-            bidder: r_owner,
-            auction_id: r_auction_id,
-            amount: r_amount,
-            nonce: r_nonce,
-        });
-
-        let fee: u128 = (r_amount * PLATFORM_FEE_BPS) / FEE_DENOMINATOR;
-        let seller_payout: u128 = r_amount - fee;
-
-        let pay_final: Final = test_usdcx_stablecoin.aleo::transfer_public(
-            seller_address,
-            seller_payout
-        );
-
-        let nonce_scalar: scalar = BHP256::hash_to_scalar(r_nonce);
-        let amount_field: field = r_amount as field;
-        let payment_commitment: field = BHP256::commit_to_field(amount_field, nonce_scalar);
-
-        let cert: WinnerCertificate = WinnerCertificate {
-            owner: self.caller,
-            auction_id: r_auction_id,
-            item_hash: item_hash,
-            winning_amount: r_amount,
-            token_type: TOKEN_USDCX,
-            certificate_id: bid_hash,
-        };
-
-        let seller_receipt: SellerReceipt = SellerReceipt {
-            owner: seller_address,
-            auction_id: r_auction_id,
-            item_hash: item_hash,
-            sale_amount: seller_payout,
-            fee_paid: fee,
-            token_type: TOKEN_USDCX,
-        };
-
-        return (cert, seller_receipt, final {
-            pay_final.run();
-
-            let winner_hash: field = auction_winners.get(r_auction_id);
-            assert_eq(bid_hash, winner_hash);
-
-            let revealed_amount: u128 = revealed_bids.get(bid_hash);
-            assert_eq(revealed_amount, r_amount);
-
-            let already_settled: bool = settlements.contains(r_auction_id);
-            assert(!already_settled);
-
-            settlements.set(r_auction_id, SettlementData {
-                winner_bid_hash: bid_hash,
-                final_price: r_amount,
-                fee_collected: fee,
-                settled_at: block.height as u64,
-            });
-
-            payment_proofs.set(r_auction_id, payment_commitment);
-
-            let treasury: u128 = platform_treasury.get_or_use(1u8, 0u128);
-            platform_treasury.set(1u8, treasury + fee);
-
-            let bal: u128 = program_balance.get(1u8);
-            program_balance.set(1u8, bal - r_amount);
-
-            let escrow: u128 = auction_escrow.get(r_auction_id);
-            auction_escrow.set(r_auction_id, escrow - r_amount);
-        });
-    }
-
-    // ########################################################################
-    //              T6: CLAIM WIN — USAD first-price settlement
-    // ########################################################################
-
-    fn claim_win_usad(
-        private receipt: EscrowReceipt,
-        private seller_address: address,
-        private item_hash: field
-    ) -> (WinnerCertificate, SellerReceipt, Final) {
-        assert_eq(receipt.token_type, TOKEN_USAD);
-
-        // Extract record fields before final block
-        let r_auction_id: field = receipt.auction_id;
-        let r_amount: u128 = receipt.escrowed_amount;
-        let r_nonce: field = receipt.bid_nonce;
-        let r_owner: address = receipt.owner;
-
-        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
-            bidder: r_owner,
-            auction_id: r_auction_id,
-            amount: r_amount,
-            nonce: r_nonce,
-        });
-
-        let fee: u128 = (r_amount * PLATFORM_FEE_BPS) / FEE_DENOMINATOR;
-        let seller_payout: u128 = r_amount - fee;
-
-        let pay_final: Final = test_usad_stablecoin.aleo::transfer_public(
-            seller_address,
-            seller_payout
-        );
-
-        let nonce_scalar: scalar = BHP256::hash_to_scalar(r_nonce);
-        let amount_field: field = r_amount as field;
-        let payment_commitment: field = BHP256::commit_to_field(amount_field, nonce_scalar);
-
-        let cert: WinnerCertificate = WinnerCertificate {
-            owner: self.caller,
-            auction_id: r_auction_id,
-            item_hash: item_hash,
-            winning_amount: r_amount,
-            token_type: TOKEN_USAD,
-            certificate_id: bid_hash,
-        };
-
-        let seller_receipt: SellerReceipt = SellerReceipt {
-            owner: seller_address,
-            auction_id: r_auction_id,
-            item_hash: item_hash,
-            sale_amount: seller_payout,
-            fee_paid: fee,
-            token_type: TOKEN_USAD,
-        };
-
-        return (cert, seller_receipt, final {
-            pay_final.run();
-
-            let winner_hash: field = auction_winners.get(r_auction_id);
-            assert_eq(bid_hash, winner_hash);
-
-            let revealed_amount: u128 = revealed_bids.get(bid_hash);
-            assert_eq(revealed_amount, r_amount);
-
-            let already_settled: bool = settlements.contains(r_auction_id);
-            assert(!already_settled);
-
-            settlements.set(r_auction_id, SettlementData {
-                winner_bid_hash: bid_hash,
-                final_price: r_amount,
-                fee_collected: fee,
-                settled_at: block.height as u64,
-            });
-
-            payment_proofs.set(r_auction_id, payment_commitment);
-
-            let treasury: u128 = platform_treasury.get_or_use(2u8, 0u128);
-            platform_treasury.set(2u8, treasury + fee);
-
-            let bal: u128 = program_balance.get(2u8);
-            program_balance.set(2u8, bal - r_amount);
-
-            let escrow: u128 = auction_escrow.get(r_auction_id);
-            auction_escrow.set(r_auction_id, escrow - r_amount);
-        });
-    }
-
-    // ########################################################################
-    //              T7: CLAIM WIN VICKREY — winner pays second-highest (ALEO)
+    //              T3: CLAIM WIN VICKREY — winner pays second-highest (ALEO)
     // ########################################################################
 
     fn claim_win_vickrey(
@@ -758,207 +434,7 @@ program obscura_settle.aleo {
     }
 
     // ########################################################################
-    //              T8: CLAIM WIN VICKREY — USDCx version
-    // ########################################################################
-
-    fn claim_win_vickrey_usdcx(
-        private receipt: EscrowReceipt,
-        private seller_address: address,
-        private item_hash: field,
-        private claimed_second_price: u128
-    ) -> (WinnerCertificate, SellerReceipt, Final) {
-        assert_eq(receipt.token_type, TOKEN_USDCX);
-
-        // Extract record fields before final block
-        let r_auction_id: field = receipt.auction_id;
-        let r_amount: u128 = receipt.escrowed_amount;
-        let r_nonce: field = receipt.bid_nonce;
-        let r_owner: address = receipt.owner;
-
-        assert(r_amount > claimed_second_price);
-        assert(claimed_second_price > 0u128);
-
-        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
-            bidder: r_owner,
-            auction_id: r_auction_id,
-            amount: r_amount,
-            nonce: r_nonce,
-        });
-
-        let fee: u128 = (claimed_second_price * PLATFORM_FEE_BPS) / FEE_DENOMINATOR;
-        let seller_payout: u128 = claimed_second_price - fee;
-        let winner_change: u128 = r_amount - claimed_second_price;
-
-        let pay_final: Final = test_usdcx_stablecoin.aleo::transfer_public(
-            seller_address,
-            seller_payout
-        );
-
-        let change_final: Final = test_usdcx_stablecoin.aleo::transfer_public(
-            r_owner,
-            winner_change
-        );
-
-        let nonce_scalar: scalar = BHP256::hash_to_scalar(r_nonce);
-        let payment_field: field = claimed_second_price as field;
-        let payment_commitment: field = BHP256::commit_to_field(payment_field, nonce_scalar);
-
-        let cert: WinnerCertificate = WinnerCertificate {
-            owner: self.caller,
-            auction_id: r_auction_id,
-            item_hash: item_hash,
-            winning_amount: claimed_second_price,
-            token_type: TOKEN_USDCX,
-            certificate_id: bid_hash,
-        };
-
-        let seller_receipt: SellerReceipt = SellerReceipt {
-            owner: seller_address,
-            auction_id: r_auction_id,
-            item_hash: item_hash,
-            sale_amount: seller_payout,
-            fee_paid: fee,
-            token_type: TOKEN_USDCX,
-        };
-
-        return (cert, seller_receipt, final {
-            pay_final.run();
-            change_final.run();
-
-            let actual_second: u128 = second_highest_bids.get(r_auction_id);
-            assert_eq(claimed_second_price, actual_second);
-
-            let winner_hash: field = auction_winners.get(r_auction_id);
-            assert_eq(bid_hash, winner_hash);
-
-            let revealed_amount: u128 = revealed_bids.get(bid_hash);
-            assert_eq(revealed_amount, r_amount);
-
-            let already_settled: bool = settlements.contains(r_auction_id);
-            assert(!already_settled);
-
-            settlements.set(r_auction_id, SettlementData {
-                winner_bid_hash: bid_hash,
-                final_price: claimed_second_price,
-                fee_collected: fee,
-                settled_at: block.height as u64,
-            });
-
-            payment_proofs.set(r_auction_id, payment_commitment);
-
-            let treasury: u128 = platform_treasury.get_or_use(1u8, 0u128);
-            platform_treasury.set(1u8, treasury + fee);
-
-            let bal: u128 = program_balance.get(1u8);
-            program_balance.set(1u8, bal - r_amount);
-
-            let escrow: u128 = auction_escrow.get(r_auction_id);
-            auction_escrow.set(r_auction_id, escrow - r_amount);
-        });
-    }
-
-    // ########################################################################
-    //              T9: CLAIM WIN VICKREY — USAD version
-    // ########################################################################
-
-    fn claim_win_vickrey_usad(
-        private receipt: EscrowReceipt,
-        private seller_address: address,
-        private item_hash: field,
-        private claimed_second_price: u128
-    ) -> (WinnerCertificate, SellerReceipt, Final) {
-        assert_eq(receipt.token_type, TOKEN_USAD);
-
-        // Extract record fields before final block
-        let r_auction_id: field = receipt.auction_id;
-        let r_amount: u128 = receipt.escrowed_amount;
-        let r_nonce: field = receipt.bid_nonce;
-        let r_owner: address = receipt.owner;
-
-        assert(r_amount > claimed_second_price);
-        assert(claimed_second_price > 0u128);
-
-        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
-            bidder: r_owner,
-            auction_id: r_auction_id,
-            amount: r_amount,
-            nonce: r_nonce,
-        });
-
-        let fee: u128 = (claimed_second_price * PLATFORM_FEE_BPS) / FEE_DENOMINATOR;
-        let seller_payout: u128 = claimed_second_price - fee;
-        let winner_change: u128 = r_amount - claimed_second_price;
-
-        let pay_final: Final = test_usad_stablecoin.aleo::transfer_public(
-            seller_address,
-            seller_payout
-        );
-
-        let change_final: Final = test_usad_stablecoin.aleo::transfer_public(
-            r_owner,
-            winner_change
-        );
-
-        let nonce_scalar: scalar = BHP256::hash_to_scalar(r_nonce);
-        let payment_field: field = claimed_second_price as field;
-        let payment_commitment: field = BHP256::commit_to_field(payment_field, nonce_scalar);
-
-        let cert: WinnerCertificate = WinnerCertificate {
-            owner: self.caller,
-            auction_id: r_auction_id,
-            item_hash: item_hash,
-            winning_amount: claimed_second_price,
-            token_type: TOKEN_USAD,
-            certificate_id: bid_hash,
-        };
-
-        let seller_receipt: SellerReceipt = SellerReceipt {
-            owner: seller_address,
-            auction_id: r_auction_id,
-            item_hash: item_hash,
-            sale_amount: seller_payout,
-            fee_paid: fee,
-            token_type: TOKEN_USAD,
-        };
-
-        return (cert, seller_receipt, final {
-            pay_final.run();
-            change_final.run();
-
-            let actual_second: u128 = second_highest_bids.get(r_auction_id);
-            assert_eq(claimed_second_price, actual_second);
-
-            let winner_hash: field = auction_winners.get(r_auction_id);
-            assert_eq(bid_hash, winner_hash);
-
-            let revealed_amount: u128 = revealed_bids.get(bid_hash);
-            assert_eq(revealed_amount, r_amount);
-
-            let already_settled: bool = settlements.contains(r_auction_id);
-            assert(!already_settled);
-
-            settlements.set(r_auction_id, SettlementData {
-                winner_bid_hash: bid_hash,
-                final_price: claimed_second_price,
-                fee_collected: fee,
-                settled_at: block.height as u64,
-            });
-
-            payment_proofs.set(r_auction_id, payment_commitment);
-
-            let treasury: u128 = platform_treasury.get_or_use(2u8, 0u128);
-            platform_treasury.set(2u8, treasury + fee);
-
-            let bal: u128 = program_balance.get(2u8);
-            program_balance.set(2u8, bal - r_amount);
-
-            let escrow: u128 = auction_escrow.get(r_auction_id);
-            auction_escrow.set(r_auction_id, escrow - r_amount);
-        });
-    }
-
-    // ########################################################################
-    //              T10: CLAIM REFUND — ALEO credits
+    //              T4: CLAIM REFUND — ALEO credits
     // ########################################################################
 
     fn claim_refund(
@@ -1004,96 +480,8 @@ program obscura_settle.aleo {
     }
 
     // ########################################################################
-    //              T11: CLAIM REFUND — USDCx
+    //              T5: DUTCH BID — ALEO credits (instant settlement)
     // ########################################################################
-
-    fn claim_refund_usdcx(
-        private receipt: EscrowReceipt
-    ) -> Final {
-        assert_eq(receipt.token_type, TOKEN_USDCX);
-
-        // Extract record fields before final block
-        let r_auction_id: field = receipt.auction_id;
-        let r_amount: u128 = receipt.escrowed_amount;
-        let r_nonce: field = receipt.bid_nonce;
-
-        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
-            bidder: self.caller,
-            auction_id: r_auction_id,
-            amount: r_amount,
-            nonce: r_nonce,
-        });
-
-        let transfer_final: Final = test_usdcx_stablecoin.aleo::transfer_public(
-            self.caller,
-            r_amount
-        );
-
-        return final {
-            transfer_final.run();
-
-            let winner: field = auction_winners.get_or_use(r_auction_id, 0field);
-            assert_neq(bid_hash, winner);
-
-            let escrow: u128 = auction_escrow.get_or_use(r_auction_id, 0u128);
-            let new_escrow: u128 = escrow > r_amount ? escrow - r_amount : 0u128;
-            auction_escrow.set(r_auction_id, new_escrow);
-
-            let bal: u128 = program_balance.get_or_use(1u8, 0u128);
-            let new_bal: u128 = bal > r_amount ? bal - r_amount : 0u128;
-            program_balance.set(1u8, new_bal);
-        };
-    }
-
-    // ########################################################################
-    //              T12: CLAIM REFUND — USAD
-    // ########################################################################
-
-    fn claim_refund_usad(
-        private receipt: EscrowReceipt
-    ) -> Final {
-        assert_eq(receipt.token_type, TOKEN_USAD);
-
-        // Extract record fields before final block
-        let r_auction_id: field = receipt.auction_id;
-        let r_amount: u128 = receipt.escrowed_amount;
-        let r_nonce: field = receipt.bid_nonce;
-
-        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
-            bidder: self.caller,
-            auction_id: r_auction_id,
-            amount: r_amount,
-            nonce: r_nonce,
-        });
-
-        let transfer_final: Final = test_usad_stablecoin.aleo::transfer_public(
-            self.caller,
-            r_amount
-        );
-
-        return final {
-            transfer_final.run();
-
-            let winner: field = auction_winners.get_or_use(r_auction_id, 0field);
-            assert_neq(bid_hash, winner);
-
-            let escrow: u128 = auction_escrow.get_or_use(r_auction_id, 0u128);
-            let new_escrow: u128 = escrow > r_amount ? escrow - r_amount : 0u128;
-            auction_escrow.set(r_auction_id, new_escrow);
-
-            let bal: u128 = program_balance.get_or_use(2u8, 0u128);
-            let new_bal: u128 = bal > r_amount ? bal - r_amount : 0u128;
-            program_balance.set(2u8, new_bal);
-        };
-    }
-
-    // ########################################################################
-    //              T13: DUTCH BID — ALEO credits (instant settlement)
-    // ########################################################################
-    // Dutch auctions: price descends per block. First buyer wins instantly.
-    // Auction data (created_at, deadline, start_price, end_price) passed as
-    // private inputs from the frontend (read from core's mappings off-chain).
-    // Finalize verifies block.height timing and computes current price.
 
     fn bid_dutch(
         private auction_id: field,
@@ -1187,178 +575,8 @@ program obscura_settle.aleo {
     }
 
     // ########################################################################
-    //              T14: DUTCH BID — USDCx
+    //              T6: ENGLISH BID — ALEO credits (ascending auction)
     // ########################################################################
-
-    fn bid_dutch_usdcx(
-        private auction_id: field,
-        private bid_amount: u128,
-        private bid_nonce: field,
-        private start_price: u128,
-        private end_price: u128,
-        private created_at: u64,
-        private deadline: u64
-    ) -> (EscrowReceipt, Final) {
-        assert(bid_amount >= MIN_BID_AMOUNT);
-        assert(start_price > end_price);
-
-        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
-            bidder: self.caller,
-            auction_id: auction_id,
-            amount: bid_amount,
-            nonce: bid_nonce,
-        });
-
-        let transfer_final: Final = test_usdcx_stablecoin.aleo::transfer_public_as_signer(
-            self.address,
-            bid_amount
-        );
-
-        let receipt: EscrowReceipt = EscrowReceipt {
-            owner: self.caller,
-            auction_id: auction_id,
-            escrowed_amount: bid_amount,
-            bid_nonce: bid_nonce,
-            token_type: TOKEN_USDCX,
-        };
-
-        return (receipt, final {
-            transfer_final.run();
-
-            let current_height: u64 = block.height as u64;
-            assert(current_height >= created_at);
-            assert(current_height <= deadline);
-
-            let status: u8 = settle_status.get_or_use(auction_id, SETTLE_STATUS_NONE);
-            assert_eq(status, SETTLE_STATUS_NONE);
-
-            let elapsed: u128 = (current_height - created_at) as u128;
-            let total_duration: u128 = (deadline - created_at) as u128;
-            let price_range: u128 = start_price - end_price;
-            let price_drop: u128 = (price_range * elapsed) / total_duration;
-            let current_price: u128 = start_price - price_drop;
-
-            assert(bid_amount >= current_price);
-
-            revealed_bids.set(bid_hash, bid_amount);
-            highest_bids.set(auction_id, bid_amount);
-            second_highest_bids.set(auction_id, current_price);
-            auction_winners.set(auction_id, bid_hash);
-
-            let current_escrow: u128 = auction_escrow.get_or_use(auction_id, 0u128);
-            auction_escrow.set(auction_id, current_escrow + bid_amount);
-
-            let current_bal: u128 = program_balance.get_or_use(1u8, 0u128);
-            program_balance.set(1u8, current_bal + bid_amount);
-
-            dutch_params.set(auction_id, DutchConfig {
-                start_price: start_price,
-                end_price: end_price,
-            });
-
-            settle_status.set(auction_id, SETTLE_STATUS_SETTLED);
-
-            let sp: field = BHP256::hash_to_field(SettlementProof {
-                auction_id: auction_id,
-                highest_bid: bid_amount,
-                second_highest: current_price,
-                winner_bid_hash: bid_hash,
-                settled_at: current_height,
-            });
-            settlement_proofs.set(auction_id, sp);
-        });
-    }
-
-    // ########################################################################
-    //              T15: DUTCH BID — USAD
-    // ########################################################################
-
-    fn bid_dutch_usad(
-        private auction_id: field,
-        private bid_amount: u128,
-        private bid_nonce: field,
-        private start_price: u128,
-        private end_price: u128,
-        private created_at: u64,
-        private deadline: u64
-    ) -> (EscrowReceipt, Final) {
-        assert(bid_amount >= MIN_BID_AMOUNT);
-        assert(start_price > end_price);
-
-        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
-            bidder: self.caller,
-            auction_id: auction_id,
-            amount: bid_amount,
-            nonce: bid_nonce,
-        });
-
-        let transfer_final: Final = test_usad_stablecoin.aleo::transfer_public_as_signer(
-            self.address,
-            bid_amount
-        );
-
-        let receipt: EscrowReceipt = EscrowReceipt {
-            owner: self.caller,
-            auction_id: auction_id,
-            escrowed_amount: bid_amount,
-            bid_nonce: bid_nonce,
-            token_type: TOKEN_USAD,
-        };
-
-        return (receipt, final {
-            transfer_final.run();
-
-            let current_height: u64 = block.height as u64;
-            assert(current_height >= created_at);
-            assert(current_height <= deadline);
-
-            let status: u8 = settle_status.get_or_use(auction_id, SETTLE_STATUS_NONE);
-            assert_eq(status, SETTLE_STATUS_NONE);
-
-            let elapsed: u128 = (current_height - created_at) as u128;
-            let total_duration: u128 = (deadline - created_at) as u128;
-            let price_range: u128 = start_price - end_price;
-            let price_drop: u128 = (price_range * elapsed) / total_duration;
-            let current_price: u128 = start_price - price_drop;
-
-            assert(bid_amount >= current_price);
-
-            revealed_bids.set(bid_hash, bid_amount);
-            highest_bids.set(auction_id, bid_amount);
-            second_highest_bids.set(auction_id, current_price);
-            auction_winners.set(auction_id, bid_hash);
-
-            let current_escrow: u128 = auction_escrow.get_or_use(auction_id, 0u128);
-            auction_escrow.set(auction_id, current_escrow + bid_amount);
-
-            let current_bal: u128 = program_balance.get_or_use(2u8, 0u128);
-            program_balance.set(2u8, current_bal + bid_amount);
-
-            dutch_params.set(auction_id, DutchConfig {
-                start_price: start_price,
-                end_price: end_price,
-            });
-
-            settle_status.set(auction_id, SETTLE_STATUS_SETTLED);
-
-            let sp: field = BHP256::hash_to_field(SettlementProof {
-                auction_id: auction_id,
-                highest_bid: bid_amount,
-                second_highest: current_price,
-                winner_bid_hash: bid_hash,
-                settled_at: current_height,
-            });
-            settlement_proofs.set(auction_id, sp);
-        });
-    }
-
-    // ########################################################################
-    //              T16: ENGLISH BID — ALEO credits (ascending auction)
-    // ########################################################################
-    // English auctions: ascending bids, 5% minimum increment, anti-sniping.
-    // The settle program tracks its own highest_bids for the auction.
-    // The deadline from core is passed as a private input; anti-sniping
-    // extensions are tracked locally via settle_status mapping.
 
     fn bid_english(
         private auction_id: field,
@@ -1426,133 +644,7 @@ program obscura_settle.aleo {
     }
 
     // ########################################################################
-    //              T17: ENGLISH BID — USDCx
-    // ########################################################################
-
-    fn bid_english_usdcx(
-        private auction_id: field,
-        private bid_amount: u128,
-        private bid_nonce: field,
-        private auction_deadline: u64
-    ) -> (EscrowReceipt, Final) {
-        assert(bid_amount >= MIN_BID_AMOUNT);
-
-        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
-            bidder: self.caller,
-            auction_id: auction_id,
-            amount: bid_amount,
-            nonce: bid_nonce,
-        });
-
-        let transfer_final: Final = test_usdcx_stablecoin.aleo::transfer_public_as_signer(
-            self.address,
-            bid_amount
-        );
-
-        let receipt: EscrowReceipt = EscrowReceipt {
-            owner: self.caller,
-            auction_id: auction_id,
-            escrowed_amount: bid_amount,
-            bid_nonce: bid_nonce,
-            token_type: TOKEN_USDCX,
-        };
-
-        return (receipt, final {
-            transfer_final.run();
-
-            let current_height: u64 = block.height as u64;
-            assert(current_height <= auction_deadline);
-
-            let already_revealed: bool = revealed_bids.contains(bid_hash);
-            assert(!already_revealed);
-
-            let current_high: u128 = highest_bids.get_or_use(auction_id, 0u128);
-            if (current_high > 0u128) {
-                let min_increment: u128 = (current_high * MIN_BID_INCREMENT_BPS) / FEE_DENOMINATOR;
-                assert(bid_amount >= current_high + min_increment);
-            }
-
-            revealed_bids.set(bid_hash, bid_amount);
-
-            if (bid_amount > current_high) {
-                second_highest_bids.set(auction_id, current_high);
-                highest_bids.set(auction_id, bid_amount);
-                auction_winners.set(auction_id, bid_hash);
-            }
-
-            let current_escrow: u128 = auction_escrow.get_or_use(auction_id, 0u128);
-            auction_escrow.set(auction_id, current_escrow + bid_amount);
-
-            let current_bal: u128 = program_balance.get_or_use(1u8, 0u128);
-            program_balance.set(1u8, current_bal + bid_amount);
-        });
-    }
-
-    // ########################################################################
-    //              T18: ENGLISH BID — USAD
-    // ########################################################################
-
-    fn bid_english_usad(
-        private auction_id: field,
-        private bid_amount: u128,
-        private bid_nonce: field,
-        private auction_deadline: u64
-    ) -> (EscrowReceipt, Final) {
-        assert(bid_amount >= MIN_BID_AMOUNT);
-
-        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
-            bidder: self.caller,
-            auction_id: auction_id,
-            amount: bid_amount,
-            nonce: bid_nonce,
-        });
-
-        let transfer_final: Final = test_usad_stablecoin.aleo::transfer_public_as_signer(
-            self.address,
-            bid_amount
-        );
-
-        let receipt: EscrowReceipt = EscrowReceipt {
-            owner: self.caller,
-            auction_id: auction_id,
-            escrowed_amount: bid_amount,
-            bid_nonce: bid_nonce,
-            token_type: TOKEN_USAD,
-        };
-
-        return (receipt, final {
-            transfer_final.run();
-
-            let current_height: u64 = block.height as u64;
-            assert(current_height <= auction_deadline);
-
-            let already_revealed: bool = revealed_bids.contains(bid_hash);
-            assert(!already_revealed);
-
-            let current_high: u128 = highest_bids.get_or_use(auction_id, 0u128);
-            if (current_high > 0u128) {
-                let min_increment: u128 = (current_high * MIN_BID_INCREMENT_BPS) / FEE_DENOMINATOR;
-                assert(bid_amount >= current_high + min_increment);
-            }
-
-            revealed_bids.set(bid_hash, bid_amount);
-
-            if (bid_amount > current_high) {
-                second_highest_bids.set(auction_id, current_high);
-                highest_bids.set(auction_id, bid_amount);
-                auction_winners.set(auction_id, bid_hash);
-            }
-
-            let current_escrow: u128 = auction_escrow.get_or_use(auction_id, 0u128);
-            auction_escrow.set(auction_id, current_escrow + bid_amount);
-
-            let current_bal: u128 = program_balance.get_or_use(2u8, 0u128);
-            program_balance.set(2u8, current_bal + bid_amount);
-        });
-    }
-
-    // ########################################################################
-    //              T19: DISPUTE AUCTION (ALEO bond)
+    //              T7: DISPUTE AUCTION (ALEO bond)
     // ########################################################################
 
     fn dispute_auction(
@@ -1612,7 +704,7 @@ program obscura_settle.aleo {
     }
 
     // ########################################################################
-    //              T20: RESOLVE DISPUTE — Admin determines outcome
+    //              T8: RESOLVE DISPUTE — Admin determines outcome
     // ########################################################################
 
     fn resolve_dispute(
@@ -1668,7 +760,7 @@ program obscura_settle.aleo {
     }
 
     // ########################################################################
-    //              T21: WITHDRAW FEES — ALEO credits (admin only)
+    //              T9: WITHDRAW FEES — ALEO credits (admin only)
     // ########################################################################
 
     fn withdraw_fees(
@@ -1688,9 +780,6 @@ program obscura_settle.aleo {
         return (credits_out, final {
             transfer_final.run();
 
-            // Admin verification: the admin_hash must match the first treasury withdrawal.
-            // Since settle has no platform_config, we verify by checking treasury has enough.
-            // In production, admin_hash would be checked against a stored config.
             let treasury: u128 = platform_treasury.get(0u8);
             assert(amount_u128 <= treasury);
             platform_treasury.set(0u8, treasury - amount_u128);
@@ -1698,36 +787,8 @@ program obscura_settle.aleo {
     }
 
     // ########################################################################
-    //              T22: WITHDRAW FEES — USDCx (admin only)
+    //              T10: PROVE WON AUCTION — Selective Disclosure
     // ########################################################################
-
-    fn withdraw_fees_usdcx(
-        private amount: u128,
-        private recipient: address
-    ) -> Final {
-        let admin_field: field = self.caller as field;
-        let admin_hash: field = BHP256::hash_to_field(admin_field);
-
-        let transfer_final: Final = test_usdcx_stablecoin.aleo::transfer_public(
-            recipient,
-            amount
-        );
-
-        return final {
-            transfer_final.run();
-
-            let treasury: u128 = platform_treasury.get(1u8);
-            assert(amount <= treasury);
-            platform_treasury.set(1u8, treasury - amount);
-        };
-    }
-
-    // ########################################################################
-    //              T23: PROVE WON AUCTION — Selective Disclosure
-    // ########################################################################
-    // Allows a winner to publicly prove they won a specific auction
-    // without revealing their bid amount or identity (just the auction_id).
-    // The WinnerCertificate is consumed and re-created (non-destructive).
 
     fn prove_won_auction(
         private cert: WinnerCertificate,
