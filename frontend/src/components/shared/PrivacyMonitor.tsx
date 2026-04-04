@@ -1,281 +1,247 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Lock, Monitor, Eye, ShieldAlert } from 'lucide-react'
+import { useMemo } from 'react'
+import { motion } from 'framer-motion'
+import { Lock, Unlock, Monitor, Eye, ShieldCheck } from 'lucide-react'
 import { AUCTION_MODE, STATUS } from '@/types'
+import PrivacyScore from '@/components/shared/PrivacyScore'
 
 interface PrivacyMonitorProps {
-  auctionId: string
-  bidCount: number
-  status: number
   auctionMode: number
+  status: number
+  bidCount: number
+  /** @deprecated Kept for backward compat with existing callsites */
+  auctionId?: string
+  /** @deprecated */
   highestBid?: number
+  /** @deprecated */
   itemName?: string
+  /** @deprecated */
   deadline?: number
 }
 
-interface LogEntry {
-  id: string
-  text: string
-  timestamp: number
+/** Stagger animation for list items */
+const containerVariants = {
+  hidden: { opacity: 1 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.07, delayChildren: 0.1 },
+  },
 }
 
-const MODE_LABELS: Record<number, string> = {
-  [AUCTION_MODE.FIRST_PRICE]: 'Sealed Bid',
-  [AUCTION_MODE.VICKREY]: 'Vickrey (2nd Price)',
-  [AUCTION_MODE.DUTCH]: 'Dutch Descending',
-  [AUCTION_MODE.ENGLISH]: 'English Ascending',
+const itemVariants = {
+  hidden: { opacity: 0, x: -8 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
+  },
 }
 
-const STATUS_LABELS: Record<number, string> = {
-  [STATUS.ACTIVE]: 'ACTIVE',
-  [STATUS.CLOSED]: 'CLOSED',
-  [STATUS.REVEALING]: 'REVEAL',
-  [STATUS.SETTLED]: 'SETTLED',
-  [STATUS.CANCELLED]: 'CANCEL',
-  [STATUS.FAILED]: 'FAILED',
-  [STATUS.DISPUTED]: 'DISPUTE',
-  [STATUS.EXPIRED]: 'EXPIRED',
-}
-
-/** Generate a fake commitment hash for animation */
-function fakeCommitment(): string {
+/** Generate a truncated hash-like string for display */
+function fakeHash(): string {
   const chars = '0123456789abcdef'
-  let result = '0x'
-  for (let i = 0; i < 4; i++) result += chars[Math.floor(Math.random() * chars.length)]
-  result += '...'
-  for (let i = 0; i < 4; i++) result += chars[Math.floor(Math.random() * chars.length)]
-  return result
+  let result = ''
+  for (let i = 0; i < 8; i++) result += chars[Math.floor(Math.random() * chars.length)]
+  return result + '...'
 }
 
-/** Hidden data items that are never revealed */
-const HIDDEN_ITEMS = [
-  'Individual bid amounts',
-  'Bidder identities',
-  'Commitment nonces',
-  'Reserve price',
-  'Settlement amounts',
-  'Bidder wallet links',
-]
+/** Items the network can see -- always public on-chain data */
+function getNetworkItems(
+  bidCount: number,
+  status: number
+) {
+  const statusLabels: Record<number, string> = {
+    [STATUS.ACTIVE]: '1 (ACTIVE)',
+    [STATUS.CLOSED]: '2 (CLOSED)',
+    [STATUS.REVEALING]: '3 (REVEALING)',
+    [STATUS.SETTLED]: '4 (SETTLED)',
+    [STATUS.CANCELLED]: '5 (CANCELLED)',
+    [STATUS.FAILED]: '6 (FAILED)',
+    [STATUS.DISPUTED]: '7 (DISPUTED)',
+    [STATUS.EXPIRED]: '8 (EXPIRED)',
+  }
+
+  return [
+    { label: 'auction_id', value: fakeHash() },
+    { label: 'status', value: statusLabels[status] || `${status}` },
+    { label: 'bid_count', value: `${bidCount}` },
+    { label: 'seller_hash', value: fakeHash() },
+    { label: 'reserve_hash', value: fakeHash() },
+    { label: 'deadline', value: '#' + Math.floor(14000000 + Math.random() * 2000000).toLocaleString() },
+  ]
+}
+
+interface HiddenItem {
+  label: string
+  locked: boolean
+  note: string
+}
+
+/** Items that are hidden -- some unlock based on auction phase */
+function getHiddenItems(
+  auctionMode: number,
+  status: number
+): HiddenItem[] {
+  const isRevealing = status === STATUS.REVEALING
+  const isSettled = status === STATUS.SETTLED
+  const isPostReveal = isRevealing || isSettled
+
+  // For open formats (English, Dutch, Timed Escalation), bids are public by design
+  const bidsPublic =
+    auctionMode === AUCTION_MODE.ENGLISH ||
+    auctionMode === AUCTION_MODE.DUTCH ||
+    auctionMode === AUCTION_MODE.TIMED_ESCALATION
+
+  return [
+    {
+      label: 'Bid amounts',
+      locked: bidsPublic ? false : !isPostReveal,
+      note: bidsPublic
+        ? 'Public by design in this format'
+        : isPostReveal
+          ? 'Unlocked during reveal phase'
+          : 'Until reveal',
+    },
+    {
+      label: 'Bidder identities',
+      locked: true,
+      note: 'Never revealed on-chain',
+    },
+    {
+      label: "Seller's real address",
+      locked: true,
+      note: 'Never revealed on-chain',
+    },
+    {
+      label: 'Reserve price',
+      locked: !isSettled,
+      note: isSettled ? 'Revealed at settlement' : 'Until settlement',
+    },
+    {
+      label: 'Winner identity',
+      locked: !isSettled,
+      note: isSettled ? 'Revealed at claim' : 'Until claim',
+    },
+    {
+      label: 'Payment details',
+      locked: true,
+      note: 'Private records only',
+    },
+  ]
+}
 
 export default function PrivacyMonitor({
-  auctionId,
-  bidCount,
-  status,
   auctionMode,
-  highestBid,
-  itemName,
-  deadline,
+  status,
+  bidCount,
 }: PrivacyMonitorProps) {
-  const [networkLogs, setNetworkLogs] = useState<LogEntry[]>([])
-  const prevBidCount = useRef(bidCount)
-  const logIdCounter = useRef(0)
-
-  // Calculate remaining time
-  const timeRemaining = useMemo(() => {
-    if (!deadline || deadline <= 0) return 'N/A'
-    // Rough estimate: 1 block ~ 15s on Aleo testnet
-    const blocksLeft = deadline - Math.floor(Date.now() / 15000)
-    if (blocksLeft <= 0) return 'Expired'
-    const mins = Math.floor((blocksLeft * 15) / 60)
-    if (mins > 1440) return `${Math.floor(mins / 1440)}d ${Math.floor((mins % 1440) / 60)}h`
-    if (mins > 60) return `${Math.floor(mins / 60)}h ${mins % 60}m`
-    return `${mins}m`
-  }, [deadline])
-
-  // Truncate the auction ID for display
-  const truncId = useMemo(() => {
-    if (!auctionId) return '...'
-    const clean = auctionId.replace('field', '')
-    if (clean.length <= 12) return clean
-    return `${clean.slice(0, 6)}...${clean.slice(-4)}`
-  }, [auctionId])
-
-  // When bid count changes, add a new log entry
-  useEffect(() => {
-    if (bidCount > prevBidCount.current) {
-      const diff = bidCount - prevBidCount.current
-      for (let i = 0; i < diff; i++) {
-        const entry: LogEntry = {
-          id: `log-${++logIdCounter.current}`,
-          text: `New commitment: ${fakeCommitment()}`,
-          timestamp: Date.now(),
-        }
-        setNetworkLogs((prev) => [entry, ...prev].slice(0, 8))
-      }
-    }
-    prevBidCount.current = bidCount
-  }, [bidCount])
-
-  // Show the highest bid for English/Dutch modes (these are public by design)
-  const showHighestBid =
-    (auctionMode === AUCTION_MODE.ENGLISH || auctionMode === AUCTION_MODE.DUTCH) &&
-    highestBid !== undefined &&
-    highestBid > 0
-
-  const formatLabel = MODE_LABELS[auctionMode] || 'Unknown'
-  const statusCode = STATUS_LABELS[status] || `${status}`
+  const networkItems = useMemo(() => getNetworkItems(bidCount, status), [bidCount, status])
+  const hiddenItems = useMemo(() => getHiddenItems(auctionMode, status), [auctionMode, status])
 
   return (
     <div
-      className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm overflow-hidden"
-      style={{ boxShadow: '0 0 20px rgba(6, 182, 212, 0.08)' }}
+      className="rounded-xl bg-white/[0.03] backdrop-blur-md border border-white/[0.06] overflow-hidden"
+      style={{ boxShadow: '0 0 24px rgba(6, 182, 212, 0.06)' }}
     >
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-white/[0.02]">
+      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-white/[0.06] bg-white/[0.02]">
         <Monitor className="w-4 h-4 text-accent-400" />
-        <h3 className="text-sm font-semibold text-white">Privacy Monitor</h3>
+        <h3 className="text-sm font-semibold text-white tracking-tight">Privacy Monitor</h3>
         <div className="ml-auto flex items-center gap-1.5">
-          <div className="relative">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-            <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-green-400 animate-ping" />
-          </div>
+          <span className="relative flex h-2 w-2">
+            <span className="h-2 w-2 rounded-full bg-green-400" />
+            <span className="absolute inset-0 h-2 w-2 rounded-full bg-green-400 animate-ping opacity-75" />
+          </span>
           <span className="text-[10px] text-green-400 uppercase tracking-wider font-medium">Live</span>
         </div>
       </div>
 
-      {/* Three columns (stacked on mobile) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/10">
-        {/* Column 1: Network sees */}
-        <div className="p-4">
-          <div className="flex items-center gap-1.5 mb-3">
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-white/[0.06]">
+        {/* LEFT: Network Sees */}
+        <motion.div
+          className="p-5"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <div className="flex items-center gap-1.5 mb-4">
             <Eye className="w-3.5 h-3.5 text-zinc-500" />
             <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">
-              Network sees
+              Network Sees
             </span>
           </div>
 
-          <div className="space-y-2 font-mono text-xs text-zinc-500">
-            <div className="flex justify-between">
-              <span>auction_id</span>
-              <span className="text-zinc-400">{truncId}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>bid_count</span>
-              <span className="text-zinc-400">{bidCount}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>status</span>
-              <span className="text-zinc-400">{statusCode}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>deadline</span>
-              <span className="text-zinc-400">
-                {deadline ? `#${deadline.toLocaleString()}` : 'N/A'}
-              </span>
-            </div>
-          </div>
-
-          {/* Animated log entries */}
-          <AnimatePresence>
-            {networkLogs.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-white/5 space-y-1">
-                {networkLogs.slice(0, 4).map((log) => (
-                  <motion.div
-                    key={log.id}
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="text-[10px] font-mono text-zinc-600 truncate"
-                  >
-                    <span className="text-accent-500/60">+</span> {log.text}
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Column 2: You see */}
-        <div className="p-4">
-          <div className="flex items-center gap-1.5 mb-3">
-            <Eye className="w-3.5 h-3.5 text-accent-400" />
-            <span className="text-[10px] text-accent-400 uppercase tracking-wider font-medium">
-              You see
-            </span>
-          </div>
-
-          <div className="space-y-2 text-xs">
-            {itemName && (
-              <div className="flex justify-between">
-                <span className="text-gray-500">Item</span>
-                <span className="text-white font-medium truncate ml-2">{itemName}</span>
-              </div>
-            )}
-            {showHighestBid && (
-              <div className="flex justify-between">
-                <span className="text-gray-500">
-                  {auctionMode === AUCTION_MODE.DUTCH ? 'Current price' : 'Highest bid'}
-                </span>
-                <span className="text-accent-300 font-mono">
-                  {(highestBid! / 1000000).toFixed(2)} ALEO
-                </span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span className="text-gray-500">Time left</span>
-              <span className="text-white">{timeRemaining}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Format</span>
-              <span className="text-white">{formatLabel}</span>
-            </div>
-          </div>
-
-          {/* Dynamic event */}
-          <AnimatePresence>
-            {bidCount > 0 && (
+          <div className="space-y-2.5">
+            {networkItems.map((item) => (
               <motion.div
-                key={`event-${bidCount}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.1 }}
-                className="mt-3 pt-3 border-t border-white/5"
+                key={item.label}
+                variants={itemVariants}
+                className="flex items-center justify-between font-mono"
               >
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-accent-400 animate-pulse" />
-                  <span className="text-[10px] text-accent-300">
-                    {auctionMode === AUCTION_MODE.ENGLISH
-                      ? `${bidCount} public bid${bidCount !== 1 ? 's' : ''} placed`
-                      : `${bidCount} sealed bid${bidCount !== 1 ? 's' : ''} received`}
-                  </span>
+                <div className="flex items-center gap-2">
+                  <Unlock className="w-3 h-3 text-zinc-600 shrink-0" />
+                  <span className="text-[11px] text-zinc-600">{item.label}</span>
                 </div>
+                <span className="text-[11px] text-zinc-500 tabular-nums">{item.value}</span>
               </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Column 3: Hidden from everyone */}
-        <div className="p-4">
-          <div className="flex items-center gap-1.5 mb-3">
-            <ShieldAlert className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-[10px] text-emerald-400 uppercase tracking-wider font-medium">
-              Hidden from everyone
-            </span>
-          </div>
-
-          <div className="space-y-2">
-            {HIDDEN_ITEMS.map((item, i) => (
-              <div key={item} className="flex items-center gap-2">
-                <Lock className="w-3 h-3 text-emerald-500/60 shrink-0" />
-                <span className="text-xs text-gray-400 flex-1">{item}</span>
-                {/* Animated redaction bar */}
-                <div className="w-16 h-3 rounded bg-surface-800 overflow-hidden relative shrink-0">
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent"
-                    animate={{ x: ['-100%', '200%'] }}
-                    transition={{
-                      duration: 2.5,
-                      repeat: Infinity,
-                      delay: i * 0.3,
-                      ease: 'linear',
-                    }}
-                  />
-                </div>
-              </div>
             ))}
           </div>
-        </div>
+        </motion.div>
+
+        {/* RIGHT: Hidden From Everyone */}
+        <motion.div
+          className="p-5"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <div className="flex items-center gap-1.5 mb-4">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-[10px] text-emerald-400 uppercase tracking-wider font-medium">
+              Hidden From Everyone
+            </span>
+          </div>
+
+          <div className="space-y-2.5">
+            {hiddenItems.map((item) => (
+              <motion.div
+                key={item.label}
+                variants={itemVariants}
+                className="flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  {item.locked ? (
+                    <Lock className="w-3 h-3 text-emerald-500 shrink-0" />
+                  ) : (
+                    <Unlock className="w-3 h-3 text-zinc-600 shrink-0" />
+                  )}
+                  <span
+                    className={`text-[11px] ${
+                      item.locked ? 'text-emerald-300' : 'text-zinc-500'
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                </div>
+                <span
+                  className={`text-[10px] italic ${
+                    item.locked ? 'text-emerald-500/60' : 'text-zinc-600'
+                  }`}
+                >
+                  {item.note}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Bottom: Privacy grade badge */}
+      <div className="px-5 py-3 border-t border-white/[0.06] bg-white/[0.015] flex items-center gap-3">
+        <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">
+          Overall Grade
+        </span>
+        <PrivacyScore mode={auctionMode} size="sm" />
       </div>
     </div>
   )

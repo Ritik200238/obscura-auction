@@ -1,11 +1,17 @@
 import { useMemo } from 'react'
 import { Shield } from 'lucide-react'
-import { AUCTION_MODE, TOKEN_TYPE } from '@/types'
+import { AUCTION_MODE } from '@/types'
 
 interface PrivacyScoreProps {
-  auctionMode: number
-  tokenType: number
+  /** Auction mode constant — use this OR auctionMode (for backward compat) */
+  mode?: number
+  /** @deprecated Use `mode` instead */
+  auctionMode?: number
+  /** @deprecated No longer affects grade calculation */
+  tokenType?: number
+  /** @deprecated No longer affects grade calculation */
   isSettled?: boolean
+  /** @deprecated No longer affects grade calculation */
   isRevealed?: boolean
   size?: 'sm' | 'md' | 'lg'
 }
@@ -13,135 +19,139 @@ interface PrivacyScoreProps {
 interface GradeInfo {
   grade: string
   color: string
-  glow: string
-  description: string
+  bgColor: string
+  tooltip: string
 }
 
-const GRADE_MAP: Record<number, GradeInfo> = {
-  5: {
-    grade: 'A+',
-    color: 'text-emerald-400',
-    glow: '0 0 16px rgba(52, 211, 153, 0.4)',
-    description: 'Maximum privacy: sealed bids, hidden identities, private settlement, second-price protection',
-  },
-  4: {
-    grade: 'A',
-    color: 'text-green-400',
-    glow: '0 0 12px rgba(74, 222, 128, 0.3)',
-    description: 'Excellent privacy: sealed bids, hidden identities, private settlement',
-  },
-  3: {
-    grade: 'B+',
-    color: 'text-teal-400',
-    glow: '0 0 10px rgba(45, 212, 191, 0.25)',
-    description: 'Good privacy: price visible but instant settlement, no bid history exposed',
-  },
-  2: {
-    grade: 'B',
-    color: 'text-cyan-400',
-    glow: '0 0 8px rgba(34, 211, 238, 0.2)',
-    description: 'Moderate privacy: bids public on-chain, ascending history visible',
-  },
-  1: {
-    grade: 'C',
-    color: 'text-amber-400',
-    glow: '0 0 8px rgba(251, 191, 36, 0.2)',
-    description: 'Limited privacy: significant on-chain data exposure',
-  },
-  0: {
-    grade: 'F',
-    color: 'text-red-400',
-    glow: '0 0 8px rgba(248, 113, 113, 0.2)',
-    description: 'No privacy: all auction data publicly visible',
-  },
-}
-
-function calculateScore(
-  auctionMode: number,
-  tokenType: number,
-  isSettled?: boolean,
-  isRevealed?: boolean
-): number {
-  let score = 0
-
-  switch (auctionMode) {
-    case AUCTION_MODE.VICKREY:
-      // Sealed bids + hidden identities + private settlement + selective disclosure + second-price hides willingness
-      score = 5
-      break
+/** Grade definitions by auction mode */
+function getGradeInfo(mode: number): GradeInfo {
+  switch (mode) {
     case AUCTION_MODE.FIRST_PRICE:
-      // Sealed bids + hidden identities + private settlement + selective disclosure
-      score = 4
-      break
-    case AUCTION_MODE.DUTCH:
-      // Price visible but no sealed bids needed, instant settlement
-      score = 3
-      break
+      return {
+        grade: 'A+',
+        color: 'text-emerald-400',
+        bgColor: 'bg-emerald-400/10 border-emerald-400/20',
+        tooltip:
+          'A+ \u2014 Bids sealed with BHP256 commitments. No tokens move during bidding. Identity never on-chain.',
+      }
+    case AUCTION_MODE.VICKREY:
+      return {
+        grade: 'A+',
+        color: 'text-emerald-400',
+        bgColor: 'bg-emerald-400/10 border-emerald-400/20',
+        tooltip:
+          'A+ \u2014 Same as sealed-bid plus second-price fairness. Winner pays 2nd price, hiding true willingness to pay.',
+      }
+    case AUCTION_MODE.CANDLE:
+      return {
+        grade: 'A+',
+        color: 'text-emerald-400',
+        bgColor: 'bg-emerald-400/10 border-emerald-400/20',
+        tooltip:
+          'A+ \u2014 Sealed bids plus random end time. Prevents timing attacks and last-second sniping entirely.',
+      }
+    case AUCTION_MODE.REVERSE:
+      return {
+        grade: 'A+',
+        color: 'text-emerald-400',
+        bgColor: 'bg-emerald-400/10 border-emerald-400/20',
+        tooltip:
+          'A+ \u2014 Sealed bids, lowest wins. Bid amounts and seller identities hidden until settlement.',
+      }
+    case AUCTION_MODE.BLIND_DUTCH:
+      return {
+        grade: 'A+',
+        color: 'text-emerald-400',
+        bgColor: 'bg-emerald-400/10 border-emerald-400/20',
+        tooltip:
+          'A+ \u2014 Sealed bids with hidden descending price. Nobody sees the current price or other bids.',
+      }
+    case AUCTION_MODE.BUNDLE:
+      return {
+        grade: 'A',
+        color: 'text-green-400',
+        bgColor: 'bg-green-400/10 border-green-400/20',
+        tooltip:
+          'A \u2014 Sealed bids with commit-reveal. Item hashes are public but amounts and identities are private.',
+      }
+    case AUCTION_MODE.MULTI_UNIT:
+      return {
+        grade: 'A',
+        color: 'text-green-400',
+        bgColor: 'bg-green-400/10 border-green-400/20',
+        tooltip:
+          'A \u2014 Sealed bids with private amounts. Unit configuration is public but bid details are hidden.',
+      }
+    case AUCTION_MODE.TIMED_ESCALATION:
+      return {
+        grade: 'B+',
+        color: 'text-teal-400',
+        bgColor: 'bg-teal-400/10 border-teal-400/20',
+        tooltip:
+          'B+ \u2014 Bid amounts visible on-chain but bidder identity is hashed. Auto-incrementing price is public.',
+      }
     case AUCTION_MODE.ENGLISH:
-      // Bids are public ascending
-      score = 2
-      break
+      return {
+        grade: 'B+',
+        color: 'text-teal-400',
+        bgColor: 'bg-teal-400/10 border-teal-400/20',
+        tooltip:
+          'B+ \u2014 Open ascending bids. Amounts public by design but bidder identity is hashed on-chain.',
+      }
+    case AUCTION_MODE.DUTCH:
+      return {
+        grade: 'B',
+        color: 'text-cyan-400',
+        bgColor: 'bg-cyan-400/10 border-cyan-400/20',
+        tooltip:
+          'B \u2014 Price publicly descending each block. Buyer identity exposed at purchase time.',
+      }
     default:
-      score = 2
+      return {
+        grade: 'B',
+        color: 'text-cyan-400',
+        bgColor: 'bg-cyan-400/10 border-cyan-400/20',
+        tooltip: 'B \u2014 Standard privacy protections.',
+      }
   }
-
-  // Post-settlement amount hidden bonus
-  if (isSettled && !isRevealed) {
-    score = Math.min(score + 1, 5)
-  }
-
-  // Stablecoin penalty (addresses more exposed for cross-chain tokens)
-  if (tokenType === TOKEN_TYPE.USDCX || tokenType === TOKEN_TYPE.USAD) {
-    score = Math.max(score - 1, 0)
-  }
-
-  return score
-}
-
-const SIZE_CONFIG = {
-  sm: {
-    container: 'gap-1 px-1.5 py-0.5',
-    icon: 'w-3 h-3',
-    text: 'text-[10px]',
-    wrapper: 'inline-flex',
-  },
-  md: {
-    container: 'gap-1.5 px-2 py-1',
-    icon: 'w-3.5 h-3.5',
-    text: 'text-xs',
-    wrapper: 'inline-flex',
-  },
-  lg: {
-    container: 'gap-2 px-3 py-1.5',
-    icon: 'w-4 h-4',
-    text: 'text-sm',
-    wrapper: 'inline-flex',
-  },
 }
 
 export default function PrivacyScore({
+  mode,
   auctionMode,
-  tokenType,
-  isSettled,
-  isRevealed,
   size = 'sm',
 }: PrivacyScoreProps) {
-  const score = useMemo(
-    () => calculateScore(auctionMode, tokenType, isSettled, isRevealed),
-    [auctionMode, tokenType, isSettled, isRevealed]
-  )
+  const resolvedMode = mode ?? auctionMode ?? AUCTION_MODE.FIRST_PRICE
 
-  const gradeInfo = GRADE_MAP[score] ?? GRADE_MAP[0]
-  const sizeConfig = SIZE_CONFIG[size]
+  const gradeInfo = useMemo(() => getGradeInfo(resolvedMode), [resolvedMode])
 
+  if (size === 'lg') {
+    return (
+      <div
+        className={`inline-flex items-center gap-2.5 px-3.5 py-2 rounded-lg border backdrop-blur-sm ${gradeInfo.bgColor}`}
+        title={gradeInfo.tooltip}
+      >
+        <Shield className={`w-5 h-5 ${gradeInfo.color}`} />
+        <div className="flex flex-col">
+          <span className={`text-sm font-bold leading-tight ${gradeInfo.color}`}>
+            {gradeInfo.grade}
+          </span>
+          <span className="text-[11px] text-gray-400 leading-snug max-w-[240px]">
+            {gradeInfo.tooltip.split(' \u2014 ')[1]}
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  // sm (default) -- compact badge ~20px tall
   return (
     <div
-      className={`${sizeConfig.wrapper} items-center ${sizeConfig.container} rounded-lg bg-white/5 border border-white/10 backdrop-blur-sm`}
-      style={{ boxShadow: gradeInfo.glow }}
-      title={gradeInfo.description}
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border backdrop-blur-sm ${gradeInfo.bgColor}`}
+      title={gradeInfo.tooltip}
     >
-      <Shield className={`${sizeConfig.icon} ${gradeInfo.color}`} />
-      <span className={`${sizeConfig.text} font-bold ${gradeInfo.color}`}>
+      <Shield className={`w-3 h-3 ${gradeInfo.color}`} />
+      <span className={`text-[10px] font-bold ${gradeInfo.color}`}>
         {gradeInfo.grade}
       </span>
     </div>
