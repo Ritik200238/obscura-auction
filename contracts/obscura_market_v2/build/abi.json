@@ -1,0 +1,1307 @@
+{
+  "program": "obscura_market_v2.aleo",
+  "structs": [
+    {
+      "path": [
+        "FixedSaleConfig"
+      ],
+      "fields": [
+        {
+          "name": "seller_hash",
+          "ty": {
+            "Primitive": "Field"
+          }
+        },
+        {
+          "name": "item_hash",
+          "ty": {
+            "Primitive": "Field"
+          }
+        },
+        {
+          "name": "price",
+          "ty": {
+            "Primitive": {
+              "UInt": "U128"
+            }
+          }
+        },
+        {
+          "name": "token_type",
+          "ty": {
+            "Primitive": {
+              "UInt": "U8"
+            }
+          }
+        },
+        {
+          "name": "status",
+          "ty": {
+            "Primitive": {
+              "UInt": "U8"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": [
+        "RFQConfig"
+      ],
+      "fields": [
+        {
+          "name": "buyer_hash",
+          "ty": {
+            "Primitive": "Field"
+          }
+        },
+        {
+          "name": "category",
+          "ty": {
+            "Primitive": {
+              "UInt": "U8"
+            }
+          }
+        },
+        {
+          "name": "description_hash",
+          "ty": {
+            "Primitive": "Field"
+          }
+        },
+        {
+          "name": "max_budget_hash",
+          "ty": {
+            "Primitive": "Field"
+          }
+        },
+        {
+          "name": "deadline",
+          "ty": {
+            "Primitive": {
+              "UInt": "U64"
+            }
+          }
+        },
+        {
+          "name": "token_type",
+          "ty": {
+            "Primitive": {
+              "UInt": "U8"
+            }
+          }
+        },
+        {
+          "name": "status",
+          "ty": {
+            "Primitive": {
+              "UInt": "U8"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": [
+        "TokenSaleConfig"
+      ],
+      "fields": [
+        {
+          "name": "seller_hash",
+          "ty": {
+            "Primitive": "Field"
+          }
+        },
+        {
+          "name": "item_hash",
+          "ty": {
+            "Primitive": "Field"
+          }
+        },
+        {
+          "name": "total_supply",
+          "ty": {
+            "Primitive": {
+              "UInt": "U128"
+            }
+          }
+        },
+        {
+          "name": "remaining_supply",
+          "ty": {
+            "Primitive": {
+              "UInt": "U128"
+            }
+          }
+        },
+        {
+          "name": "min_price_per_unit",
+          "ty": {
+            "Primitive": {
+              "UInt": "U128"
+            }
+          }
+        },
+        {
+          "name": "token_type",
+          "ty": {
+            "Primitive": {
+              "UInt": "U8"
+            }
+          }
+        },
+        {
+          "name": "deadline",
+          "ty": {
+            "Primitive": {
+              "UInt": "U64"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": [
+        "RoyaltyInfo"
+      ],
+      "fields": [
+        {
+          "name": "creator_hash",
+          "ty": {
+            "Primitive": "Field"
+          }
+        },
+        {
+          "name": "bps",
+          "ty": {
+            "Primitive": {
+              "UInt": "U128"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "records": [
+    {
+      "path": [
+        "MarketReceipt"
+      ],
+      "fields": [
+        {
+          "name": "owner",
+          "ty": {
+            "Primitive": "Address"
+          },
+          "mode": "None"
+        },
+        {
+          "name": "listing_id",
+          "ty": {
+            "Primitive": "Field"
+          },
+          "mode": "None"
+        },
+        {
+          "name": "item_hash",
+          "ty": {
+            "Primitive": "Field"
+          },
+          "mode": "None"
+        },
+        {
+          "name": "purchase_amount",
+          "ty": {
+            "Primitive": {
+              "UInt": "U128"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "name": "token_type",
+          "ty": {
+            "Primitive": {
+              "UInt": "U8"
+            }
+          },
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "path": [
+        "QuoteRecord"
+      ],
+      "fields": [
+        {
+          "name": "owner",
+          "ty": {
+            "Primitive": "Address"
+          },
+          "mode": "None"
+        },
+        {
+          "name": "rfq_id",
+          "ty": {
+            "Primitive": "Field"
+          },
+          "mode": "None"
+        },
+        {
+          "name": "quote_amount",
+          "ty": {
+            "Primitive": {
+              "UInt": "U128"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "name": "quote_hash",
+          "ty": {
+            "Primitive": "Field"
+          },
+          "mode": "None"
+        },
+        {
+          "name": "token_type",
+          "ty": {
+            "Primitive": {
+              "UInt": "U8"
+            }
+          },
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "path": [
+        "WinnerCertificate"
+      ],
+      "fields": [
+        {
+          "name": "owner",
+          "ty": {
+            "Primitive": "Address"
+          },
+          "mode": "None"
+        },
+        {
+          "name": "auction_id",
+          "ty": {
+            "Primitive": "Field"
+          },
+          "mode": "None"
+        },
+        {
+          "name": "item_hash",
+          "ty": {
+            "Primitive": "Field"
+          },
+          "mode": "None"
+        },
+        {
+          "name": "winning_amount",
+          "ty": {
+            "Primitive": {
+              "UInt": "U128"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "name": "token_type",
+          "ty": {
+            "Primitive": {
+              "UInt": "U8"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "name": "certificate_id",
+          "ty": {
+            "Primitive": "Field"
+          },
+          "mode": "None"
+        }
+      ]
+    }
+  ],
+  "mappings": [
+    {
+      "name": "fixed_sales",
+      "key": {
+        "Primitive": "Field"
+      },
+      "value": {
+        "Struct": {
+          "path": [
+            "FixedSaleConfig"
+          ],
+          "program": "obscura_market_v2"
+        }
+      }
+    },
+    {
+      "name": "rfq_configs",
+      "key": {
+        "Primitive": "Field"
+      },
+      "value": {
+        "Struct": {
+          "path": [
+            "RFQConfig"
+          ],
+          "program": "obscura_market_v2"
+        }
+      }
+    },
+    {
+      "name": "rfq_quote_count",
+      "key": {
+        "Primitive": "Field"
+      },
+      "value": {
+        "Primitive": {
+          "UInt": "U64"
+        }
+      }
+    },
+    {
+      "name": "token_sales",
+      "key": {
+        "Primitive": "Field"
+      },
+      "value": {
+        "Struct": {
+          "path": [
+            "TokenSaleConfig"
+          ],
+          "program": "obscura_market_v2"
+        }
+      }
+    },
+    {
+      "name": "provenance",
+      "key": {
+        "Primitive": "Field"
+      },
+      "value": {
+        "Primitive": "Field"
+      }
+    },
+    {
+      "name": "royalty_info",
+      "key": {
+        "Primitive": "Field"
+      },
+      "value": {
+        "Struct": {
+          "path": [
+            "RoyaltyInfo"
+          ],
+          "program": "obscura_market_v2"
+        }
+      }
+    },
+    {
+      "name": "market_treasury",
+      "key": {
+        "Primitive": {
+          "UInt": "U8"
+        }
+      },
+      "value": {
+        "Primitive": {
+          "UInt": "U128"
+        }
+      }
+    },
+    {
+      "name": "market_balance",
+      "key": {
+        "Primitive": {
+          "UInt": "U8"
+        }
+      },
+      "value": {
+        "Primitive": {
+          "UInt": "U128"
+        }
+      }
+    },
+    {
+      "name": "sale_escrow",
+      "key": {
+        "Primitive": "Field"
+      },
+      "value": {
+        "Primitive": {
+          "UInt": "U128"
+        }
+      }
+    },
+    {
+      "name": "market_config",
+      "key": {
+        "Primitive": {
+          "UInt": "U8"
+        }
+      },
+      "value": {
+        "Primitive": "Field"
+      }
+    }
+  ],
+  "storage_variables": [],
+  "transitions": [
+    {
+      "name": "create_fixed_sale",
+      "is_async": true,
+      "inputs": [
+        {
+          "name": "item_hash",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "price",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "token_type",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U8"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "nonce",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": "Future",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "buy_fixed_sale",
+      "is_async": true,
+      "inputs": [
+        {
+          "name": "listing_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "item_hash",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "price",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "credits_in",
+          "ty": {
+            "Record": {
+              "path": [
+                "credits"
+              ],
+              "program": "credits"
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "MarketReceipt"
+              ],
+              "program": "obscura_market_v2"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "credits"
+              ],
+              "program": "credits"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": "Future",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "buy_fixed_sale_usdcx",
+      "is_async": true,
+      "inputs": [
+        {
+          "name": "listing_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "item_hash",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "price",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "MarketReceipt"
+              ],
+              "program": "obscura_market_v2"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": "Future",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "buy_fixed_sale_usad",
+      "is_async": true,
+      "inputs": [
+        {
+          "name": "listing_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "item_hash",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "price",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "MarketReceipt"
+              ],
+              "program": "obscura_market_v2"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": "Future",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "delist_item",
+      "is_async": true,
+      "inputs": [
+        {
+          "name": "listing_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": "Future",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "create_rfq",
+      "is_async": true,
+      "inputs": [
+        {
+          "name": "category",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U8"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "description_hash",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "max_budget",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "token_type",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U8"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "nonce",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "deadline",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U64"
+              }
+            }
+          },
+          "mode": "Public"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": "Future",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "submit_quote",
+      "is_async": true,
+      "inputs": [
+        {
+          "name": "rfq_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "quote_amount",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "nonce",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "QuoteRecord"
+              ],
+              "program": "obscura_market_v2"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": "Future",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "accept_quote",
+      "is_async": true,
+      "inputs": [
+        {
+          "name": "rfq_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "quote",
+          "ty": {
+            "Record": {
+              "path": [
+                "QuoteRecord"
+              ],
+              "program": "obscura_market_v2"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "seller_address",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Address"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "credits_in",
+          "ty": {
+            "Record": {
+              "path": [
+                "credits"
+              ],
+              "program": "credits"
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "MarketReceipt"
+              ],
+              "program": "obscura_market_v2"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "credits"
+              ],
+              "program": "credits"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": "Future",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "accept_quote_usdcx",
+      "is_async": true,
+      "inputs": [
+        {
+          "name": "rfq_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "quote",
+          "ty": {
+            "Record": {
+              "path": [
+                "QuoteRecord"
+              ],
+              "program": "obscura_market_v2"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "seller_address",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Address"
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "MarketReceipt"
+              ],
+              "program": "obscura_market_v2"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": "Future",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "create_token_sale",
+      "is_async": true,
+      "inputs": [
+        {
+          "name": "item_hash",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "total_supply",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "min_price_per_unit",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "token_type",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U8"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "nonce",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "deadline",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U64"
+              }
+            }
+          },
+          "mode": "Public"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": "Future",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "bid_token_sale",
+      "is_async": true,
+      "inputs": [
+        {
+          "name": "sale_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "quantity",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "price_per_unit",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "credits_in",
+          "ty": {
+            "Record": {
+              "path": [
+                "credits"
+              ],
+              "program": "credits"
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "MarketReceipt"
+              ],
+              "program": "obscura_market_v2"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "credits"
+              ],
+              "program": "credits"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": "Future",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "bid_token_sale_usdcx",
+      "is_async": true,
+      "inputs": [
+        {
+          "name": "sale_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "quantity",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "price_per_unit",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "MarketReceipt"
+              ],
+              "program": "obscura_market_v2"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": "Future",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "set_provenance",
+      "is_async": true,
+      "inputs": [
+        {
+          "name": "auction_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "previous_auction_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": "Future",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "set_royalty",
+      "is_async": true,
+      "inputs": [
+        {
+          "name": "auction_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "bps",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": "Future",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "prove_won_auction",
+      "is_async": false,
+      "inputs": [
+        {
+          "name": "cert",
+          "ty": {
+            "Record": {
+              "path": [
+                "WinnerCertificate"
+              ],
+              "program": "obscura_market_v2"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "auction_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Public"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "WinnerCertificate"
+              ],
+              "program": "obscura_market_v2"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Boolean"
+            }
+          },
+          "mode": "None"
+        }
+      ]
+    }
+  ]
+}

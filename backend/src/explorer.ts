@@ -2,7 +2,9 @@ import fetch from 'node-fetch';
 import { logger } from './logger';
 
 const EXPLORER_API = process.env.EXPLORER_API || 'https://api.explorer.provable.com/v1';
-const PROGRAM_ID = process.env.PROGRAM_ID || 'obscura_v4.aleo';
+const PROGRAM_ID = process.env.PROGRAM_ID || 'obscura_core.aleo';
+const SETTLE_PROGRAM_ID = process.env.SETTLE_PROGRAM_ID || 'obscura_settle.aleo';
+const MARKET_PROGRAM_ID = process.env.MARKET_PROGRAM_ID || 'obscura_market_v2.aleo';
 
 export async function fetchMapping(mapping: string, key: string): Promise<string | null> {
   try {
@@ -51,4 +53,4 @@ export async function fetchTransaction(txId: string): Promise<any> {
   }
 }
 
-export { EXPLORER_API, PROGRAM_ID };
+export { EXPLORER_API, PROGRAM_ID, SETTLE_PROGRAM_ID, MARKET_PROGRAM_ID };

@@ -1,14 +1,23 @@
 export const config = {
-  programId: 'obscura_v4.aleo',
+  // 3-program architecture
+  programId: 'obscura_core.aleo',             // Core: auction lifecycle + bidding
+  settleProgramId: 'obscura_settle.aleo',     // Settle: token movement + claims
+  marketProgramId: 'obscura_market_v2.aleo',  // Market: fixed sales + RFQ + token sales
+
+  // Token programs
   creditsProgram: 'credits.aleo',
   usdcxProgramId: 'test_usdcx_stablecoin.aleo',
   usadProgramId: 'test_usad_stablecoin.aleo',
+
+  // API endpoints
   explorerApi: 'https://api.explorer.provable.com/v1',
-  explorerUrl: 'https://explorer.provable.com',
+  explorerUrl: 'https://testnet.explorer.provable.com',
   backendApi: import.meta.env.VITE_BACKEND_URL || (import.meta.env.PROD ? 'https://obscura-auction.onrender.com' : 'http://localhost:3001'),
+
+  // Network
   network: 'testnet' as const,
-  defaultFee: 500_000, // microcredits (= 0.5 ALEO). TransactionOptions.fee is in microcredits.
-  blockTime: 15, // seconds per block (approximate)
+  defaultFee: 500_000, // microcredits (= 0.5 ALEO)
+  blockTime: 15, // seconds per block
   blocksPerHour: 240,
   revealWindowBlocks: 2880,
   minAuctionDuration: 240,

@@ -149,7 +149,7 @@ export default function TokenSale() {
     const deadlineHeight = currentHeight + durationToBlocks(deadline)
 
     const result = await execute({
-      program: 'obscura_v4.aleo',
+      program: 'obscura_market_v2.aleo',
       functionName: 'create_token_sale',
       inputs: [
         `${supplyMicros}u128`,
@@ -191,7 +191,7 @@ export default function TokenSale() {
           return
         }
         await execute({
-          program: 'obscura_v4.aleo',
+          program: 'obscura_market_v2.aleo',
           functionName: 'bid_token_sale',
           inputs: [
             saleKey,
@@ -204,7 +204,7 @@ export default function TokenSale() {
         })
       } else {
         await execute({
-          program: 'obscura_v4.aleo',
+          program: 'obscura_market_v2.aleo',
           functionName: 'bid_token_sale_usdcx',
           inputs: [
             saleKey,

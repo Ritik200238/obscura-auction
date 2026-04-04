@@ -1,0 +1,87 @@
+{
+  "program": "test_cpi_settle.aleo",
+  "structs": [],
+  "records": [
+    {
+      "path": [
+        "EscrowReceipt"
+      ],
+      "fields": [
+        {
+          "name": "owner",
+          "ty": {
+            "Primitive": "Address"
+          },
+          "mode": "None"
+        },
+        {
+          "name": "auction_id",
+          "ty": {
+            "Primitive": "Field"
+          },
+          "mode": "None"
+        },
+        {
+          "name": "escrowed_amount",
+          "ty": {
+            "Primitive": {
+              "UInt": "U128"
+            }
+          },
+          "mode": "None"
+        }
+      ]
+    }
+  ],
+  "mappings": [
+    {
+      "name": "escrow_total",
+      "key": {
+        "Primitive": "Field"
+      },
+      "value": {
+        "Primitive": {
+          "UInt": "U128"
+        }
+      }
+    }
+  ],
+  "storage_variables": [],
+  "transitions": [
+    {
+      "name": "reveal_bid",
+      "is_async": true,
+      "inputs": [
+        {
+          "name": "bid",
+          "ty": {
+            "Record": {
+              "path": [
+                "TestBid"
+              ],
+              "program": "test_cpi_core"
+            }
+          },
+          "mode": "None"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "EscrowReceipt"
+              ],
+              "program": "test_cpi_settle"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": "Future",
+          "mode": "None"
+        }
+      ]
+    }
+  ]
+}

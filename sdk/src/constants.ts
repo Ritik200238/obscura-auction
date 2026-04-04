@@ -1,6 +1,8 @@
-// Mirrors the on-chain constants in obscura_v4.aleo exactly.
+// Mirrors the on-chain constants across 3 Obscura programs.
 
-export const PROGRAM_ID = 'obscura_v4.aleo';
+export const PROGRAM_ID = 'obscura_core.aleo';
+export const SETTLE_PROGRAM_ID = 'obscura_settle.aleo';
+export const MARKET_PROGRAM_ID = 'obscura_market_v2.aleo';
 
 export const STATUS = {
   ACTIVE: 1,
@@ -41,6 +43,8 @@ export const AUCTION_MODE = {
   VICKREY: 2,
   DUTCH: 3,
   ENGLISH: 4,
+  BUNDLE: 5,
+  MULTI_UNIT: 6,
 } as const;
 
 export const MODE_LABELS: Record<number, string> = {
@@ -48,6 +52,8 @@ export const MODE_LABELS: Record<number, string> = {
   [AUCTION_MODE.VICKREY]: 'Vickrey (2nd-Price)',
   [AUCTION_MODE.DUTCH]: 'Dutch (Descending)',
   [AUCTION_MODE.ENGLISH]: 'English (Ascending)',
+  [AUCTION_MODE.BUNDLE]: 'Bundle (Multi-Item)',
+  [AUCTION_MODE.MULTI_UNIT]: 'Multi-Unit (Batch)',
 };
 
 // Fee and timing constants (match on-chain)

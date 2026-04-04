@@ -45,7 +45,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         config.programId,
         config.creditsProgram,
         config.usdcxProgramId,
-        'obscura_v4.aleo',
+        'obscura_core.aleo',
         config.usadProgramId,
       ]}
       onError={handleWalletError}

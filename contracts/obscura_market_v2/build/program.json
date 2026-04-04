@@ -1,0 +1,9 @@
+{
+  "program": "obscura_market_v2.aleo",
+  "version": "0.1.0",
+  "description": "",
+  "license": "",
+  "leo": "3.5.0",
+  "dependencies": null,
+  "dev_dependencies": null
+}

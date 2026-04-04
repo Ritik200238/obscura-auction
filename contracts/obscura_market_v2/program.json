@@ -1,0 +1,27 @@
+{
+  "program": "obscura_market_v2.aleo",
+  "version": "0.1.0",
+  "description": "Obscura Marketplace — fixed sales, RFQ, token sales, royalties, provenance",
+  "license": "MIT",
+  "leo": "3.5.0",
+  "dependencies": [
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    },
+    {
+      "name": "test_usdcx_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    },
+    {
+      "name": "test_usad_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    }
+  ]
+}

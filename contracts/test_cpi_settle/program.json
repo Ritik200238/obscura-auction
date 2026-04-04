@@ -1,0 +1,14 @@
+{
+  "program": "test_cpi_settle.aleo",
+  "version": "0.1.0",
+  "description": "CPI test - imports test_cpi_core record types",
+  "license": "MIT",
+  "leo": "3.5.0",
+  "dependencies": [
+    {
+      "name": "test_cpi_core.aleo",
+      "location": "local",
+      "path": "../test_cpi_core"
+    }
+  ]
+}
