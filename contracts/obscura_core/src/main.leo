@@ -8,14 +8,14 @@
 //
 // Other Aleo programs import this to compose sealed-bid mechanics.
 //
-// 14 transitions | 3 records | 18 mappings | 12 structs
+// 26 transitions | 4 records | 19 mappings | 12 structs
 //
 // AUCTION FORMATS:
 //   1. First-Price Sealed-Bid (MODE 1)
 //   2. Vickrey Sealed-Bid (MODE 2) — winner pays second-highest
 //   3. Dutch Descending (MODE 3) — price drops per block
 //   4. English Ascending (MODE 4) — open bids, anti-sniping
-//   5. Bundle (MODE 5) — multi-item, bid on whole package
+//   5. Bundle (MODE 5) — multi-item, whole-package OR combinatorial subset bids
 //   6. Multi-Unit (MODE 6) — N identical units, qty+price bidding
 //
 // PRIVACY:
@@ -87,7 +87,7 @@ program obscura_core_v2.aleo {
     const ESCALATION_PERIOD_BLOCKS: u64 = 40u64;    // auto-increment every ~10 min
 
     // ========================================================================
-    // RECORDS (3 — all private UTXO)
+    // RECORDS (4 — all private UTXO)
     // ========================================================================
 
     record SealedBid {
@@ -111,6 +111,15 @@ program obscura_core_v2.aleo {
         auction_id: field,
         quantity: u128,
         price_per_unit: u128,
+        bid_nonce: field,
+        token_type: u8,
+    }
+
+    record SubsetBid {
+        owner: address,
+        auction_id: field,
+        item_mask: u8,      // bitmask: 0b1010 = items 1 and 3
+        bid_amount: u128,
         bid_nonce: field,
         token_type: u8,
     }
@@ -240,6 +249,8 @@ program obscura_core_v2.aleo {
     mapping escalation_prices: field => u128;
     // Reverse auction lowest bids
     mapping lowest_bids: field => u128;
+    // Bundle combinatorial allocation: auction_id => allocated_mask (which items sold)
+    mapping bundle_allocation: field => u8;
 
     // ########################################################################
     //              T1: INITIALIZE PLATFORM
@@ -716,6 +727,71 @@ program obscura_core_v2.aleo {
         let bid: BundleBid = BundleBid {
             owner: self.caller,
             auction_id: auction_id,
+            bid_amount: bid_amount,
+            bid_nonce: bid_nonce,
+            token_type: token_type,
+        };
+
+        let bid_hash: field = BHP256::hash_to_field(BidCommitment {
+            bidder: self.caller,
+            auction_id: auction_id,
+            amount: bid_amount,
+            nonce: bid_nonce,
+        });
+
+        return (bid, final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.status, STATUS_ACTIVE);
+            assert_eq(auction.auction_mode, MODE_BUNDLE);
+            assert_eq(auction.token_type, token_type);
+
+            let current_height: u64 = block.height as u64;
+            assert(current_height <= auction.deadline);
+
+            let already_exists: bool = bid_commitments.contains(bid_hash);
+            assert(!already_exists);
+
+            let cfg: PlatformConfig = platform_config.get(0u8);
+            assert(!cfg.paused);
+
+            bid_commitments.set(bid_hash, true);
+
+            auctions.set(auction_id, AuctionData {
+                item_hash: auction.item_hash,
+                seller_hash: auction.seller_hash,
+                category: auction.category,
+                token_type: auction.token_type,
+                auction_mode: auction.auction_mode,
+                status: auction.status,
+                deadline: auction.deadline,
+                reveal_deadline: auction.reveal_deadline,
+                bid_count: auction.bid_count + 1u64,
+                reserve_price_hash: auction.reserve_price_hash,
+                created_at: auction.created_at,
+                dispute_deadline: auction.dispute_deadline,
+            });
+        });
+    }
+
+    // ########################################################################
+    //              T9b: PLACE SUBSET BID (combinatorial — bid on item subsets)
+    // ########################################################################
+
+    fn place_subset_bid(
+        private auction_id: field,
+        private item_mask: u8,     // which items the bidder wants (bitmask)
+        private bid_amount: u128,
+        private bid_nonce: field,
+        private token_type: u8
+    ) -> (SubsetBid, Final) {
+        assert(bid_amount >= MIN_BID_AMOUNT);
+        assert(item_mask > 0u8);           // at least 1 item
+        assert(item_mask <= 15u8);         // max 4 items = 0b1111
+
+        let bid: SubsetBid = SubsetBid {
+            owner: self.caller,
+            auction_id: auction_id,
+            item_mask: item_mask,
             bid_amount: bid_amount,
             bid_nonce: bid_nonce,
             token_type: token_type,
@@ -1902,5 +1978,137 @@ program obscura_core_v2.aleo {
                 });
             }
         });
+    }
+
+    // ########################################################################
+    //              T25: SETTLE BUNDLE ALLOCATION (combinatorial subset)
+    // ########################################################################
+    // The seller selects up to 3 subset bids to accept. Each bid covers a
+    // disjoint subset of items (enforced via bitmask). Total revenue must
+    // meet the bundle reserve. This is the ADVANCED combinatorial path;
+    // finalize_auction remains available as the SIMPLE whole-bundle path.
+
+    fn settle_bundle_allocation(
+        private auction_id: field,
+        private bid_hash_1: field,    // first accepted bid hash
+        private bid_mask_1: u8,       // items allocated to bid 1
+        private bid_amount_1: u128,   // amount of bid 1
+        private bid_hash_2: field,    // second accepted bid (0field if none)
+        private bid_mask_2: u8,       // items allocated to bid 2 (0 if none)
+        private bid_amount_2: u128,   // amount of bid 2 (0 if none)
+        private bid_hash_3: field,    // third accepted bid (0field if none)
+        private bid_mask_3: u8,       // items allocated to bid 3 (0 if none)
+        private bid_amount_3: u128,   // amount of bid 3 (0 if none)
+        private reserve_price: u128   // total reserve for the bundle
+    ) -> Final {
+        let caller_field: field = self.caller as field;
+        let caller_hash: field = BHP256::hash_to_field(caller_field);
+
+        let reserve_field: field = reserve_price as field;
+        let reserve_hash: field = BHP256::hash_to_field(reserve_field);
+
+        return final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.seller_hash, caller_hash);
+            assert_eq(auction.auction_mode, MODE_BUNDLE);
+            assert_eq(auction.status, STATUS_REVEALING);
+
+            let current_height: u64 = block.height as u64;
+            assert(current_height > auction.reveal_deadline);
+
+            assert_eq(reserve_hash, auction.reserve_price_hash);
+
+            // --- Verify no overlap between allocated item masks ---
+            let overlap_12: u8 = bid_mask_1 & bid_mask_2;
+            assert_eq(overlap_12, 0u8);
+            let overlap_13: u8 = bid_mask_1 & bid_mask_3;
+            assert_eq(overlap_13, 0u8);
+            let overlap_23: u8 = bid_mask_2 & bid_mask_3;
+            assert_eq(overlap_23, 0u8);
+
+            // --- Verify each referenced bid is committed and revealed ---
+            // Bid 1 is always required
+            assert(bid_hash_1 != 0field);
+            let has_commit_1: bool = bid_commitments.contains(bid_hash_1);
+            assert(has_commit_1);
+            let has_reveal_1: bool = revealed_bids.contains(bid_hash_1);
+            assert(has_reveal_1);
+            assert(bid_mask_1 > 0u8);
+
+            // Bid 2: if present, verify committed+revealed; if absent, mask and amount must be 0
+            let bid2_active: bool = bid_hash_2 != 0field;
+            let has_commit_2: bool = bid2_active ? bid_commitments.contains(bid_hash_2) : true;
+            assert(has_commit_2);
+            let has_reveal_2: bool = bid2_active ? revealed_bids.contains(bid_hash_2) : true;
+            assert(has_reveal_2);
+            // If bid2 is inactive, mask and amount must be zero
+            assert(bid2_active || bid_mask_2 == 0u8);
+            assert(bid2_active || bid_amount_2 == 0u128);
+
+            // Bid 3: if present, verify committed+revealed; if absent, mask and amount must be 0
+            let bid3_active: bool = bid_hash_3 != 0field;
+            let has_commit_3: bool = bid3_active ? bid_commitments.contains(bid_hash_3) : true;
+            assert(has_commit_3);
+            let has_reveal_3: bool = bid3_active ? revealed_bids.contains(bid_hash_3) : true;
+            assert(has_reveal_3);
+            assert(bid3_active || bid_mask_3 == 0u8);
+            assert(bid3_active || bid_amount_3 == 0u128);
+
+            // --- Compute total revenue and check reserve ---
+            let amount_2: u128 = bid2_active ? bid_amount_2 : 0u128;
+            let amount_3: u128 = bid3_active ? bid_amount_3 : 0u128;
+            let total: u128 = bid_amount_1 + amount_2 + amount_3;
+
+            if (total >= reserve_price) {
+                // Settlement succeeds
+                auctions.set(auction_id, AuctionData {
+                    item_hash: auction.item_hash,
+                    seller_hash: auction.seller_hash,
+                    category: auction.category,
+                    token_type: auction.token_type,
+                    auction_mode: auction.auction_mode,
+                    status: STATUS_SETTLED,
+                    deadline: auction.deadline,
+                    reveal_deadline: auction.reveal_deadline,
+                    bid_count: auction.bid_count,
+                    reserve_price_hash: auction.reserve_price_hash,
+                    created_at: auction.created_at,
+                    dispute_deadline: 0u64,
+                });
+
+                let sp: field = BHP256::hash_to_field(SettlementProof {
+                    auction_id: auction_id,
+                    highest_bid: total,
+                    second_highest: 0u128,
+                    winner_bid_hash: bid_hash_1,
+                    settled_at: current_height,
+                });
+                settlement_proofs.set(auction_id, sp);
+
+                // Store which items were allocated
+                let allocated: u8 = bid_mask_1 | bid_mask_2 | bid_mask_3;
+                bundle_allocation.set(auction_id, allocated);
+
+                // Update seller reputation
+                let completed: u64 = reputation_completed.get_or_use(auction.seller_hash, 0u64);
+                reputation_completed.set(auction.seller_hash, completed + 1u64);
+            } else {
+                // Reserve not met — auction fails
+                auctions.set(auction_id, AuctionData {
+                    item_hash: auction.item_hash,
+                    seller_hash: auction.seller_hash,
+                    category: auction.category,
+                    token_type: auction.token_type,
+                    auction_mode: auction.auction_mode,
+                    status: STATUS_FAILED,
+                    deadline: auction.deadline,
+                    reveal_deadline: auction.reveal_deadline,
+                    bid_count: auction.bid_count,
+                    reserve_price_hash: auction.reserve_price_hash,
+                    created_at: auction.created_at,
+                    dispute_deadline: 0u64,
+                });
+            }
+        };
     }
 }
