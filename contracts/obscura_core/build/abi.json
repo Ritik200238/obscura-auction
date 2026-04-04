@@ -815,6 +815,15 @@
           "UInt": "U128"
         }
       }
+    },
+    {
+      "name": "bid_nullifiers",
+      "key": {
+        "Primitive": "Field"
+      },
+      "value": {
+        "Primitive": "Boolean"
+      }
     }
   ],
   "storage_variables": [],

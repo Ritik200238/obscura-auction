@@ -86,6 +86,78 @@ export default function Docs() {
             </tbody>
           </table>
         </div>
+
+        {/* Phase-by-Phase Privacy Audit */}
+        <h4 className="text-white font-semibold text-sm mt-8 mb-3 flex items-center gap-2">
+          <Eye className="w-3.5 h-3.5 text-accent-400" />
+          What's Private vs Public at Each Phase
+        </h4>
+        <div className="overflow-x-auto rounded-xl border border-surface-700">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-surface-800/80">
+                <th className="text-left py-3 px-4 text-gray-400 font-medium">Phase</th>
+                <th className="text-left py-3 px-4 text-green-400 font-medium">Private</th>
+                <th className="text-left py-3 px-4 text-yellow-400 font-medium">Public</th>
+              </tr>
+            </thead>
+            <tbody className="text-gray-300">
+              <tr className="border-b border-surface-800/50 hover:bg-surface-800/30 transition-colors">
+                <td className="py-2.5 px-4 font-medium text-accent-400">During Bidding</td>
+                <td className="py-2.5 px-4 text-xs">Bid amounts, bidder identities, reserve price, bid nonces, item details</td>
+                <td className="py-2.5 px-4 text-xs">Bid count, auction status, deadline, token type</td>
+              </tr>
+              <tr className="border-b border-surface-800/50 hover:bg-surface-800/30 transition-colors">
+                <td className="py-2.5 px-4 font-medium text-amber-400">During Reveal</td>
+                <td className="py-2.5 px-4 text-xs">Bidder identities (still private), reserve price</td>
+                <td className="py-2.5 px-4 text-xs">Revealed bid amounts (intentional for settlement), bid count</td>
+              </tr>
+              <tr className="border-b border-surface-800/50 hover:bg-surface-800/30 transition-colors">
+                <td className="py-2.5 px-4 font-medium text-blue-400">After Settlement</td>
+                <td className="py-2.5 px-4 text-xs">Winner identity (until claim), seller identity (hashed), losing bid amounts</td>
+                <td className="py-2.5 px-4 text-xs">Winning price, settlement proof hash, status</td>
+              </tr>
+              <tr className="hover:bg-surface-800/30 transition-colors">
+                <td className="py-2.5 px-4 font-medium text-purple-400">After Claim</td>
+                <td className="py-2.5 px-4 text-xs">Recipient address (for ALEO via transfer_public_to_private)</td>
+                <td className="py-2.5 px-4 text-xs">Payment amounts (token transfer), platform fee</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Platform constraint note */}
+        <div className="mt-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
+          <p className="text-xs text-amber-300 font-medium mb-1">Platform Constraint</p>
+          <p className="text-xs text-gray-400 leading-relaxed">
+            Token transfers via credits.aleo inherently expose the transfer amount on Aleo's ledger.
+            This is an Aleo platform constraint, not an Obscura limitation. We minimize exposure by
+            deferring token movement to the reveal phase — during sealed bidding, zero tokens move.
+            Nullifier-based anti-replay (BHP256 hash of bid nonce) provides double-bid prevention
+            without revealing any bid content on-chain.
+          </p>
+        </div>
+
+        {/* Privacy features */}
+        <h4 className="text-white font-semibold text-sm mt-6 mb-3 flex items-center gap-2">
+          <Lock className="w-3.5 h-3.5 text-green-400" />
+          Privacy Features
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {[
+            { label: 'Zero-Transfer Sealed Bidding', desc: 'No tokens move during the bid phase — amounts stay fully encrypted in ZK records' },
+            { label: 'Per-Auction Pseudonymous IDs', desc: 'Seller identity is BHP256(address + auction_id) — unlinkable across auctions' },
+            { label: 'Nullifier Anti-Replay', desc: 'Each bid nonce produces a unique nullifier (BHP256 hash) preventing double-bids without revealing content' },
+            { label: '16-Level Merkle Allowlists', desc: 'Optional gated access via off-chain Merkle proof verification in ZK circuits' },
+            { label: 'Selective Disclosure', desc: 'Bidders choose what to reveal and when — unrevealed bids remain permanently encrypted' },
+            { label: 'Time-Delayed Results', desc: 'Auction results can be time-locked, preventing front-running of settlement' },
+          ].map((f) => (
+            <div key={f.label} className="p-3 rounded-lg bg-surface-800/40 border border-green-500/10">
+              <p className="text-xs font-medium text-green-400">{f.label}</p>
+              <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{f.desc}</p>
+            </div>
+          ))}
+        </div>
       </Section>
 
       {/* Architecture */}

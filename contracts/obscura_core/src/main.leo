@@ -159,6 +159,12 @@ program obscura_core_v2.aleo {
         created_at: u64,
         dispute_deadline: u64,
     }
+    // PRIVACY NOTE: bid_count and token_type are intentionally public in the auctions mapping.
+    // bid_count: needed for close_bidding to determine EXPIRED vs REVEALING state.
+    // token_type: needed for bid validation (ensure bidder uses correct token).
+    // Both are minimal information — bid_count reveals quantity (not amounts or identities),
+    // token_type reveals only which of 3 tokens is used (not amounts).
+    // All sensitive data (bid amounts, bidder identities, reserve price) remains private.
 
     struct AuctionSeed {
         creator: address,
@@ -274,6 +280,9 @@ program obscura_core_v2.aleo {
     // Privacy: time-delayed result disclosure
     mapping result_timelock: field => u64;      // auction_id => block height after which result is public
     mapping revealed_results: field => u128;    // auction_id => winning price (readable after timelock)
+
+    // Privacy: nullifier-based anti-replay — prevents double-bidding without revealing bid content
+    mapping bid_nullifiers: field => bool;      // BHP256(bid_nonce) => true
 
     // ########################################################################
     //              T1: INITIALIZE PLATFORM
@@ -691,6 +700,9 @@ program obscura_core_v2.aleo {
             nonce: bid_nonce,
         });
 
+        // Nullifier: hash of nonce only — reveals nothing about bidder or amount
+        let nullifier: field = BHP256::hash_to_field(bid_nonce);
+
         return (sealed, final {
             let auction: AuctionData = auctions.get(auction_id);
             assert_eq(auction.status, STATUS_ACTIVE);
@@ -709,10 +721,15 @@ program obscura_core_v2.aleo {
             let already_exists: bool = bid_commitments.contains(bid_hash);
             assert(!already_exists);
 
+            // Nullifier anti-replay: prevents reuse of the same nonce across bids
+            let nullifier_exists: bool = bid_nullifiers.contains(nullifier);
+            assert(!nullifier_exists);
+
             let cfg: PlatformConfig = platform_config.get(0u8);
             assert(!cfg.paused);
 
             bid_commitments.set(bid_hash, true);
+            bid_nullifiers.set(nullifier, true);
 
             auctions.set(auction_id, AuctionData {
                 item_hash: auction.item_hash,
@@ -758,6 +775,9 @@ program obscura_core_v2.aleo {
             nonce: bid_nonce,
         });
 
+        // Nullifier: hash of nonce only — reveals nothing about bidder or amount
+        let nullifier: field = BHP256::hash_to_field(bid_nonce);
+
         return (bid, final {
             let auction: AuctionData = auctions.get(auction_id);
             assert_eq(auction.status, STATUS_ACTIVE);
@@ -770,10 +790,15 @@ program obscura_core_v2.aleo {
             let already_exists: bool = bid_commitments.contains(bid_hash);
             assert(!already_exists);
 
+            // Nullifier anti-replay: prevents reuse of the same nonce across bids
+            let nullifier_exists: bool = bid_nullifiers.contains(nullifier);
+            assert(!nullifier_exists);
+
             let cfg: PlatformConfig = platform_config.get(0u8);
             assert(!cfg.paused);
 
             bid_commitments.set(bid_hash, true);
+            bid_nullifiers.set(nullifier, true);
 
             auctions.set(auction_id, AuctionData {
                 item_hash: auction.item_hash,
@@ -823,6 +848,9 @@ program obscura_core_v2.aleo {
             nonce: bid_nonce,
         });
 
+        // Nullifier: hash of nonce only — reveals nothing about bidder or amount
+        let nullifier: field = BHP256::hash_to_field(bid_nonce);
+
         return (bid, final {
             let auction: AuctionData = auctions.get(auction_id);
             assert_eq(auction.status, STATUS_ACTIVE);
@@ -835,10 +863,15 @@ program obscura_core_v2.aleo {
             let already_exists: bool = bid_commitments.contains(bid_hash);
             assert(!already_exists);
 
+            // Nullifier anti-replay: prevents reuse of the same nonce across bids
+            let nullifier_exists: bool = bid_nullifiers.contains(nullifier);
+            assert(!nullifier_exists);
+
             let cfg: PlatformConfig = platform_config.get(0u8);
             assert(!cfg.paused);
 
             bid_commitments.set(bid_hash, true);
+            bid_nullifiers.set(nullifier, true);
 
             auctions.set(auction_id, AuctionData {
                 item_hash: auction.item_hash,
@@ -889,6 +922,9 @@ program obscura_core_v2.aleo {
             nonce: bid_nonce,
         });
 
+        // Nullifier: hash of nonce only — reveals nothing about bidder or amount
+        let nullifier: field = BHP256::hash_to_field(bid_nonce);
+
         return (bid, final {
             let auction: AuctionData = auctions.get(auction_id);
             assert_eq(auction.status, STATUS_ACTIVE);
@@ -901,10 +937,15 @@ program obscura_core_v2.aleo {
             let already_exists: bool = bid_commitments.contains(bid_hash);
             assert(!already_exists);
 
+            // Nullifier anti-replay: prevents reuse of the same nonce across bids
+            let nullifier_exists: bool = bid_nullifiers.contains(nullifier);
+            assert(!nullifier_exists);
+
             let cfg: PlatformConfig = platform_config.get(0u8);
             assert(!cfg.paused);
 
             bid_commitments.set(bid_hash, true);
+            bid_nullifiers.set(nullifier, true);
 
             auctions.set(auction_id, AuctionData {
                 item_hash: auction.item_hash,
@@ -1356,6 +1397,9 @@ program obscura_core_v2.aleo {
             nonce: bid_nonce,
         });
 
+        // Nullifier: hash of nonce only — reveals nothing about bidder or amount
+        let nullifier: field = BHP256::hash_to_field(bid_nonce);
+
         return (sealed, final {
             let auction: AuctionData = auctions.get(auction_id);
             assert_eq(auction.status, STATUS_ACTIVE);
@@ -1369,10 +1413,15 @@ program obscura_core_v2.aleo {
             let already_exists: bool = bid_commitments.contains(bid_hash);
             assert(!already_exists);
 
+            // Nullifier anti-replay: prevents reuse of the same nonce across bids
+            let nullifier_exists: bool = bid_nullifiers.contains(nullifier);
+            assert(!nullifier_exists);
+
             let cfg: PlatformConfig = platform_config.get(0u8);
             assert(!cfg.paused);
 
             bid_commitments.set(bid_hash, true);
+            bid_nullifiers.set(nullifier, true);
 
             auctions.set(auction_id, AuctionData {
                 item_hash: auction.item_hash,
@@ -1567,6 +1616,9 @@ program obscura_core_v2.aleo {
             nonce: bid_nonce,
         });
 
+        // Nullifier: hash of nonce only — reveals nothing about bidder or amount
+        let nullifier: field = BHP256::hash_to_field(bid_nonce);
+
         return (sealed, final {
             let auction: AuctionData = auctions.get(auction_id);
             assert_eq(auction.status, STATUS_ACTIVE);
@@ -1579,10 +1631,15 @@ program obscura_core_v2.aleo {
             let already_exists: bool = bid_commitments.contains(bid_hash);
             assert(!already_exists);
 
+            // Nullifier anti-replay: prevents reuse of the same nonce across bids
+            let nullifier_exists: bool = bid_nullifiers.contains(nullifier);
+            assert(!nullifier_exists);
+
             let cfg: PlatformConfig = platform_config.get(0u8);
             assert(!cfg.paused);
 
             bid_commitments.set(bid_hash, true);
+            bid_nullifiers.set(nullifier, true);
 
             auctions.set(auction_id, AuctionData {
                 item_hash: auction.item_hash,
@@ -1779,6 +1836,9 @@ program obscura_core_v2.aleo {
             nonce: bid_nonce,
         });
 
+        // Nullifier: hash of nonce only — reveals nothing about bidder or amount
+        let nullifier: field = BHP256::hash_to_field(bid_nonce);
+
         return (sealed, final {
             let auction: AuctionData = auctions.get(auction_id);
             assert_eq(auction.status, STATUS_ACTIVE);
@@ -1791,10 +1851,15 @@ program obscura_core_v2.aleo {
             let already_exists: bool = bid_commitments.contains(bid_hash);
             assert(!already_exists);
 
+            // Nullifier anti-replay: prevents reuse of the same nonce across bids
+            let nullifier_exists: bool = bid_nullifiers.contains(nullifier);
+            assert(!nullifier_exists);
+
             let cfg: PlatformConfig = platform_config.get(0u8);
             assert(!cfg.paused);
 
             bid_commitments.set(bid_hash, true);
+            bid_nullifiers.set(nullifier, true);
 
             auctions.set(auction_id, AuctionData {
                 item_hash: auction.item_hash,
