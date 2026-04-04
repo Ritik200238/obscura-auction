@@ -8,7 +8,7 @@
 //
 // Other Aleo programs import this to compose sealed-bid mechanics.
 //
-// 26 transitions | 4 records | 19 mappings | 12 structs
+// 29 transitions | 5 records | 23 mappings | 13 structs
 //
 // AUCTION FORMATS:
 //   1. First-Price Sealed-Bid (MODE 1)
@@ -22,7 +22,7 @@
 //   place_bid: NO token transfer. Amounts hidden via BHP256 commitments.
 //   Merkle allowlists: 8-level tree verified in transition (off-chain ZK).
 //   Finalize blocks see: auction_id, bid_hash, status codes. NOT amounts/addresses.
-//   Seller identity: BHP256(address as field) — never plaintext.
+//   Seller identity: BHP256(PseudoIdentity{addr, auction_id}) — per-auction pseudonym, never plaintext, unlinkable across auctions.
 // ============================================================================
 
 program obscura_core_v2.aleo {
@@ -125,8 +125,25 @@ program obscura_core_v2.aleo {
     }
 
     // ========================================================================
+    // RECORDS (privacy proofs)
+    // ========================================================================
+
+    record ParticipationProof {
+        owner: address,
+        auction_id: field,
+        participated_at: u64,
+        auction_mode: u8,
+    }
+
+    // ========================================================================
     // STRUCTS
     // ========================================================================
+
+    // Per-auction pseudonymous identity — prevents cross-auction seller linking
+    struct PseudoIdentity {
+        addr: address,
+        salt: field,
+    }
 
     struct AuctionData {
         item_hash: field,
@@ -252,6 +269,10 @@ program obscura_core_v2.aleo {
     // Bundle combinatorial allocation: auction_id => allocated_mask (which items sold)
     mapping bundle_allocation: field => u8;
 
+    // Privacy: time-delayed result disclosure
+    mapping result_timelock: field => u64;      // auction_id => block height after which result is public
+    mapping revealed_results: field => u128;    // auction_id => winning price (readable after timelock)
+
     // ########################################################################
     //              T1: INITIALIZE PLATFORM
     // ########################################################################
@@ -299,8 +320,8 @@ program obscura_core_v2.aleo {
         let reserve_field: field = reserve_price as field;
         let reserve_hash: field = BHP256::hash_to_field(reserve_field);
 
-        let seller_field: field = self.caller as field;
-        let seller_hash: field = BHP256::hash_to_field(seller_field);
+        // Per-auction pseudonymous ID — different hash per auction, prevents cross-auction linking
+        let seller_hash: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
 
         // Modes 1-4 via this transition (5=bundle, 6=multi-unit have their own)
         assert(
@@ -373,8 +394,7 @@ program obscura_core_v2.aleo {
         let end_field: field = end_price as field;
         let reserve_hash: field = BHP256::hash_to_field(end_field);
 
-        let seller_field: field = self.caller as field;
-        let seller_hash: field = BHP256::hash_to_field(seller_field);
+        let seller_hash: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
 
         return (auction_id, final {
             let exists: bool = auctions.contains(auction_id);
@@ -444,8 +464,7 @@ program obscura_core_v2.aleo {
         let reserve_field: field = total_reserve as field;
         let reserve_hash: field = BHP256::hash_to_field(reserve_field);
 
-        let seller_field: field = self.caller as field;
-        let seller_hash: field = BHP256::hash_to_field(seller_field);
+        let seller_hash: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
 
         return (auction_id, final {
             let exists: bool = auctions.contains(auction_id);
@@ -515,8 +534,7 @@ program obscura_core_v2.aleo {
         let reserve_field: field = min_price_per_unit as field;
         let reserve_hash: field = BHP256::hash_to_field(reserve_field);
 
-        let seller_field: field = self.caller as field;
-        let seller_hash: field = BHP256::hash_to_field(seller_field);
+        let seller_hash: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
 
         return (auction_id, final {
             let exists: bool = auctions.contains(auction_id);
@@ -558,8 +576,7 @@ program obscura_core_v2.aleo {
     fn cancel_auction(
         private auction_id: field
     ) -> Final {
-        let caller_field: field = self.caller as field;
-        let caller_hash: field = BHP256::hash_to_field(caller_field);
+        let caller_hash: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
         return final {
             let auction: AuctionData = auctions.get(auction_id);
             assert_eq(auction.seller_hash, caller_hash);
@@ -912,8 +929,7 @@ program obscura_core_v2.aleo {
         private auction_id: field,
         private root: field
     ) -> Final {
-        let caller_field: field = self.caller as field;
-        let caller_hash: field = BHP256::hash_to_field(caller_field);
+        let caller_hash: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
         return final {
             let auction: AuctionData = auctions.get(auction_id);
             assert_eq(auction.seller_hash, caller_hash);
@@ -931,8 +947,7 @@ program obscura_core_v2.aleo {
         private auction_id: field,
         private reserve_price: u128
     ) -> Final {
-        let caller_field: field = self.caller as field;
-        let caller_hash: field = BHP256::hash_to_field(caller_field);
+        let caller_hash: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
 
         let reserve_field: field = reserve_price as field;
         let reserve_hash: field = BHP256::hash_to_field(reserve_field);
@@ -1119,8 +1134,7 @@ program obscura_core_v2.aleo {
         private auction_id: field,
         private reserve_price: u128
     ) -> Final {
-        let caller_field: field = self.caller as field;
-        let caller_hash: field = BHP256::hash_to_field(caller_field);
+        let caller_hash: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
 
         let reserve_field: field = reserve_price as field;
         let reserve_hash: field = BHP256::hash_to_field(reserve_field);
@@ -1269,8 +1283,7 @@ program obscura_core_v2.aleo {
         let reserve_field: field = reserve_price as field;
         let reserve_hash: field = BHP256::hash_to_field(reserve_field);
 
-        let seller_field: field = self.caller as field;
-        let seller_hash: field = BHP256::hash_to_field(seller_field);
+        let seller_hash: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
 
         let candle_start: u64 = deadline - candle_start_offset;
 
@@ -1388,8 +1401,7 @@ program obscura_core_v2.aleo {
         private auction_id: field,
         private reserve_price: u128
     ) -> Final {
-        let caller_field: field = self.caller as field;
-        let caller_hash: field = BHP256::hash_to_field(caller_field);
+        let caller_hash: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
 
         let reserve_field: field = reserve_price as field;
         let reserve_hash: field = BHP256::hash_to_field(reserve_field);
@@ -1490,9 +1502,8 @@ program obscura_core_v2.aleo {
         let budget_field: field = max_budget as field;
         let reserve_hash: field = BHP256::hash_to_field(budget_field);
 
-        // Buyer's hash stored as seller_hash (creator of the reverse auction)
-        let buyer_field: field = self.caller as field;
-        let buyer_hash: field = BHP256::hash_to_field(buyer_field);
+        // Buyer's pseudonymous hash stored as seller_hash (creator of the reverse auction)
+        let buyer_hash: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
 
         return (auction_id, final {
             let exists: bool = auctions.contains(auction_id);
@@ -1597,8 +1608,7 @@ program obscura_core_v2.aleo {
         private auction_id: field,
         private max_budget: u128
     ) -> Final {
-        let caller_field: field = self.caller as field;
-        let caller_hash: field = BHP256::hash_to_field(caller_field);
+        let caller_hash: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
 
         let budget_field: field = max_budget as field;
         let reserve_hash: field = BHP256::hash_to_field(budget_field);
@@ -1698,8 +1708,7 @@ program obscura_core_v2.aleo {
         let end_field: field = end_price as field;
         let reserve_hash: field = BHP256::hash_to_field(end_field);
 
-        let seller_field: field = self.caller as field;
-        let seller_hash: field = BHP256::hash_to_field(seller_field);
+        let seller_hash: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
 
         return (auction_id, final {
             let exists: bool = auctions.contains(auction_id);
@@ -1835,8 +1844,7 @@ program obscura_core_v2.aleo {
         let reserve_field: field = starting_price as field;
         let reserve_hash: field = BHP256::hash_to_field(reserve_field);
 
-        let seller_field: field = self.caller as field;
-        let seller_hash: field = BHP256::hash_to_field(seller_field);
+        let seller_hash: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
 
         return (auction_id, final {
             let exists: bool = auctions.contains(auction_id);
@@ -2001,8 +2009,7 @@ program obscura_core_v2.aleo {
         private bid_amount_3: u128,   // amount of bid 3 (0 if none)
         private reserve_price: u128   // total reserve for the bundle
     ) -> Final {
-        let caller_field: field = self.caller as field;
-        let caller_hash: field = BHP256::hash_to_field(caller_field);
+        let caller_hash: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
 
         let reserve_field: field = reserve_price as field;
         let reserve_hash: field = BHP256::hash_to_field(reserve_field);
@@ -2109,6 +2116,81 @@ program obscura_core_v2.aleo {
                     dispute_deadline: 0u64,
                 });
             }
+        };
+    }
+
+    // ########################################################################
+    //              T26: CLAIM PARTICIPATION PROOF
+    // ########################################################################
+    // Returns a private ParticipationProof record proving the caller bid in
+    // an auction. The SealedBid is consumed and re-created unchanged so the
+    // bidder keeps their bid. Finalize checks the auction exists.
+
+    fn claim_participation(
+        private bid: SealedBid
+    ) -> (SealedBid, ParticipationProof, Final) {
+        let new_bid: SealedBid = SealedBid {
+            owner: bid.owner,
+            auction_id: bid.auction_id,
+            bid_amount: bid.bid_amount,
+            bid_nonce: bid.bid_nonce,
+            token_type: bid.token_type,
+        };
+        let proof: ParticipationProof = ParticipationProof {
+            owner: bid.owner,
+            auction_id: bid.auction_id,
+            participated_at: 0u64,
+            auction_mode: 0u8,
+        };
+        let auction_id: field = bid.auction_id;
+        return (new_bid, proof, final {
+            let auction_exists: bool = auctions.contains(auction_id);
+            assert(auction_exists);
+        });
+    }
+
+    // ########################################################################
+    //              T27: SET RESULT TIMELOCK
+    // ########################################################################
+    // Seller sets a delay (in blocks) before auction results become publicly
+    // queryable. Must be called while auction is still active (before settlement).
+
+    fn set_result_timelock(
+        private auction_id: field,
+        private reveal_after_blocks: u64
+    ) -> Final {
+        let caller_hash: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
+        return final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.seller_hash, caller_hash);
+            // Must set timelock while auction is active or revealing
+            assert(auction.status == STATUS_ACTIVE || auction.status == STATUS_REVEALING);
+
+            let current_height: u64 = block.height as u64;
+            result_timelock.set(auction_id, current_height + reveal_after_blocks);
+        };
+    }
+
+    // ########################################################################
+    //              T28: REVEAL RESULT (after timelock)
+    // ########################################################################
+    // Anyone can trigger this after the timelock expires. Copies the winning
+    // price from highest_bids into revealed_results for public queryability.
+
+    fn reveal_result(
+        private auction_id: field
+    ) -> Final {
+        return final {
+            let auction: AuctionData = auctions.get(auction_id);
+            // Auction must be settled or failed (completed lifecycle)
+            assert(auction.status == STATUS_SETTLED || auction.status == STATUS_FAILED);
+
+            let timelock: u64 = result_timelock.get(auction_id);
+            let current_height: u64 = block.height as u64;
+            assert(current_height >= timelock);
+
+            let winning_price: u128 = highest_bids.get_or_use(auction_id, 0u128);
+            revealed_results.set(auction_id, winning_price);
         };
     }
 }

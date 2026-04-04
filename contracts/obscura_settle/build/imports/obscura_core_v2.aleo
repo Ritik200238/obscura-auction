@@ -30,6 +30,16 @@ record SubsetBid:
     bid_nonce as field.private;
     token_type as u8.private;
 
+record ParticipationProof:
+    owner as address.private;
+    auction_id as field.private;
+    participated_at as u64.private;
+    auction_mode as u8.private;
+
+struct PseudoIdentity:
+    addr as address;
+    salt as field;
+
 struct AuctionData:
     item_hash as field;
     seller_hash as field;
@@ -184,6 +194,14 @@ mapping bundle_allocation:
     key as field.public;
     value as u8.public;
 
+mapping result_timelock:
+    key as field.public;
+    value as u64.public;
+
+mapping revealed_results:
+    key as field.public;
+    value as u128.public;
+
 function initialize_platform:
     input r0 as address.private;
     input r1 as u128.private;
@@ -215,7 +233,7 @@ function create_auction:
     hash.bhp256 r7 into r8 as field;
     cast r2 into r9 as field;
     hash.bhp256 r9 into r10 as field;
-    cast self.caller into r11 as field;
+    cast self.caller r8 into r11 as PseudoIdentity;
     hash.bhp256 r11 into r12 as field;
     is.eq r3 1u8 into r13;
     is.eq r3 2u8 into r14;
@@ -277,7 +295,7 @@ function create_dutch_auction:
     hash.bhp256 r14 into r15 as field;
     cast r3 into r16 as field;
     hash.bhp256 r16 into r17 as field;
-    cast self.caller into r18 as field;
+    cast self.caller r15 into r18 as PseudoIdentity;
     hash.bhp256 r18 into r19 as field;
     async create_dutch_auction r15 r6 r0 r19 r1 r4 r17 r2 r3 into r20;
     output r15 as field.private;
@@ -335,7 +353,7 @@ function create_bundle_auction:
     hash.bhp256 r19 into r20 as field;
     cast r6 into r21 as field;
     hash.bhp256 r21 into r22 as field;
-    cast self.caller into r23 as field;
+    cast self.caller r20 into r23 as PseudoIdentity;
     hash.bhp256 r23 into r24 as field;
     async create_bundle_auction r20 r9 r0 r24 r5 r7 r22 r4 r1 r2 r3 r6 into r25;
     output r20 as field.private;
@@ -391,7 +409,7 @@ function create_multi_unit_auction:
     hash.bhp256 r14 into r15 as field;
     cast r3 into r16 as field;
     hash.bhp256 r16 into r17 as field;
-    cast self.caller into r18 as field;
+    cast self.caller r15 into r18 as PseudoIdentity;
     hash.bhp256 r18 into r19 as field;
     async create_multi_unit_auction r15 r6 r0 r19 r1 r4 r17 r2 r3 into r20;
     output r15 as field.private;
@@ -424,7 +442,7 @@ finalize create_multi_unit_auction:
 
 function cancel_auction:
     input r0 as field.private;
-    cast self.caller into r1 as field;
+    cast self.caller r0 into r1 as PseudoIdentity;
     hash.bhp256 r1 into r2 as field;
     async cancel_auction r0 r2 into r3;
     output r3 as obscura_core_v2.aleo/cancel_auction.future;
@@ -641,7 +659,7 @@ finalize place_multi_unit_bid:
 function set_merkle_root:
     input r0 as field.private;
     input r1 as field.private;
-    cast self.caller into r2 as field;
+    cast self.caller r0 into r2 as PseudoIdentity;
     hash.bhp256 r2 into r3 as field;
     async set_merkle_root r0 r3 r1 into r4;
     output r4 as obscura_core_v2.aleo/set_merkle_root.future;
@@ -659,7 +677,7 @@ finalize set_merkle_root:
 function finalize_auction:
     input r0 as field.private;
     input r1 as u128.private;
-    cast self.caller into r2 as field;
+    cast self.caller r0 into r2 as PseudoIdentity;
     hash.bhp256 r2 into r3 as field;
     cast r1 into r4 as field;
     hash.bhp256 r4 into r5 as field;
@@ -753,7 +771,7 @@ finalize finalize_auction:
 function settle_english:
     input r0 as field.private;
     input r1 as u128.private;
-    cast self.caller into r2 as field;
+    cast self.caller r0 into r2 as PseudoIdentity;
     hash.bhp256 r2 into r3 as field;
     cast r1 into r4 as field;
     hash.bhp256 r4 into r5 as field;
@@ -847,7 +865,7 @@ function create_candle_auction:
     hash.bhp256 r14 into r15 as field;
     cast r2 into r16 as field;
     hash.bhp256 r16 into r17 as field;
-    cast self.caller into r18 as field;
+    cast self.caller r15 into r18 as PseudoIdentity;
     hash.bhp256 r18 into r19 as field;
     sub r5 r6 into r20;
     async create_candle_auction r15 r20 r0 r19 r1 r3 r5 r17 into r21;
@@ -923,7 +941,7 @@ finalize place_candle_bid:
 function settle_candle:
     input r0 as field.private;
     input r1 as u128.private;
-    cast self.caller into r2 as field;
+    cast self.caller r0 into r2 as PseudoIdentity;
     hash.bhp256 r2 into r3 as field;
     cast r1 into r4 as field;
     hash.bhp256 r4 into r5 as field;
@@ -986,7 +1004,7 @@ function create_reverse_auction:
     hash.bhp256 r12 into r13 as field;
     cast r2 into r14 as field;
     hash.bhp256 r14 into r15 as field;
-    cast self.caller into r16 as field;
+    cast self.caller r13 into r16 as PseudoIdentity;
     hash.bhp256 r16 into r17 as field;
     async create_reverse_auction r13 r5 r0 r17 r1 r3 r15 into r18;
     output r13 as field.private;
@@ -1058,7 +1076,7 @@ finalize place_reverse_bid:
 function settle_reverse:
     input r0 as field.private;
     input r1 as u128.private;
-    cast self.caller into r2 as field;
+    cast self.caller r0 into r2 as PseudoIdentity;
     hash.bhp256 r2 into r3 as field;
     cast r1 into r4 as field;
     hash.bhp256 r4 into r5 as field;
@@ -1120,7 +1138,7 @@ function create_blind_dutch:
     hash.bhp256 r14 into r15 as field;
     cast r3 into r16 as field;
     hash.bhp256 r16 into r17 as field;
-    cast self.caller into r18 as field;
+    cast self.caller r15 into r18 as PseudoIdentity;
     hash.bhp256 r18 into r19 as field;
     async create_blind_dutch r15 r6 r0 r19 r1 r4 r17 r2 r3 into r20;
     output r15 as field.private;
@@ -1212,7 +1230,7 @@ function create_timed_escalation:
     hash.bhp256 r12 into r13 as field;
     cast r2 into r14 as field;
     hash.bhp256 r14 into r15 as field;
-    cast self.caller into r16 as field;
+    cast self.caller r13 into r16 as PseudoIdentity;
     hash.bhp256 r16 into r17 as field;
     async create_timed_escalation r13 r5 r0 r17 r1 r3 r15 r2 into r18;
     output r13 as field.private;
@@ -1334,7 +1352,7 @@ function settle_bundle_allocation:
     input r8 as u8.private;
     input r9 as u128.private;
     input r10 as u128.private;
-    cast self.caller into r11 as field;
+    cast self.caller r0 into r11 as PseudoIdentity;
     hash.bhp256 r11 into r12 as field;
     cast r10 into r13 as field;
     hash.bhp256 r13 into r14 as field;
@@ -1425,6 +1443,61 @@ finalize settle_bundle_allocation:
     cast r13.item_hash r13.seller_hash r13.category r13.token_type r13.auction_mode 6u8 r13.deadline r13.reveal_deadline r13.bid_count r13.reserve_price_hash r13.created_at 0u64 into r53 as AuctionData;
     set r53 into auctions[r0];
     position end_otherwise_0_31;
+
+function claim_participation:
+    input r0 as SealedBid.record;
+    cast r0.owner r0.auction_id r0.bid_amount r0.bid_nonce r0.token_type into r1 as SealedBid.record;
+    cast r0.owner r0.auction_id 0u64 0u8 into r2 as ParticipationProof.record;
+    async claim_participation r0.auction_id into r3;
+    output r1 as SealedBid.record;
+    output r2 as ParticipationProof.record;
+    output r3 as obscura_core_v2.aleo/claim_participation.future;
+
+finalize claim_participation:
+    input r0 as field.public;
+    contains auctions[r0] into r1;
+    assert.eq r1 true;
+
+function set_result_timelock:
+    input r0 as field.private;
+    input r1 as u64.private;
+    cast self.caller r0 into r2 as PseudoIdentity;
+    hash.bhp256 r2 into r3 as field;
+    async set_result_timelock r0 r3 r1 into r4;
+    output r4 as obscura_core_v2.aleo/set_result_timelock.future;
+
+finalize set_result_timelock:
+    input r0 as field.public;
+    input r1 as field.public;
+    input r2 as u64.public;
+    get auctions[r0] into r3;
+    assert.eq r3.seller_hash r1;
+    is.eq r3.status 1u8 into r4;
+    is.eq r3.status 3u8 into r5;
+    or r4 r5 into r6;
+    assert.eq r6 true;
+    cast block.height into r7 as u64;
+    add r7 r2 into r8;
+    set r8 into result_timelock[r0];
+
+function reveal_result:
+    input r0 as field.private;
+    async reveal_result r0 into r1;
+    output r1 as obscura_core_v2.aleo/reveal_result.future;
+
+finalize reveal_result:
+    input r0 as field.public;
+    get auctions[r0] into r1;
+    is.eq r1.status 4u8 into r2;
+    is.eq r1.status 6u8 into r3;
+    or r2 r3 into r4;
+    assert.eq r4 true;
+    get result_timelock[r0] into r5;
+    cast block.height into r6 as u64;
+    gte r6 r5 into r7;
+    assert.eq r7 true;
+    get.or_use highest_bids[r0] 0u128 into r8;
+    set r8 into revealed_results[r0];
 
 constructor:
     assert.eq edition 0u16;

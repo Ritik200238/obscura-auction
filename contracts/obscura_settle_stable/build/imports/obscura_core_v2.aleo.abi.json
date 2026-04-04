@@ -495,6 +495,45 @@
           "mode": "None"
         }
       ]
+    },
+    {
+      "path": [
+        "ParticipationProof"
+      ],
+      "fields": [
+        {
+          "name": "owner",
+          "ty": {
+            "Primitive": "Address"
+          },
+          "mode": "None"
+        },
+        {
+          "name": "auction_id",
+          "ty": {
+            "Primitive": "Field"
+          },
+          "mode": "None"
+        },
+        {
+          "name": "participated_at",
+          "ty": {
+            "Primitive": {
+              "UInt": "U64"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "name": "auction_mode",
+          "ty": {
+            "Primitive": {
+              "UInt": "U8"
+            }
+          },
+          "mode": "None"
+        }
+      ]
     }
   ],
   "mappings": [
@@ -752,6 +791,28 @@
       "value": {
         "Primitive": {
           "UInt": "U8"
+        }
+      }
+    },
+    {
+      "name": "result_timelock",
+      "key": {
+        "Primitive": "Field"
+      },
+      "value": {
+        "Primitive": {
+          "UInt": "U64"
+        }
+      }
+    },
+    {
+      "name": "revealed_results",
+      "key": {
+        "Primitive": "Field"
+      },
+      "value": {
+        "Primitive": {
+          "UInt": "U128"
         }
       }
     }
@@ -2421,6 +2482,105 @@
               "Primitive": {
                 "UInt": "U128"
               }
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": "Final",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "claim_participation",
+      "is_final": true,
+      "inputs": [
+        {
+          "name": "bid",
+          "ty": {
+            "Record": {
+              "path": [
+                "SealedBid"
+              ],
+              "program": "obscura_core_v2.aleo"
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "SealedBid"
+              ],
+              "program": "obscura_core_v2.aleo"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "ParticipationProof"
+              ],
+              "program": "obscura_core_v2.aleo"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": "Final",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "set_result_timelock",
+      "is_final": true,
+      "inputs": [
+        {
+          "name": "auction_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "reveal_after_blocks",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U64"
+              }
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": "Final",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "reveal_result",
+      "is_final": true,
+      "inputs": [
+        {
+          "name": "auction_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
             }
           },
           "mode": "Private"
