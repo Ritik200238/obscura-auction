@@ -1,5 +1,5 @@
 {
-  "program": "obscura_settle_v2.aleo",
+  "program": "obscura_settle_v3.aleo",
   "structs": [
     {
       "path": [
@@ -373,7 +373,7 @@
           "path": [
             "SettlementData"
           ],
-          "program": "obscura_settle_v2.aleo"
+          "program": "obscura_settle_v3.aleo"
         }
       }
     },
@@ -405,7 +405,7 @@
           "path": [
             "DutchConfig"
           ],
-          "program": "obscura_settle_v2.aleo"
+          "program": "obscura_settle_v3.aleo"
         }
       }
     },
@@ -430,7 +430,7 @@
           "path": [
             "DisputeData"
           ],
-          "program": "obscura_settle_v2.aleo"
+          "program": "obscura_settle_v3.aleo"
         }
       }
     },
@@ -459,7 +459,7 @@
               "path": [
                 "SealedBid"
               ],
-              "program": "obscura_core_v2.aleo"
+              "program": "obscura_core_v3.aleo"
             }
           },
           "mode": "Private"
@@ -484,7 +484,7 @@
               "path": [
                 "EscrowReceipt"
               ],
-              "program": "obscura_settle_v2.aleo"
+              "program": "obscura_settle_v3.aleo"
             }
           },
           "mode": "None"
@@ -517,7 +517,7 @@
               "path": [
                 "EscrowReceipt"
               ],
-              "program": "obscura_settle_v2.aleo"
+              "program": "obscura_settle_v3.aleo"
             }
           },
           "mode": "Private"
@@ -548,7 +548,7 @@
               "path": [
                 "WinnerCertificate"
               ],
-              "program": "obscura_settle_v2.aleo"
+              "program": "obscura_settle_v3.aleo"
             }
           },
           "mode": "None"
@@ -559,7 +559,7 @@
               "path": [
                 "SellerReceipt"
               ],
-              "program": "obscura_settle_v2.aleo"
+              "program": "obscura_settle_v3.aleo"
             }
           },
           "mode": "None"
@@ -592,7 +592,7 @@
               "path": [
                 "EscrowReceipt"
               ],
-              "program": "obscura_settle_v2.aleo"
+              "program": "obscura_settle_v3.aleo"
             }
           },
           "mode": "Private"
@@ -634,7 +634,7 @@
               "path": [
                 "WinnerCertificate"
               ],
-              "program": "obscura_settle_v2.aleo"
+              "program": "obscura_settle_v3.aleo"
             }
           },
           "mode": "None"
@@ -645,7 +645,7 @@
               "path": [
                 "SellerReceipt"
               ],
-              "program": "obscura_settle_v2.aleo"
+              "program": "obscura_settle_v3.aleo"
             }
           },
           "mode": "None"
@@ -689,7 +689,7 @@
               "path": [
                 "EscrowReceipt"
               ],
-              "program": "obscura_settle_v2.aleo"
+              "program": "obscura_settle_v3.aleo"
             }
           },
           "mode": "Private"
@@ -810,7 +810,7 @@
               "path": [
                 "EscrowReceipt"
               ],
-              "program": "obscura_settle_v2.aleo"
+              "program": "obscura_settle_v3.aleo"
             }
           },
           "mode": "None"
@@ -896,7 +896,7 @@
               "path": [
                 "EscrowReceipt"
               ],
-              "program": "obscura_settle_v2.aleo"
+              "program": "obscura_settle_v3.aleo"
             }
           },
           "mode": "None"
@@ -971,7 +971,7 @@
               "path": [
                 "DisputeBond"
               ],
-              "program": "obscura_settle_v2.aleo"
+              "program": "obscura_settle_v3.aleo"
             }
           },
           "mode": "None"
@@ -1108,7 +1108,7 @@
               "path": [
                 "WinnerCertificate"
               ],
-              "program": "obscura_settle_v2.aleo"
+              "program": "obscura_settle_v3.aleo"
             }
           },
           "mode": "Private"
@@ -1130,7 +1130,7 @@
               "path": [
                 "WinnerCertificate"
               ],
-              "program": "obscura_settle_v2.aleo"
+              "program": "obscura_settle_v3.aleo"
             }
           },
           "mode": "None"

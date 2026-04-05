@@ -1,12 +1,12 @@
 {
-  "program": "obscura_settle_v2.aleo",
+  "program": "obscura_settle_v3.aleo",
   "version": "0.1.0",
   "description": "Obscura Settlement Layer — ALEO credits token movement for auctions",
   "license": "MIT",
   "leo": "4.0.0",
   "dependencies": [
     {
-      "name": "obscura_core_v2.aleo",
+      "name": "obscura_core_v3.aleo",
       "location": "local",
       "path": "../obscura_core"
     },

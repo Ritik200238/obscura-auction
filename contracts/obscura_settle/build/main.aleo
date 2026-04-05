@@ -1,6 +1,6 @@
-import obscura_core_v2.aleo;
+import obscura_core_v3.aleo;
 import credits.aleo;
-program obscura_settle_v2.aleo;
+program obscura_settle_v3.aleo;
 
 record EscrowReceipt:
     owner as address.private;
@@ -116,18 +116,18 @@ mapping dispute_bonds:
     value as u128.public;
 
 function reveal_bid:
-    input r0 as obscura_core_v2.aleo/SealedBid.record;
+    input r0 as obscura_core_v3.aleo/SealedBid.record;
     input r1 as credits.aleo/credits.record;
     assert.eq r0.token_type 1u8;
     cast r0.owner r0.auction_id r0.bid_amount r0.bid_nonce into r2 as BidCommitment;
     hash.bhp256 r2 into r3 as field;
     cast r0.bid_amount into r4 as u64;
-    call credits.aleo/transfer_private_to_public r1 obscura_settle_v2.aleo r4 into r5 r6;
+    call credits.aleo/transfer_private_to_public r1 obscura_settle_v3.aleo r4 into r5 r6;
     cast r0.owner r0.auction_id r0.bid_amount r0.bid_nonce 1u8 into r7 as EscrowReceipt.record;
     async reveal_bid r6 r3 r0.bid_amount r0.auction_id into r8;
     output r7 as EscrowReceipt.record;
     output r5 as credits.aleo/credits.record;
-    output r8 as obscura_settle_v2.aleo/reveal_bid.future;
+    output r8 as obscura_settle_v3.aleo/reveal_bid.future;
 
 finalize reveal_bid:
     input r0 as credits.aleo/transfer_private_to_public.future;
@@ -183,7 +183,7 @@ function claim_win:
     output r14 as WinnerCertificate.record;
     output r15 as SellerReceipt.record;
     output r9 as credits.aleo/credits.record;
-    output r16 as obscura_settle_v2.aleo/claim_win.future;
+    output r16 as obscura_settle_v3.aleo/claim_win.future;
 
 finalize claim_win:
     input r0 as credits.aleo/transfer_public_to_private.future;
@@ -244,7 +244,7 @@ function claim_win_vickrey:
     output r22 as SellerReceipt.record;
     output r14 as credits.aleo/credits.record;
     output r16 as credits.aleo/credits.record;
-    output r23 as obscura_settle_v2.aleo/claim_win_vickrey.future;
+    output r23 as obscura_settle_v3.aleo/claim_win_vickrey.future;
 
 finalize claim_win_vickrey:
     input r0 as credits.aleo/transfer_public_to_private.future;
@@ -289,7 +289,7 @@ function claim_refund:
     hash.bhp256 r4 into r5 as field;
     async claim_refund r3 r0.auction_id r5 r0.escrowed_amount into r6;
     output r2 as credits.aleo/credits.record;
-    output r6 as obscura_settle_v2.aleo/claim_refund.future;
+    output r6 as obscura_settle_v3.aleo/claim_refund.future;
 
 finalize claim_refund:
     input r0 as credits.aleo/transfer_public_to_private.future;
@@ -326,12 +326,12 @@ function bid_dutch:
     cast self.caller r0 r1 r2 into r10 as BidCommitment;
     hash.bhp256 r10 into r11 as field;
     cast r1 into r12 as u64;
-    call credits.aleo/transfer_private_to_public r3 obscura_settle_v2.aleo r12 into r13 r14;
+    call credits.aleo/transfer_private_to_public r3 obscura_settle_v3.aleo r12 into r13 r14;
     cast self.caller r0 r1 r2 1u8 into r15 as EscrowReceipt.record;
     async bid_dutch r14 r6 r7 r0 r4 r5 r1 r11 into r16;
     output r15 as EscrowReceipt.record;
     output r13 as credits.aleo/credits.record;
-    output r16 as obscura_settle_v2.aleo/bid_dutch.future;
+    output r16 as obscura_settle_v3.aleo/bid_dutch.future;
 
 finalize bid_dutch:
     input r0 as credits.aleo/transfer_private_to_public.future;
@@ -388,12 +388,12 @@ function bid_english:
     cast self.caller r0 r1 r2 into r6 as BidCommitment;
     hash.bhp256 r6 into r7 as field;
     cast r1 into r8 as u64;
-    call credits.aleo/transfer_private_to_public r3 obscura_settle_v2.aleo r8 into r9 r10;
+    call credits.aleo/transfer_private_to_public r3 obscura_settle_v3.aleo r8 into r9 r10;
     cast self.caller r0 r1 r2 1u8 into r11 as EscrowReceipt.record;
     async bid_english r10 r4 r7 r0 r1 into r12;
     output r11 as EscrowReceipt.record;
     output r9 as credits.aleo/credits.record;
-    output r12 as obscura_settle_v2.aleo/bid_english.future;
+    output r12 as obscura_settle_v3.aleo/bid_english.future;
 
 finalize bid_english:
     input r0 as credits.aleo/transfer_private_to_public.future;
@@ -445,12 +445,12 @@ function dispute_auction:
     cast self.caller into r5 as field;
     hash.bhp256 r5 into r6 as field;
     cast r2 into r7 as u64;
-    call credits.aleo/transfer_private_to_public r1 obscura_settle_v2.aleo r7 into r8 r9;
+    call credits.aleo/transfer_private_to_public r1 obscura_settle_v3.aleo r7 into r8 r9;
     cast self.caller r0 r2 into r10 as DisputeBond.record;
     async dispute_auction r9 r0 r2 r6 r3 into r11;
     output r10 as DisputeBond.record;
     output r8 as credits.aleo/credits.record;
-    output r11 as obscura_settle_v2.aleo/dispute_auction.future;
+    output r11 as obscura_settle_v3.aleo/dispute_auction.future;
 
 finalize dispute_auction:
     input r0 as credits.aleo/transfer_private_to_public.future;
@@ -494,7 +494,7 @@ function resolve_dispute:
     call credits.aleo/transfer_public_to_private r9 r10 into r11 r12;
     async resolve_dispute r12 r0 r7 r3 r1 into r13;
     output r11 as credits.aleo/credits.record;
-    output r13 as obscura_settle_v2.aleo/resolve_dispute.future;
+    output r13 as obscura_settle_v3.aleo/resolve_dispute.future;
 
 finalize resolve_dispute:
     input r0 as credits.aleo/transfer_public_to_private.future;
@@ -529,7 +529,7 @@ function withdraw_fees:
     cast r0 into r4 as u128;
     async withdraw_fees r3 r4 into r5;
     output r2 as credits.aleo/credits.record;
-    output r5 as obscura_settle_v2.aleo/withdraw_fees.future;
+    output r5 as obscura_settle_v3.aleo/withdraw_fees.future;
 
 finalize withdraw_fees:
     input r0 as credits.aleo/transfer_public_to_private.future;

@@ -25,7 +25,7 @@
 //   Seller identity: BHP256(PseudoIdentity{addr, auction_id}) — per-auction pseudonym, never plaintext, unlinkable across auctions.
 // ============================================================================
 
-program obscura_core_v2.aleo {
+program obscura_core_v3.aleo {
 
     @noupgrade
     constructor() {}

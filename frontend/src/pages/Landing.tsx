@@ -803,11 +803,11 @@ export default function Landing() {
           >
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-green-400 font-medium font-mono text-xs">obscura_core_v2.aleo</span>
+              <span className="text-green-400 font-medium font-mono text-xs">obscura_core_v3.aleo</span>
             </span>
             <span className="text-surface-600">|</span>
             <a
-              href="https://testnet.explorer.provable.com/program/obscura_core_v2.aleo"
+              href="https://testnet.explorer.provable.com/program/obscura_core_v3.aleo"
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent-400 hover:text-accent-300 transition-colors flex items-center gap-1 text-xs"
@@ -1234,12 +1234,12 @@ export default function Landing() {
           <motion.p variants={fadeInUp} className="text-center text-xs text-gray-600 font-mono">
             Deployed as{' '}
             <a
-              href="https://testnet.explorer.provable.com/program/obscura_core_v2.aleo"
+              href="https://testnet.explorer.provable.com/program/obscura_core_v3.aleo"
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent-400/70 hover:text-accent-400 transition-colors"
             >
-              obscura_core_v2.aleo
+              obscura_core_v3.aleo
             </a>{' '}
             on Aleo Testnet · 4 programs · 52 transitions · 6 auction formats
           </motion.p>
@@ -1305,7 +1305,7 @@ export default function Landing() {
 
             <div className="mt-5 pt-5 border-t border-surface-800 flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-xs text-gray-600">
-                Contract: <span className="font-mono text-accent-400/70">obscura_core_v2.aleo</span> ·
+                Contract: <span className="font-mono text-accent-400/70">obscura_core_v3.aleo</span> ·
                 Deploy TX: <span className="font-mono text-gray-500">at1f3sxnl...928a</span>
               </p>
               <Link to="/create" className="btn-primary text-sm flex items-center gap-2">
@@ -1359,7 +1359,7 @@ export default function Landing() {
                   <ExternalLink className="w-3 h-3" />
                 </a>
                 <a
-                  href="https://testnet.explorer.provable.com/program/obscura_core_v2.aleo"
+                  href="https://testnet.explorer.provable.com/program/obscura_core_v3.aleo"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-gray-300 transition-colors flex items-center gap-1"

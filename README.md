@@ -2,7 +2,7 @@
 
 > Bids are invisible. Identities never touch the chain. Winners prove ownership without revealing what they paid. **The auction protocol that treats privacy as architecture, not a feature.**
 
-**[Live Demo](https://obscura-auction-95hm.vercel.app)** · **[Core Contract](https://testnet.explorer.provable.com/program/obscura_core_v2.aleo)** · **[Settlement](https://testnet.explorer.provable.com/program/obscura_settle_v2.aleo)** · **[Marketplace](https://testnet.explorer.provable.com/program/obscura_market_v2.aleo)** · Shield Wallet Required
+**[Live Demo](https://obscura-auction-95hm.vercel.app)** · **[Core Contract](https://testnet.explorer.provable.com/program/obscura_core_v3.aleo)** · **[Settlement](https://testnet.explorer.provable.com/program/obscura_settle_v3.aleo)** · **[Marketplace](https://testnet.explorer.provable.com/program/obscura_market_v2.aleo)** · Shield Wallet Required
 
 ---
 
@@ -67,13 +67,13 @@ For stablecoin paths (USDCx/USAD), `transfer_public_as_signer` exposes both send
 4 deployed programs with cross-program invocation (CPI):
 
 ```
-obscura_core_v2.aleo          ← Auction lifecycle, bidding, 10 formats
+obscura_core_v3.aleo          ← Auction lifecycle, bidding, 10 formats
     ↑                            29 transitions | 5 records | 23 mappings
     │ imports
-obscura_settle_v2.aleo        ← ALEO token settlement
+obscura_settle_v3.aleo        ← ALEO token settlement
     10 transitions | 4 records | 14 mappings
 
-obscura_settle_stable_v2.aleo ← USDCx + USAD settlement
+obscura_settle_stable_v3.aleo ← USDCx + USAD settlement
     13 transitions | 3 records | 12 mappings
 
 obscura_market_v2.aleo        ← Fixed sales, RFQ, token sales
@@ -116,9 +116,9 @@ Each program has its own mappings, records, and finalize blocks. The frontend co
 
 | Program | Explorer Link |
 |---------|--------------|
-| `obscura_core_v2.aleo` | [View on Explorer](https://testnet.explorer.provable.com/program/obscura_core_v2.aleo) |
-| `obscura_settle_v2.aleo` | [View on Explorer](https://testnet.explorer.provable.com/program/obscura_settle_v2.aleo) |
-| `obscura_settle_stable_v2.aleo` | [View on Explorer](https://testnet.explorer.provable.com/program/obscura_settle_stable_v2.aleo) |
+| `obscura_core_v3.aleo` | [View on Explorer](https://testnet.explorer.provable.com/program/obscura_core_v3.aleo) |
+| `obscura_settle_v3.aleo` | [View on Explorer](https://testnet.explorer.provable.com/program/obscura_settle_v3.aleo) |
+| `obscura_settle_stable_v3.aleo` | [View on Explorer](https://testnet.explorer.provable.com/program/obscura_settle_stable_v3.aleo) |
 | `obscura_market_v2.aleo` | [View on Explorer](https://testnet.explorer.provable.com/program/obscura_market_v2.aleo) |
 
 All programs deployed on Aleo Testnet with `@noupgrade` constructors.

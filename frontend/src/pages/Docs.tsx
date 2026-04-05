@@ -163,7 +163,7 @@ export default function Docs() {
       {/* Architecture */}
       <Section id="architecture" title="Architecture" icon={Layers}>
         <p className="text-gray-400 text-sm mb-4">
-          The protocol is a single Leo program (obscura_core_v2.aleo) with 28 transitions,
+          The protocol is a single Leo program (obscura_core_v3.aleo) with 28 transitions,
           forming an 8-state machine with 4 auction formats. All sensitive operations happen off-chain in ZK circuits.
         </p>
 
@@ -396,7 +396,7 @@ export default function Docs() {
         </p>
         <div className="bg-surface-800/60 rounded-xl p-4 border border-surface-700 font-mono text-sm">
           <p className="text-gray-500 mb-2"># Auction contract (deployed on testnet)</p>
-          <p className="text-accent-400 mb-4">obscura_core_v2.aleo — 28 transitions, 5 records, 16 mappings</p>
+          <p className="text-accent-400 mb-4">obscura_core_v3.aleo — 28 transitions, 5 records, 16 mappings</p>
           <p className="text-gray-500 mb-2"># Build from source</p>
           <div className="text-gray-300 space-y-1">
             <p>cd contracts/obscura_core</p>
