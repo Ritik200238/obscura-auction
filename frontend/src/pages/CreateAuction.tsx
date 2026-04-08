@@ -65,6 +65,9 @@ export default function CreateAuction() {
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null)
   const [startPrice, setStartPrice] = useState('')
   const [endPrice, setEndPrice] = useState('')
+  const [itemCount, setItemCount] = useState(2)
+  const [totalUnits, setTotalUnits] = useState('')
+  const [minPricePerUnit, setMinPricePerUnit] = useState('')
   const [scheduleEnabled, setScheduleEnabled] = useState(false)
   const [scheduleBlocks, setScheduleBlocks] = useState('')
   const [timelockEnabled, setTimelockEnabled] = useState(false)
@@ -273,12 +276,18 @@ export default function CreateAuction() {
     fireAdvancedCalls()
   }, [onChainAuctionId])
 
+  // Modes that use start_price + end_price (Dutch-style descending)
+  const isDutchStyle = auctionMode === AUCTION_MODE.DUTCH || auctionMode === AUCTION_MODE.BLIND_DUTCH
+
+  // Modes that use a single reserve/budget price field
+  const needsReservePrice = !isDutchStyle && auctionMode !== AUCTION_MODE.TIMED_ESCALATION
+
   const validate = (): boolean => {
     if (!title.trim()) {
       setFormError('Item title is required')
       return false
     }
-    if (auctionMode === AUCTION_MODE.DUTCH) {
+    if (isDutchStyle) {
       if (!startPrice || parseFloat(startPrice) <= 0) {
         setFormError('Starting price must be greater than 0')
         return false
@@ -291,14 +300,45 @@ export default function CreateAuction() {
         setFormError('Starting price must be higher than floor price')
         return false
       }
+    } else if (auctionMode === AUCTION_MODE.TIMED_ESCALATION) {
+      if (!startPrice || parseFloat(startPrice) <= 0) {
+        setFormError('Starting price must be greater than 0')
+        return false
+      }
+      const micros = Math.floor(parseFloat(startPrice) * 1_000_000)
+      if (micros < 1000) {
+        setFormError('Minimum starting price is 0.001 (1000 microcredits)')
+        return false
+      }
     } else {
       if (!reservePrice || parseFloat(reservePrice) <= 0) {
-        setFormError('Reserve price must be greater than 0')
+        setFormError(auctionMode === AUCTION_MODE.REVERSE ? 'Maximum budget must be greater than 0' : 'Reserve price must be greater than 0')
         return false
       }
       const micros = Math.floor(parseFloat(reservePrice) * 1_000_000)
       if (micros < 1000) {
-        setFormError('Minimum reserve price is 0.001 (1000 microcredits)')
+        setFormError(auctionMode === AUCTION_MODE.REVERSE ? 'Minimum budget is 0.001 (1000 microcredits)' : 'Minimum reserve price is 0.001 (1000 microcredits)')
+        return false
+      }
+    }
+    if (auctionMode === AUCTION_MODE.BUNDLE) {
+      if (itemCount < 2 || itemCount > 4) {
+        setFormError('Bundle item count must be between 2 and 4')
+        return false
+      }
+    }
+    if (auctionMode === AUCTION_MODE.MULTI_UNIT) {
+      if (!totalUnits || parseInt(totalUnits, 10) < 1) {
+        setFormError('Total units must be at least 1')
+        return false
+      }
+      if (!minPricePerUnit || parseFloat(minPricePerUnit) <= 0) {
+        setFormError('Minimum price per unit must be greater than 0')
+        return false
+      }
+      const minMicros = Math.floor(parseFloat(minPricePerUnit) * 1_000_000)
+      if (minMicros < 1000) {
+        setFormError('Minimum price per unit is 0.001 (1000 microcredits)')
         return false
       }
     }
@@ -356,7 +396,96 @@ export default function CreateAuction() {
           ],
           onChainVerify,
         })
+      } else if (auctionMode === AUCTION_MODE.BUNDLE) {
+        const reserveMicros = toMicrocredits(parseFloat(reservePrice))
+        result = await execute({
+          functionName: 'create_bundle_auction',
+          inputs: [
+            itemHash,
+            `${category}u8`,
+            `${reserveMicros}u128`,
+            `${itemCount}u8`,
+            `${tokenType}u8`,
+            nonce,
+            `${deadlineHeight}u64`,
+          ],
+          onChainVerify,
+        })
+      } else if (auctionMode === AUCTION_MODE.MULTI_UNIT) {
+        const minPriceMicros = toMicrocredits(parseFloat(minPricePerUnit))
+        result = await execute({
+          functionName: 'create_multi_unit_auction',
+          inputs: [
+            itemHash,
+            `${category}u8`,
+            `${parseInt(totalUnits, 10)}u64`,
+            `${minPriceMicros}u128`,
+            `${tokenType}u8`,
+            nonce,
+            `${deadlineHeight}u64`,
+          ],
+          onChainVerify,
+        })
+      } else if (auctionMode === AUCTION_MODE.CANDLE) {
+        const reserveMicros = toMicrocredits(parseFloat(reservePrice))
+        result = await execute({
+          functionName: 'create_candle_auction',
+          inputs: [
+            itemHash,
+            `${category}u8`,
+            `${reserveMicros}u128`,
+            `${tokenType}u8`,
+            nonce,
+            `${deadlineHeight}u64`,
+          ],
+          onChainVerify,
+        })
+      } else if (auctionMode === AUCTION_MODE.REVERSE) {
+        const budgetMicros = toMicrocredits(parseFloat(reservePrice))
+        result = await execute({
+          functionName: 'create_reverse_auction',
+          inputs: [
+            itemHash,
+            `${category}u8`,
+            `${budgetMicros}u128`,
+            `${tokenType}u8`,
+            nonce,
+            `${deadlineHeight}u64`,
+          ],
+          onChainVerify,
+        })
+      } else if (auctionMode === AUCTION_MODE.BLIND_DUTCH) {
+        const startMicros = Math.floor(parseFloat(startPrice) * 1_000_000)
+        const endMicros = Math.floor(parseFloat(endPrice) * 1_000_000)
+        result = await execute({
+          functionName: 'create_blind_dutch',
+          inputs: [
+            itemHash,
+            `${category}u8`,
+            `${startMicros}u128`,
+            `${endMicros}u128`,
+            `${tokenType}u8`,
+            nonce,
+            `${deadlineHeight}u64`,
+          ],
+          onChainVerify,
+        })
+      } else if (auctionMode === AUCTION_MODE.TIMED_ESCALATION) {
+        const startMicros = Math.floor(parseFloat(startPrice) * 1_000_000)
+        result = await execute({
+          functionName: 'create_timed_escalation',
+          inputs: [
+            itemHash,
+            `${category}u8`,
+            `${startMicros}u128`,
+            `${tokenType}u8`,
+            nonce,
+            `${deadlineHeight}u64`,
+          ],
+          onChainVerify,
+        })
       } else {
+        // Modes 1 (First-Price), 2 (Vickrey), 4 (English)
         const reserveMicros = toMicrocredits(parseFloat(reservePrice))
         result = await execute({
           functionName: 'create_auction',
@@ -569,6 +698,18 @@ export default function CreateAuction() {
             ? 'Price descends from your starting price. The first buyer to accept wins instantly.'
             : auctionMode === AUCTION_MODE.ENGLISH
             ? 'Open ascending bids. Each bid must beat the current highest. Anti-sniping protection included.'
+            : auctionMode === AUCTION_MODE.BUNDLE
+            ? 'Sell 2-4 items as a package. Bidders compete on the entire bundle with sealed bids.'
+            : auctionMode === AUCTION_MODE.MULTI_UNIT
+            ? 'Sell N identical units. Bidders specify quantity and price per unit. Highest bidders allocated first.'
+            : auctionMode === AUCTION_MODE.CANDLE
+            ? 'Like sealed-bid but ends at a random block. Prevents last-second sniping entirely.'
+            : auctionMode === AUCTION_MODE.REVERSE
+            ? 'Post a request with a maximum budget. Sellers compete by bidding down. Lowest bid wins.'
+            : auctionMode === AUCTION_MODE.BLIND_DUTCH
+            ? 'Price drops every block but nobody sees it. Submit sealed guesses. First correct guess wins.'
+            : auctionMode === AUCTION_MODE.TIMED_ESCALATION
+            ? 'Price auto-increments every 10 minutes. Bid above the current price to lead. Last bidder wins.'
             : 'All bid amounts remain encrypted until the reveal phase.'}
         </p>
       </div>
@@ -581,7 +722,7 @@ export default function CreateAuction() {
       <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
         {[
           { num: 1, label: 'Item Details', icon: Gavel, done: !!title.trim() },
-          { num: 2, label: 'Auction Settings', icon: Info, done: auctionMode === AUCTION_MODE.DUTCH ? (!!startPrice && !!endPrice && parseFloat(startPrice) > 0 && parseFloat(endPrice) > 0) : (!!reservePrice && parseFloat(reservePrice) > 0) },
+          { num: 2, label: 'Auction Settings', icon: Info, done: isDutchStyle ? (!!startPrice && !!endPrice && parseFloat(startPrice) > 0 && parseFloat(endPrice) > 0) : auctionMode === AUCTION_MODE.TIMED_ESCALATION ? (!!startPrice && parseFloat(startPrice) > 0) : (!!reservePrice && parseFloat(reservePrice) > 0) },
           { num: 3, label: 'Review & Create', icon: CheckCircle, done: false },
         ].map((step, i) => (
           <div key={step.num} className="flex items-center gap-2 shrink-0">
@@ -766,7 +907,7 @@ export default function CreateAuction() {
 
           <div className="space-y-4">
             {/* Price fields — mode-aware */}
-            {auctionMode === AUCTION_MODE.DUTCH ? (
+            {isDutchStyle ? (
               <>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1.5 font-medium">Starting Price</label>
@@ -785,22 +926,96 @@ export default function CreateAuction() {
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">{tokenLabel}</span>
                   </div>
                   <p className="text-xs text-gray-600 mt-1">
-                    The lowest price. Price drops linearly from starting to floor over the auction duration. First buyer to accept wins instantly.
+                    {auctionMode === AUCTION_MODE.BLIND_DUTCH
+                      ? 'The lowest price. Price drops but is hidden from bidders. First sealed bid matching the current price wins.'
+                      : 'The lowest price. Price drops linearly from starting to floor over the auction duration. First buyer to accept wins instantly.'}
                   </p>
                 </div>
               </>
+            ) : auctionMode === AUCTION_MODE.TIMED_ESCALATION ? (
+              <div>
+                <label className="block text-sm text-gray-400 mb-1.5 font-medium">Starting Price</label>
+                <div className="relative">
+                  <input type="number" value={startPrice} onChange={(e) => setStartPrice(e.target.value)}
+                    placeholder="0.00" min="0.001" step="0.001" className="input-field pr-20" />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">{tokenLabel}</span>
+                </div>
+                <p className="text-xs text-gray-600 mt-1">
+                  The initial price. Auto-increments every 10 minutes. Bidders must bid above the current escalated price.
+                </p>
+              </div>
             ) : (
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5 font-medium">Reserve Price</label>
+                <label className="block text-sm text-gray-400 mb-1.5 font-medium">
+                  {auctionMode === AUCTION_MODE.REVERSE ? 'Maximum Budget' : 'Reserve Price'}
+                </label>
                 <div className="relative">
                   <input type="number" value={reservePrice} onChange={(e) => setReservePrice(e.target.value)}
                     placeholder="0.00" min="0.001" step="0.001" className="input-field pr-20" />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">{tokenLabel}</span>
                 </div>
                 <p className="text-xs text-gray-600 mt-1">
-                  Stored encrypted on-chain. Disclosed only after all bids are revealed.
+                  {auctionMode === AUCTION_MODE.REVERSE
+                    ? 'The maximum you are willing to pay. Sellers bid below this amount. Lowest bid wins.'
+                    : 'Stored encrypted on-chain. Disclosed only after all bids are revealed.'}
                 </p>
               </div>
+            )}
+
+            {/* Bundle: item count */}
+            {auctionMode === AUCTION_MODE.BUNDLE && (
+              <div>
+                <label className="block text-sm text-gray-400 mb-1.5 font-medium">Items in Bundle</label>
+                <input
+                  type="number"
+                  value={itemCount}
+                  onChange={(e) => setItemCount(Math.min(4, Math.max(2, parseInt(e.target.value, 10) || 2)))}
+                  min={2}
+                  max={4}
+                  className="input-field"
+                />
+                <p className="text-xs text-gray-600 mt-1">
+                  How many items are included in this bundle (2-4). Bidders bid on the entire package.
+                </p>
+              </div>
+            )}
+
+            {/* Multi-Unit: total units + min price per unit */}
+            {auctionMode === AUCTION_MODE.MULTI_UNIT && (
+              <>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1.5 font-medium">Total Units</label>
+                  <input
+                    type="number"
+                    value={totalUnits}
+                    onChange={(e) => setTotalUnits(e.target.value)}
+                    placeholder="e.g., 100"
+                    min={1}
+                    className="input-field"
+                  />
+                  <p className="text-xs text-gray-600 mt-1">
+                    The total number of identical units available for sale.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1.5 font-medium">Minimum Price Per Unit</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={minPricePerUnit}
+                      onChange={(e) => setMinPricePerUnit(e.target.value)}
+                      placeholder="0.00"
+                      min="0.001"
+                      step="0.001"
+                      className="input-field pr-20"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">{tokenLabel}</span>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Bids below this price per unit will be rejected. Highest bidders are allocated first.
+                  </p>
+                </div>
+              </>
             )}
 
             {/* Token Type — options adapt to auction mode */}
@@ -835,20 +1050,22 @@ export default function CreateAuction() {
                   )
                 })}
               </div>
-              {(auctionMode === AUCTION_MODE.DUTCH || auctionMode === AUCTION_MODE.ENGLISH) && (
+              {auctionMode !== AUCTION_MODE.FIRST_PRICE && auctionMode !== AUCTION_MODE.VICKREY && (
                 <p className="text-[10px] text-gray-600 mt-1.5">USAD is available for Sealed Bid and Vickrey modes only.</p>
               )}
             </div>
 
-            {/* Auction Mode — 4 formats */}
+            {/* Auction Mode — 6 primary + 4 advanced */}
             <div>
               <label className="block text-sm text-gray-400 mb-2 font-medium">Auction Format</label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {([
                   { mode: AUCTION_MODE.FIRST_PRICE, label: 'Sealed Bid', icon: '🔒', badge: null },
-                  { mode: AUCTION_MODE.VICKREY, label: 'Vickrey', icon: '💡', badge: 'FIRST ON ALEO' },
-                  { mode: AUCTION_MODE.DUTCH, label: 'Dutch', icon: '📉', badge: 'NEW' },
-                  { mode: AUCTION_MODE.ENGLISH, label: 'English', icon: '📈', badge: 'NEW' },
+                  { mode: AUCTION_MODE.VICKREY, label: 'Vickrey', icon: '💡', badge: 'UNIQUE' },
+                  { mode: AUCTION_MODE.DUTCH, label: 'Dutch', icon: '📉', badge: null },
+                  { mode: AUCTION_MODE.ENGLISH, label: 'English', icon: '📈', badge: null },
+                  { mode: AUCTION_MODE.BUNDLE, label: 'Bundle', icon: '📦', badge: 'NEW' },
+                  { mode: AUCTION_MODE.REVERSE, label: 'Reverse', icon: '🔄', badge: 'NEW' },
                 ] as const).map((m) => (
                   <button
                     key={m.mode}
@@ -874,6 +1091,39 @@ export default function CreateAuction() {
                   </button>
                 ))}
               </div>
+
+              {/* Advanced modes toggle */}
+              <details className="mt-2">
+                <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400 transition-colors">
+                  + 4 more advanced formats
+                </summary>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                  {([
+                    { mode: AUCTION_MODE.MULTI_UNIT, label: 'Multi-Unit', icon: '🔢' },
+                    { mode: AUCTION_MODE.CANDLE, label: 'Candle', icon: '🕯️' },
+                    { mode: AUCTION_MODE.BLIND_DUTCH, label: 'Blind Dutch', icon: '🙈' },
+                    { mode: AUCTION_MODE.TIMED_ESCALATION, label: 'Escalation', icon: '⏫' },
+                  ] as const).map((m) => (
+                    <button
+                      key={m.mode}
+                      type="button"
+                      onClick={() => setAuctionMode(m.mode)}
+                      className={`p-2.5 rounded-lg border text-left transition-all ${
+                        auctionMode === m.mode
+                          ? 'border-accent-500 bg-accent-500/10'
+                          : 'border-surface-700 bg-surface-800 hover:border-surface-600'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm">{m.icon}</span>
+                        <p className={`text-xs font-medium ${
+                          auctionMode === m.mode ? 'text-accent-400' : 'text-gray-300'
+                        }`}>{m.label}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </details>
 
               {/* Mode description */}
               <div className="mt-2 p-2.5 rounded-lg bg-surface-800/60 border border-surface-700/50">
@@ -1039,6 +1289,30 @@ export default function CreateAuction() {
                 <li>- Bidder identities remain private through hashed commitments</li>
                 <li>- Anti-sniping timer prevents last-second manipulation</li>
               </>
+            ) : auctionMode === AUCTION_MODE.BLIND_DUTCH ? (
+              <>
+                <li>- Current price is hidden from all participants — maximum privacy</li>
+                <li>- Bids are sealed; only a matching bid triggers settlement</li>
+                <li>- Bidder identities are protected through hashed commitments</li>
+              </>
+            ) : auctionMode === AUCTION_MODE.CANDLE ? (
+              <>
+                <li>- Random end time prevents sniping — nobody knows the final block</li>
+                <li>- All bid amounts are sealed in encrypted records</li>
+                <li>- Bidder identities are never revealed to other participants</li>
+              </>
+            ) : auctionMode === AUCTION_MODE.REVERSE ? (
+              <>
+                <li>- Budget is hashed on-chain (only you know the maximum)</li>
+                <li>- Seller bids are sealed — competitors cannot undercut strategically</li>
+                <li>- Bidder identities are never revealed to other participants</li>
+              </>
+            ) : auctionMode === AUCTION_MODE.TIMED_ESCALATION ? (
+              <>
+                <li>- Current leader is tracked by hash — identity stays private</li>
+                <li>- Escalation price is public but bidder amounts are sealed</li>
+                <li>- Final settlement reveals only the winning amount</li>
+              </>
             ) : (
               <>
                 <li>- Reserve price is hashed on-chain (only you know the exact amount)</li>
@@ -1068,7 +1342,7 @@ export default function CreateAuction() {
             <div><span className="text-gray-500">Title: </span><span className="text-white truncate">{title.trim() || '—'}</span></div>
             <div><span className="text-gray-500">Mode: </span><span className="text-white">{modeLabel}</span></div>
             <div><span className="text-gray-500">Token: </span><span className="text-white">{tokenLabel}</span></div>
-            <div><span className="text-gray-500">Reserve: </span><span className="text-white font-mono">{reservePrice || '—'}</span></div>
+            <div><span className="text-gray-500">{auctionMode === AUCTION_MODE.REVERSE ? 'Budget' : isDutchStyle || auctionMode === AUCTION_MODE.TIMED_ESCALATION ? 'Start' : 'Reserve'}: </span><span className="text-white font-mono">{isDutchStyle || auctionMode === AUCTION_MODE.TIMED_ESCALATION ? (startPrice || '—') : (reservePrice || '—')}</span></div>
             <div className="col-span-2 flex items-center gap-1.5">
               <span className="text-gray-500">Privacy: </span>
               <PrivacyScore auctionMode={auctionMode} tokenType={tokenType} size="sm" />
@@ -1157,9 +1431,11 @@ export default function CreateAuction() {
             {/* Preview details */}
             <div className="mt-4 space-y-2 text-xs">
               <div className="flex justify-between">
-                <span className="text-gray-500">Reserve</span>
+                <span className="text-gray-500">{auctionMode === AUCTION_MODE.REVERSE ? 'Budget' : isDutchStyle || auctionMode === AUCTION_MODE.TIMED_ESCALATION ? 'Start Price' : 'Reserve'}</span>
                 <span className="text-white font-mono">
-                  {reservePrice ? `${reservePrice} ${tokenLabel}` : '—'}
+                  {isDutchStyle || auctionMode === AUCTION_MODE.TIMED_ESCALATION
+                    ? (startPrice ? `${startPrice} ${tokenLabel}` : '—')
+                    : (reservePrice ? `${reservePrice} ${tokenLabel}` : '—')}
                 </span>
               </div>
               <div className="flex justify-between">

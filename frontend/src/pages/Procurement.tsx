@@ -88,8 +88,8 @@ export default function Procurement() {
         ids.map(async (rfqId) => {
           const key = rfqId.endsWith('field') ? rfqId : `${rfqId}field`
           const [raw, countRaw] = await Promise.all([
-            fetchMapping('rfq_configs', key),
-            fetchMapping('rfq_quote_count', key),
+            fetchMapping('rfq_configs', key, config.marketProgramId),
+            fetchMapping('rfq_quote_count', key, config.marketProgramId),
           ])
           if (!raw) return null
           const parsed = parseRFQ(raw, rfqId)

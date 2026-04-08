@@ -97,7 +97,7 @@ export default function FixedSales() {
       const results = await Promise.allSettled(
         ids.map(async (saleId) => {
           const key = saleId.endsWith('field') ? saleId : `${saleId}field`
-          const raw = await fetchMapping('fixed_sales', key)
+          const raw = await fetchMapping('fixed_sales', key, config.marketProgramId)
           if (!raw) return null
           return parseFixedSale(raw, saleId)
         })

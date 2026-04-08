@@ -56,6 +56,12 @@ import { ShimmerDetail } from '@/components/shared/Shimmer'
 import BidPanel from '@/components/auction/BidPanel'
 import DutchBidPanel from '@/components/auction/DutchBidPanel'
 import EnglishBidPanel from '@/components/auction/EnglishBidPanel'
+import BundleBidPanel from '@/components/auction/BundleBidPanel'
+import MultiUnitBidPanel from '@/components/auction/MultiUnitBidPanel'
+import CandleBidPanel from '@/components/auction/CandleBidPanel'
+import ReverseBidPanel from '@/components/auction/ReverseBidPanel'
+import BlindDutchBidPanel from '@/components/auction/BlindDutchBidPanel'
+import TimedEscalationBidPanel from '@/components/auction/TimedEscalationBidPanel'
 import RevealPanel from '@/components/auction/RevealPanel'
 import ClaimPanel from '@/components/auction/ClaimPanel'
 import RefundPanel from '@/components/auction/RefundPanel'
@@ -499,6 +505,18 @@ export default function AuctionDetail() {
                 <DutchBidPanel auction={auction} onBidConfirmed={handleTxConfirmed} />
               ) : auction.auction_mode === AUCTION_MODE.ENGLISH ? (
                 <EnglishBidPanel auction={auction} highestBid={Number(highestBid)} onBidConfirmed={handleTxConfirmed} />
+              ) : auction.auction_mode === AUCTION_MODE.BUNDLE ? (
+                <BundleBidPanel auction={auction} onBidConfirmed={handleTxConfirmed} />
+              ) : auction.auction_mode === AUCTION_MODE.MULTI_UNIT ? (
+                <MultiUnitBidPanel auction={auction} onBidConfirmed={handleTxConfirmed} />
+              ) : auction.auction_mode === AUCTION_MODE.CANDLE ? (
+                <CandleBidPanel auction={auction} onBidConfirmed={handleTxConfirmed} />
+              ) : auction.auction_mode === AUCTION_MODE.REVERSE ? (
+                <ReverseBidPanel auction={auction} onBidConfirmed={handleTxConfirmed} />
+              ) : auction.auction_mode === AUCTION_MODE.BLIND_DUTCH ? (
+                <BlindDutchBidPanel auction={auction} onBidConfirmed={handleTxConfirmed} />
+              ) : auction.auction_mode === AUCTION_MODE.TIMED_ESCALATION ? (
+                <TimedEscalationBidPanel auction={auction} onBidConfirmed={handleTxConfirmed} />
               ) : (
                 <BidPanel auction={auction} onBidConfirmed={handleTxConfirmed} />
               )}
