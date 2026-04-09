@@ -21,6 +21,8 @@
     "@provablehq/aleo-wallet-adaptor-shield": "^0.3.0-alpha.3",
     "@provablehq/aleo-wallet-adaptor-soter": "^0.3.0-alpha.3",
     "@provablehq/sdk": "^0.9.17",
+    "@splinetool/react-spline": "^4.1.0",
+    "@splinetool/runtime": "^1.12.78",
     "clsx": "^2.1.1",
     "framer-motion": "^12.35.2",
     "lucide-react": "^0.577.0",
