@@ -28,6 +28,10 @@ const MODE_CHIP: Record<number, { bg: string; text: string; label: string }> = {
   [AUCTION_MODE.ENGLISH]: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: 'English' },
   [AUCTION_MODE.BUNDLE]: { bg: 'bg-cyan-500/10', text: 'text-cyan-400', label: 'Bundle' },
   [AUCTION_MODE.MULTI_UNIT]: { bg: 'bg-blue-500/10', text: 'text-blue-400', label: 'Multi-Unit' },
+  [AUCTION_MODE.CANDLE]: { bg: 'bg-amber-500/10', text: 'text-amber-400', label: 'Candle' },
+  [AUCTION_MODE.REVERSE]: { bg: 'bg-rose-500/10', text: 'text-rose-400', label: 'Reverse' },
+  [AUCTION_MODE.BLIND_DUTCH]: { bg: 'bg-indigo-500/10', text: 'text-indigo-400', label: 'Blind Dutch' },
+  [AUCTION_MODE.TIMED_ESCALATION]: { bg: 'bg-pink-500/10', text: 'text-pink-400', label: 'Escalation' },
 }
 
 /** Status dot + text color */

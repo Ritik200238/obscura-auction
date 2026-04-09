@@ -50,7 +50,7 @@ export default function Footer() {
           {/* Bottom row */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-white/[0.04]">
             <span className="font-mono text-[11px] text-gray-600 tracking-wide">
-              4 programs &middot; 52 transitions &middot; 10 records
+              4 programs &middot; 67 transitions &middot; 10 records
             </span>
             <div className="flex items-center gap-3 text-[11px] text-gray-600">
               <span className="flex items-center gap-1.5">
