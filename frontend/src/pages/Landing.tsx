@@ -1,8 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion, useInView, animate } from 'framer-motion'
-import { Suspense, lazy, useRef, useEffect, useState, useMemo } from 'react'
-
-const Spline = lazy(() => import('@splinetool/react-spline'))
+import { useRef, useEffect, useState, useMemo } from 'react'
 import { fadeInUp, staggerContainer, scaleIn } from '@/lib/animations'
 import { config } from '@/lib/config'
 import {
@@ -730,12 +728,6 @@ export default function Landing() {
           HERO SECTION — Full viewport
           ═══════════════════════════════════════ */}
       <section className="relative min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
-        {/* 3D Spline background */}
-        <div className="absolute inset-0 z-0 opacity-40 pointer-events-none">
-          <Suspense fallback={null}>
-            <Spline scene="https://prod.spline.design/PyzDhpQ9E5f1E3MT/scene.splinecode" className="w-full h-full" />
-          </Suspense>
-        </div>
         <div className="absolute inset-0 mesh-gradient" />
         <div className="absolute inset-0 dot-grid opacity-30" />
         <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-surface-950 to-transparent" />
