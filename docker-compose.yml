@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - EXPLORER_API=https://api.explorer.provable.com/v1
+      - PROGRAM_ID=obscura_core_v3.aleo
+    restart: unless-stopped
