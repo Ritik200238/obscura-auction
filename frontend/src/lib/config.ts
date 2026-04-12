@@ -1,6 +1,6 @@
 export const config = {
   // 4-program architecture (verified on testnet 2026-04-12)
-  programId: 'obscura_core_v3.aleo',                        // Core: auction lifecycle + bidding
+  programId: 'obscura_core_v4.aleo',                        // Core: auction lifecycle + bidding
   settleProgramId: 'obscura_settle_v6.aleo',                // Settle v4: privacy-hardened ALEO paths (revealed_bids bool only)
   settleStableProgramId: 'obscura_settle_stable_v4.aleo',   // Settle Stable v4: privacy-hardened USDCx + USAD (pending deploy)
   marketProgramId: 'obscura_market_v2.aleo',                // Market: fixed sales + RFQ + token sales

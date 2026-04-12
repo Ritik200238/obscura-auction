@@ -22,7 +22,7 @@ services:
       - key: EXPLORER_API
         value: https://api.explorer.provable.com/v1
       - key: PROGRAM_ID
-        value: obscura_core_v3.aleo
+        value: obscura_core_v4.aleo
       - key: SETTLE_PROGRAM_ID
         value: obscura_settle_v6.aleo
       - key: MARKET_PROGRAM_ID
@@ -43,7 +43,7 @@ services:
       - key: ENDPOINT
         value: https://api.explorer.provable.com/v1
       - key: PROGRAM_ID
-        value: obscura_core_v3.aleo
+        value: obscura_core_v4.aleo
       - key: SETTLE_PROGRAM_ID
         value: obscura_settle_v6.aleo
       - key: MARKET_PROGRAM_ID

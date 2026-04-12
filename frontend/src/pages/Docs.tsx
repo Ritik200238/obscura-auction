@@ -163,7 +163,7 @@ export default function Docs() {
       {/* Architecture */}
       <Section id="architecture" title="Architecture" icon={Layers}>
         <p className="text-gray-400 text-sm mb-4">
-          The protocol is a 4-program architecture: obscura_core_v3.aleo (29 transitions) handles auction
+          The protocol is a 4-program architecture: obscura_core_v4.aleo (29 transitions) handles auction
           lifecycle, obscura_settle_v6.aleo handles ALEO settlement with hardened privacy (revealed_bids
           stores hash commitments only), obscura_settle_stable_v4.aleo handles USDCx/USAD, and
           obscura_market_v2.aleo handles fixed sales + RFQ. Forms an 8-state machine with 10 auction formats.
@@ -399,7 +399,7 @@ export default function Docs() {
         </p>
         <div className="bg-surface-800/60 rounded-xl p-4 border border-surface-700 font-mono text-sm">
           <p className="text-gray-500 mb-2"># 4 programs deployed on testnet</p>
-          <p className="text-accent-400 mb-1">obscura_core_v3.aleo — 29 functions (auction lifecycle, 10 formats, Merkle gating)</p>
+          <p className="text-accent-400 mb-1">obscura_core_v4.aleo — 29 functions (auction lifecycle, 10 formats, Merkle gating)</p>
           <p className="text-accent-400 mb-1">obscura_settle_v6.aleo — 10 functions (ALEO escrow, commit-based settlements)</p>
           <p className="text-accent-400 mb-1">obscura_settle_stable_v4.aleo — 13 functions (USDCx + USAD settlements)</p>
           <p className="text-accent-400 mb-4">obscura_market_v2.aleo — 15 functions (fixed sales, RFQ, token sales)</p>

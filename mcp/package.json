@@ -1,0 +1,52 @@
+{
+  "name": "obscura-aleo-mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server for Obscura — lets AI agents (Claude Desktop, ChatGPT, etc.) create, bid on, and settle private auctions on Aleo. First auction protocol with native AI-agent integration.",
+  "main": "dist/index.js",
+  "bin": {
+    "obscura-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "aleo",
+    "auction",
+    "privacy",
+    "zero-knowledge",
+    "ai-agent",
+    "claude-desktop",
+    "obscura"
+  ],
+  "author": "Obscura",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ritik200238/obscura-auction.git"
+  },
+  "homepage": "https://obscura-auction-95hm.vercel.app",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "obscura-aleo-sdk": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.0",
+    "typescript": "~5.9.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

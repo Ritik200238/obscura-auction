@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import { logger } from './logger';
 
 const EXPLORER_API = process.env.EXPLORER_API || 'https://api.explorer.provable.com/v1';
-const PROGRAM_ID = process.env.PROGRAM_ID || 'obscura_core_v3.aleo';
+const PROGRAM_ID = process.env.PROGRAM_ID || 'obscura_core_v4.aleo';
 const SETTLE_PROGRAM_ID = process.env.SETTLE_PROGRAM_ID || 'obscura_settle_v6.aleo';
 const MARKET_PROGRAM_ID = process.env.MARKET_PROGRAM_ID || 'obscura_market_v2.aleo';
 

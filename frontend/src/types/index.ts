@@ -1,5 +1,5 @@
 // 4-program architecture — verified on testnet 2026-04-12 (Rule 0)
-export const PROGRAM_ID = 'obscura_core_v3.aleo'                        // Core auction engine
+export const PROGRAM_ID = 'obscura_core_v4.aleo'                        // Core auction engine
 export const SETTLE_PROGRAM_ID = 'obscura_settle_v6.aleo'               // ALEO v4 — privacy-hardened (revealed_bids bool)
 export const SETTLE_STABLE_PROGRAM_ID = 'obscura_settle_stable_v4.aleo' // USDCx+USAD v4 — privacy-hardened (pending deploy)
 export const MARKET_PROGRAM_ID = 'obscura_market_v2.aleo'               // Marketplace extensions
