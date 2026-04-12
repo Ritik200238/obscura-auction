@@ -1,7 +1,7 @@
 {
   "name": "obscura-aleo-sdk",
-  "version": "0.4.0",
-  "description": "TypeScript SDK for Obscura — privacy-first sealed-bid auction protocol on Aleo. 10 auction formats (Sealed, Vickrey, Dutch, English, Bundle, Multi-Unit, Candle, Reverse, Blind Dutch, Timed Escalation). v4 hardened with hash-commitment mappings.",
+  "version": "0.5.0",
+  "description": "TypeScript SDK for Obscura — privacy-first sealed-bid auction protocol on Aleo. 10 auction formats (Sealed, Vickrey, Dutch, English, Bundle, Multi-Unit, Candle, Reverse, Blind Dutch, Timed Escalation). v6: commit-based settlements, BidderParticipationProof + AuctionCompletionProof records, post-settle cleanup.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -44,5 +44,5 @@
   },
   "engines": {
     "node": ">=18"
-  },
+  }
 }

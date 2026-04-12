@@ -1,0 +1,9 @@
+{
+  "program": "obscura_core_v4.aleo",
+  "version": "0.1.0",
+  "description": "Obscura Core v4 — finalize-min + Mapping::remove post-settle + 20-level Merkle + reputation counters removed. The final privacy push.",
+  "license": "MIT",
+  "leo": "4.0.0",
+  "dependencies": null,
+  "dev_dependencies": null
+}

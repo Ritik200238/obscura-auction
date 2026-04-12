@@ -2,7 +2,7 @@
 
 > Bids are invisible. Identities never touch the chain. Winners prove ownership without revealing what they paid. **The auction protocol that treats privacy as architecture, not a feature.**
 
-**[Live Demo](https://obscura-auction-95hm.vercel.app)** · **[Core Contract](https://testnet.explorer.provable.com/program/obscura_core_v3.aleo)** · **[Settlement](https://testnet.explorer.provable.com/program/obscura_settle_v4.aleo)** · **[Marketplace](https://testnet.explorer.provable.com/program/obscura_market_v2.aleo)** · Shield Wallet Required
+**[Live Demo](https://obscura-auction-95hm.vercel.app)** · **[Core Contract](https://testnet.explorer.provable.com/program/obscura_core_v3.aleo)** · **[Settlement](https://testnet.explorer.provable.com/program/obscura_settle_v6.aleo)** · **[Marketplace](https://testnet.explorer.provable.com/program/obscura_market_v2.aleo)** · Shield Wallet Required
 
 ---
 
@@ -70,7 +70,7 @@ For stablecoin paths (USDCx/USAD), `transfer_public_as_signer` exposes both send
 obscura_core_v3.aleo          ← Auction lifecycle, bidding, 10 formats
     ↑                            29 transitions | 5 records | 23 mappings
     │ imports
-obscura_settle_v4.aleo        ← ALEO token settlement
+obscura_settle_v6.aleo        ← ALEO token settlement
     10 transitions | 4 records | 14 mappings
 
 obscura_settle_stable_v4.aleo ← USDCx + USAD settlement
@@ -119,7 +119,7 @@ All 4 programs deployed on Aleo Testnet with `@noupgrade` constructors. Verified
 | Program | Deploy TX | Size | Explorer |
 |---------|-----------|------|----------|
 | `obscura_core_v3.aleo` | (Wave 3) | — | [View](https://testnet.explorer.provable.com/program/obscura_core_v3.aleo) |
-| `obscura_settle_v4.aleo` ✨ | `at1s8smny0vmfecegp8gh0qefdw3mcqgwccvl4vtqxxpy5dp8k3j5gs9yher0` | 17.76 KB | [View](https://testnet.explorer.provable.com/program/obscura_settle_v4.aleo) |
+| `obscura_settle_v6.aleo` ✨ | `at1s8smny0vmfecegp8gh0qefdw3mcqgwccvl4vtqxxpy5dp8k3j5gs9yher0` | 17.76 KB | [View](https://testnet.explorer.provable.com/program/obscura_settle_v6.aleo) |
 | `obscura_settle_stable_v4.aleo` ✨ | `at1uln0ruxy2k3v47lkrl0nawxpetphjujgws6cxt0m9uw4x4ar3srqmcapu9` | 24.96 KB | [View](https://testnet.explorer.provable.com/program/obscura_settle_stable_v4.aleo) |
 | `obscura_market_v2.aleo` | (previous wave) | — | [View](https://testnet.explorer.provable.com/program/obscura_market_v2.aleo) |
 

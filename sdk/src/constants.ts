@@ -1,7 +1,7 @@
 // Mirrors the on-chain constants across 3 Obscura programs.
 
 export const PROGRAM_ID = 'obscura_core_v3.aleo';
-export const SETTLE_PROGRAM_ID = 'obscura_settle_v4.aleo';
+export const SETTLE_PROGRAM_ID = 'obscura_settle_v6.aleo';
 export const MARKET_PROGRAM_ID = 'obscura_market_v2.aleo';
 
 export const STATUS = {

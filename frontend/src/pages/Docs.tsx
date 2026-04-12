@@ -164,7 +164,7 @@ export default function Docs() {
       <Section id="architecture" title="Architecture" icon={Layers}>
         <p className="text-gray-400 text-sm mb-4">
           The protocol is a 4-program architecture: obscura_core_v3.aleo (29 transitions) handles auction
-          lifecycle, obscura_settle_v4.aleo handles ALEO settlement with hardened privacy (revealed_bids
+          lifecycle, obscura_settle_v6.aleo handles ALEO settlement with hardened privacy (revealed_bids
           stores hash commitments only), obscura_settle_stable_v4.aleo handles USDCx/USAD, and
           obscura_market_v2.aleo handles fixed sales + RFQ. Forms an 8-state machine with 10 auction formats.
           All sensitive operations happen off-chain in ZK circuits.

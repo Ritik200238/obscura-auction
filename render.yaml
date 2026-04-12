@@ -24,7 +24,7 @@ services:
       - key: PROGRAM_ID
         value: obscura_core_v3.aleo
       - key: SETTLE_PROGRAM_ID
-        value: obscura_settle_v4.aleo
+        value: obscura_settle_v6.aleo
       - key: MARKET_PROGRAM_ID
         value: obscura_market_v2.aleo
 
@@ -45,7 +45,7 @@ services:
       - key: PROGRAM_ID
         value: obscura_core_v3.aleo
       - key: SETTLE_PROGRAM_ID
-        value: obscura_settle_v4.aleo
+        value: obscura_settle_v6.aleo
       - key: MARKET_PROGRAM_ID
         value: obscura_market_v2.aleo
       - key: POLL_INTERVAL

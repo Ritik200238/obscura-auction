@@ -1,0 +1,21 @@
+{
+  "program": "obscura_settle_v5.aleo",
+  "version": "0.1.0",
+  "description": "Obscura Settlement v5 — Mapping::remove post-settle + BidderParticipationProof + AuctionCompletionProof. Privacy + novel primitives beyond Fairdrop/Veiled Markets floor.",
+  "license": "MIT",
+  "leo": "4.0.0",
+  "dependencies": [
+    {
+      "name": "obscura_core_v3.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    },
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    }
+  ]
+}

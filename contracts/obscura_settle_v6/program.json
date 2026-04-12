@@ -1,0 +1,21 @@
+{
+  "program": "obscura_settle_v6.aleo",
+  "version": "0.1.0",
+  "description": "Obscura Settlement v6 — commit-based settlements. Zero plaintext price in public state. Matches ZKPerp hash-only depth.",
+  "license": "MIT",
+  "leo": "4.0.0",
+  "dependencies": [
+    {
+      "name": "obscura_core_v3.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    },
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    }
+  ]
+}
