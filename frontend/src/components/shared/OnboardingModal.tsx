@@ -21,7 +21,7 @@ const steps = [
   {
     icon: Gavel,
     title: 'Create or Browse',
-    description: 'Create your own auction, browse listings, or bid. 4 auction formats: Sealed-Bid, Vickrey, Dutch, and English.',
+    description: 'Create your own auction, browse listings, or bid. 10 auction formats: Sealed, Vickrey, Dutch, English, Bundle, Multi-Unit, Candle, Reverse, Blind Dutch, Timed Escalation.',
     color: 'text-cyan-400 bg-cyan-500/20',
   },
 ]

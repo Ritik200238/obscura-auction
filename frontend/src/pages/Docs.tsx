@@ -163,8 +163,11 @@ export default function Docs() {
       {/* Architecture */}
       <Section id="architecture" title="Architecture" icon={Layers}>
         <p className="text-gray-400 text-sm mb-4">
-          The protocol is a single Leo program (obscura_core_v3.aleo) with 28 transitions,
-          forming an 8-state machine with 4 auction formats. All sensitive operations happen off-chain in ZK circuits.
+          The protocol is a 4-program architecture: obscura_core_v3.aleo (29 transitions) handles auction
+          lifecycle, obscura_settle_v4.aleo handles ALEO settlement with hardened privacy (revealed_bids
+          stores hash commitments only), obscura_settle_stable_v4.aleo handles USDCx/USAD, and
+          obscura_market_v2.aleo handles fixed sales + RFQ. Forms an 8-state machine with 10 auction formats.
+          All sensitive operations happen off-chain in ZK circuits.
         </p>
 
         {/* Visual State Machine */}
@@ -344,7 +347,7 @@ export default function Docs() {
           />
           <FAQ
             q="What tokens can I use?"
-            a="The protocol supports ALEO Credits (credits.aleo), USDCx stablecoin (test_usdcx_stablecoin.aleo), and USAD stablecoin (test_usad_stablecoin.aleo). ALEO uses private record transfers for maximum privacy. USDCx and USAD use public balance transfers. All 4 auction formats support all 3 tokens."
+            a="The protocol supports ALEO Credits (credits.aleo), USDCx stablecoin (test_usdcx_stablecoin.aleo), and USAD stablecoin (test_usad_stablecoin.aleo). ALEO uses private record transfers for maximum privacy. USDCx and USAD use public balance transfers. All 10 auction formats support all 3 tokens where applicable."
           />
           <FAQ
             q="What is the platform fee?"
@@ -396,7 +399,7 @@ export default function Docs() {
         </p>
         <div className="bg-surface-800/60 rounded-xl p-4 border border-surface-700 font-mono text-sm">
           <p className="text-gray-500 mb-2"># Auction contract (deployed on testnet)</p>
-          <p className="text-accent-400 mb-4">obscura_core_v3.aleo — 28 transitions, 5 records, 16 mappings</p>
+          <p className="text-accent-400 mb-4">obscura_core_v3.aleo — 29 transitions, 5 records, 25 mappings · +settle_v4 · +settle_stable_v4 · +market_v2</p>
           <p className="text-gray-500 mb-2"># Build from source</p>
           <div className="text-gray-300 space-y-1">
             <p>cd contracts/obscura_core</p>

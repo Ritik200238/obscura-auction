@@ -827,6 +827,41 @@ export default function Landing() {
       </section>
 
       {/* ═══════════════════════════════════════
+          LIVE INFRASTRUCTURE — production signals
+          ═══════════════════════════════════════ */}
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+        <AnimatedSection>
+          <motion.div variants={fadeInUp} className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-medium mb-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              Running 24/7
+            </div>
+            <h3 className="text-xl sm:text-2xl font-bold text-white font-display">Live Infrastructure</h3>
+          </motion.div>
+          <motion.div variants={fadeInUp} className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+            {[
+              { label: 'Frontend', url: 'https://obscura-auction-95hm.vercel.app', host: 'Vercel', color: 'text-accent-400' },
+              { label: 'Backend API', url: 'https://obscura-auction-api.onrender.com/health', host: 'Render', color: 'text-brand-cyan' },
+              { label: 'Monitor Bot', url: 'https://obscura-auction-bot.onrender.com/health', host: 'Render', color: 'text-emerald-400' },
+              { label: 'SDK on npm', url: 'https://www.npmjs.com/package/obscura-aleo-sdk', host: 'npmjs.com', color: 'text-orange-400' },
+            ].map(s => (
+              <a key={s.label} href={s.url} target="_blank" rel="noopener noreferrer"
+                className="p-3 rounded-xl bg-surface-900/50 border border-surface-800 hover:border-surface-600 transition">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                  <span className={`text-xs font-semibold ${s.color}`}>{s.label}</span>
+                </div>
+                <div className="text-[10px] text-gray-500">{s.host}</div>
+              </a>
+            ))}
+          </motion.div>
+          <motion.p variants={fadeInUp} className="text-center text-[10px] text-gray-600 mt-4 italic">
+            Infrastructure running continuously. Free-tier services may take 30-60s to wake from idle.
+          </motion.p>
+        </AnimatedSection>
+      </section>
+
+      {/* ═══════════════════════════════════════
           HOW IT WORKS — 3 Glassmorphism Cards
           ═══════════════════════════════════════ */}
       <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
