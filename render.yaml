@@ -1,4 +1,5 @@
 services:
+  # Backend API (indexer + REST)
   - type: web
     name: obscura-auction-api
     runtime: node
@@ -6,6 +7,7 @@ services:
     plan: free
     buildCommand: cd backend && npm install && npm run build
     startCommand: cd backend && node dist/index.js
+    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
@@ -20,4 +22,36 @@ services:
       - key: EXPLORER_API
         value: https://api.explorer.provable.com/v1
       - key: PROGRAM_ID
-        value: obscura_v5.aleo
+        value: obscura_core_v3.aleo
+      - key: SETTLE_PROGRAM_ID
+        value: obscura_settle_v4.aleo
+      - key: MARKET_PROGRAM_ID
+        value: obscura_market_v2.aleo
+
+  # Auction Monitor Bot (background worker)
+  - type: worker
+    name: obscura-auction-bot
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: cd bot && npm install && npm run build
+    startCommand: cd bot && node dist/index.js
+    envVars:
+      - key: NETWORK
+        value: testnet
+      - key: ENDPOINT
+        value: https://api.explorer.provable.com/v1
+      - key: PROGRAM_ID
+        value: obscura_core_v3.aleo
+      - key: SETTLE_PROGRAM_ID
+        value: obscura_settle_v4.aleo
+      - key: MARKET_PROGRAM_ID
+        value: obscura_market_v2.aleo
+      - key: POLL_INTERVAL
+        value: "30000"
+      - key: WATCH_AUCTIONS
+        value: all
+      - key: DEADLINE_WARNING_BLOCKS
+        value: "100"
+      - key: DUTCH_PRICE_THRESHOLD
+        value: "0.5"

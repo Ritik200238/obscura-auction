@@ -25,7 +25,7 @@
 //   Seller identity: BHP256(PseudoIdentity{addr, auction_id}) — per-auction pseudonym, never plaintext, unlinkable across auctions.
 // ============================================================================
 
-program obscura_core_v3.aleo {
+program obscura_core_v4.aleo {
 
     @noupgrade
     constructor() {}
@@ -133,6 +133,17 @@ program obscura_core_v3.aleo {
         auction_id: field,
         participated_at: u64,
         auction_mode: u8,
+    }
+
+    // ZK Referral — referrer holds this private record.
+    // When a referred bidder uses it, NO on-chain link exists between referrer and bidder.
+    // The referral_hash is stored in a mapping so the referrer can later claim commissions,
+    // but the mapping key is a hash — not the referrer's address.
+    record ReferralCode {
+        owner: address,
+        referral_id: field,       // unique ID for this referral
+        auction_id: field,        // which auction this referral is for (0field = any auction)
+        uses_remaining: u64,      // how many times this code can be used
     }
 
     // ========================================================================
@@ -283,6 +294,10 @@ program obscura_core_v3.aleo {
 
     // Privacy: nullifier-based anti-replay — prevents double-bidding without revealing bid content
     mapping bid_nullifiers: field => bool;      // BHP256(bid_nonce) => true
+
+    // ZK Referral mappings
+    mapping referral_uses: field => u64;          // referral_id => total uses
+    mapping referral_commissions: field => u128;  // referral_id => accumulated commission (in microcredits)
 
     // ########################################################################
     //              T1: INITIALIZE PLATFORM
@@ -2259,5 +2274,128 @@ program obscura_core_v3.aleo {
             let winning_price: u128 = highest_bids.get_or_use(auction_id, 0u128);
             revealed_results.set(auction_id, winning_price);
         };
+    }
+
+    // ########################################################################
+    //              T29: CREATE REFERRAL CODE
+    // ########################################################################
+    // Creates a private ReferralCode record. The referrer can share this off-chain.
+    // When a bidder uses it via place_bid_with_referral, the referral_id is logged
+    // on-chain but NO link between referrer address and bidder address exists.
+    // The referrer's identity is hidden behind the referral_id hash.
+
+    fn create_referral(
+        private auction_id: field,     // 0field = valid for any auction
+        private uses: u64,             // max number of uses
+        private nonce: field           // unique nonce
+    ) -> ReferralCode {
+        // Derive referral_id from caller + nonce (no one can reverse this)
+        let referral_id: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: nonce });
+
+        return ReferralCode {
+            owner: self.caller,
+            referral_id: referral_id,
+            auction_id: auction_id,
+            uses_remaining: uses,
+        };
+    }
+
+    // ########################################################################
+    //              T30: PLACE BID WITH REFERRAL
+    // ########################################################################
+    // Same as place_bid but consumes a ReferralCode. The referral_id is recorded
+    // on-chain for commission tracking, but the referrer's address is NEVER revealed.
+    // The ReferralCode is re-created with decremented uses_remaining.
+
+    fn place_bid_with_referral(
+        private auction_id: field,
+        private bid_amount: u128,
+        private bid_nonce: field,
+        private token_type: u8,
+        private referral: ReferralCode
+    ) -> (SealedBid, ReferralCode, Final) {
+        // Validate referral is for this auction (or any auction if 0field)
+        let is_universal: bool = referral.auction_id == 0field;
+        let is_matching: bool = referral.auction_id == auction_id;
+        assert(is_universal || is_matching);
+        assert(referral.uses_remaining > 0u64);
+
+        // Create bid commitment (same logic as place_bid)
+        let commitment: BidCommitment = BidCommitment {
+            bidder: self.caller,
+            auction_id: auction_id,
+            amount: bid_amount,
+            nonce: bid_nonce,
+        };
+        let bid_hash: field = BHP256::hash_to_field(commitment);
+
+        // Nullifier for double-bid prevention
+        let nullifier: field = BHP256::hash_to_field(bid_nonce);
+
+        // Pseudonymous bidder ID (per-auction, unlinkable)
+        let bidder_pseudo: field = BHP256::hash_to_field(PseudoIdentity { addr: self.caller, salt: auction_id });
+
+        let sealed_bid: SealedBid = SealedBid {
+            owner: self.caller,
+            auction_id: auction_id,
+            bid_amount: bid_amount,
+            bid_nonce: bid_nonce,
+            token_type: token_type,
+        };
+
+        // Return referral with decremented uses
+        let updated_referral: ReferralCode = ReferralCode {
+            owner: referral.owner,
+            referral_id: referral.referral_id,
+            auction_id: referral.auction_id,
+            uses_remaining: referral.uses_remaining - 1u64,
+        };
+
+        let referral_id: field = referral.referral_id;
+
+        return (sealed_bid, updated_referral, final {
+            let auction: AuctionData = auctions.get(auction_id);
+            assert_eq(auction.status, STATUS_ACTIVE);
+            // Referral bids only for sealed-bid modes (same restriction as place_bid)
+            assert(
+                auction.auction_mode == MODE_FIRST_PRICE ||
+                auction.auction_mode == MODE_VICKREY
+            );
+            assert_eq(auction.token_type, token_type);
+
+            let current_height: u64 = block.height as u64;
+            assert(current_height <= auction.deadline);
+
+            assert(bid_amount >= MIN_BID_AMOUNT);
+
+            // Prevent duplicate bids via nullifier
+            let already_used: bool = bid_nullifiers.contains(nullifier);
+            assert(!already_used);
+            bid_nullifiers.set(nullifier, true);
+
+            // Store bid commitment
+            bid_commitments.set(bid_hash, true);
+
+            // Increment bid count
+            let updated_auction: AuctionData = AuctionData {
+                item_hash: auction.item_hash,
+                seller_hash: auction.seller_hash,
+                category: auction.category,
+                token_type: auction.token_type,
+                auction_mode: auction.auction_mode,
+                status: auction.status,
+                deadline: auction.deadline,
+                reveal_deadline: auction.reveal_deadline,
+                bid_count: auction.bid_count + 1u64,
+                reserve_price_hash: auction.reserve_price_hash,
+                created_at: auction.created_at,
+                dispute_deadline: auction.dispute_deadline,
+            };
+            auctions.set(auction_id, updated_auction);
+
+            // Track referral usage (referral_id is a hash — no address exposed)
+            let current_uses: u64 = referral_uses.get_or_use(referral_id, 0u64);
+            referral_uses.set(referral_id, current_uses + 1u64);
+        });
     }
 }

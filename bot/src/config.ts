@@ -3,7 +3,7 @@ import 'dotenv/config';
 export const config = {
   network: process.env.NETWORK ?? 'testnet',
   programId: process.env.PROGRAM_ID ?? 'obscura_core_v3.aleo',
-  settleProgramId: process.env.SETTLE_PROGRAM_ID ?? 'obscura_settle_v3.aleo',
+  settleProgramId: process.env.SETTLE_PROGRAM_ID ?? 'obscura_settle_v4.aleo',
   marketProgramId: process.env.MARKET_PROGRAM_ID ?? 'obscura_market_v2.aleo',
   endpoint: process.env.ENDPOINT ?? 'https://api.explorer.provable.com/v1',
   pollInterval: Number(process.env.POLL_INTERVAL ?? 30000),

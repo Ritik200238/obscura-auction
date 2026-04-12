@@ -1,4 +1,4 @@
-program obscura_core_v4.aleo;
+program obscura_core_v3.aleo;
 
 record SealedBid:
     owner as address.private;
@@ -35,12 +35,6 @@ record ParticipationProof:
     auction_id as field.private;
     participated_at as u64.private;
     auction_mode as u8.private;
-
-record ReferralCode:
-    owner as address.private;
-    referral_id as field.private;
-    auction_id as field.private;
-    uses_remaining as u64.private;
 
 struct PseudoIdentity:
     addr as address;
@@ -212,14 +206,6 @@ mapping bid_nullifiers:
     key as field.public;
     value as boolean.public;
 
-mapping referral_uses:
-    key as field.public;
-    value as u64.public;
-
-mapping referral_commissions:
-    key as field.public;
-    value as u128.public;
-
 function initialize_platform:
     input r0 as address.private;
     input r1 as u128.private;
@@ -227,7 +213,7 @@ function initialize_platform:
     cast r0 into r3 as field;
     hash.bhp256 r3 into r4 as field;
     async initialize_platform r4 r1 r2 into r5;
-    output r5 as obscura_core_v4.aleo/initialize_platform.future;
+    output r5 as obscura_core_v3.aleo/initialize_platform.future;
 
 finalize initialize_platform:
     input r0 as field.public;
@@ -267,7 +253,7 @@ function create_auction:
     assert.eq r22 true;
     async create_auction r8 r6 r0 r12 r1 r4 r3 r10 into r23;
     output r8 as field.private;
-    output r23 as obscura_core_v4.aleo/create_auction.future;
+    output r23 as obscura_core_v3.aleo/create_auction.future;
 
 finalize create_auction:
     input r0 as field.public;
@@ -317,7 +303,7 @@ function create_dutch_auction:
     hash.bhp256 r18 into r19 as field;
     async create_dutch_auction r15 r6 r0 r19 r1 r4 r17 r2 r3 into r20;
     output r15 as field.private;
-    output r20 as obscura_core_v4.aleo/create_dutch_auction.future;
+    output r20 as obscura_core_v3.aleo/create_dutch_auction.future;
 
 finalize create_dutch_auction:
     input r0 as field.public;
@@ -375,7 +361,7 @@ function create_bundle_auction:
     hash.bhp256 r23 into r24 as field;
     async create_bundle_auction r20 r9 r0 r24 r5 r7 r22 r4 r1 r2 r3 r6 into r25;
     output r20 as field.private;
-    output r25 as obscura_core_v4.aleo/create_bundle_auction.future;
+    output r25 as obscura_core_v3.aleo/create_bundle_auction.future;
 
 finalize create_bundle_auction:
     input r0 as field.public;
@@ -431,7 +417,7 @@ function create_multi_unit_auction:
     hash.bhp256 r18 into r19 as field;
     async create_multi_unit_auction r15 r6 r0 r19 r1 r4 r17 r2 r3 into r20;
     output r15 as field.private;
-    output r20 as obscura_core_v4.aleo/create_multi_unit_auction.future;
+    output r20 as obscura_core_v3.aleo/create_multi_unit_auction.future;
 
 finalize create_multi_unit_auction:
     input r0 as field.public;
@@ -463,7 +449,7 @@ function cancel_auction:
     cast self.caller r0 into r1 as PseudoIdentity;
     hash.bhp256 r1 into r2 as field;
     async cancel_auction r0 r2 into r3;
-    output r3 as obscura_core_v4.aleo/cancel_auction.future;
+    output r3 as obscura_core_v3.aleo/cancel_auction.future;
 
 finalize cancel_auction:
     input r0 as field.public;
@@ -478,7 +464,7 @@ finalize cancel_auction:
 function close_bidding:
     input r0 as field.private;
     async close_bidding r0 into r1;
-    output r1 as obscura_core_v4.aleo/close_bidding.future;
+    output r1 as obscura_core_v3.aleo/close_bidding.future;
 
 finalize close_bidding:
     input r0 as field.public;
@@ -531,7 +517,7 @@ function place_bid:
     hash.bhp256 r2 into r13 as field;
     async place_bid r0 r3 r12 r13 into r14;
     output r10 as SealedBid.record;
-    output r14 as obscura_core_v4.aleo/place_bid.future;
+    output r14 as obscura_core_v3.aleo/place_bid.future;
 
 finalize place_bid:
     input r0 as field.public;
@@ -576,7 +562,7 @@ function place_bundle_bid:
     hash.bhp256 r2 into r8 as field;
     async place_bundle_bid r0 r3 r7 r8 into r9;
     output r5 as BundleBid.record;
-    output r9 as obscura_core_v4.aleo/place_bundle_bid.future;
+    output r9 as obscura_core_v3.aleo/place_bundle_bid.future;
 
 finalize place_bundle_bid:
     input r0 as field.public;
@@ -623,7 +609,7 @@ function place_subset_bid:
     hash.bhp256 r3 into r11 as field;
     async place_subset_bid r0 r4 r10 r11 into r12;
     output r8 as SubsetBid.record;
-    output r12 as obscura_core_v4.aleo/place_subset_bid.future;
+    output r12 as obscura_core_v3.aleo/place_subset_bid.future;
 
 finalize place_subset_bid:
     input r0 as field.public;
@@ -669,7 +655,7 @@ function place_multi_unit_bid:
     hash.bhp256 r3 into r11 as field;
     async place_multi_unit_bid r0 r4 r10 r11 into r12;
     output r7 as MultiUnitBid.record;
-    output r12 as obscura_core_v4.aleo/place_multi_unit_bid.future;
+    output r12 as obscura_core_v3.aleo/place_multi_unit_bid.future;
 
 finalize place_multi_unit_bid:
     input r0 as field.public;
@@ -704,7 +690,7 @@ function set_merkle_root:
     cast self.caller r0 into r2 as PseudoIdentity;
     hash.bhp256 r2 into r3 as field;
     async set_merkle_root r0 r3 r1 into r4;
-    output r4 as obscura_core_v4.aleo/set_merkle_root.future;
+    output r4 as obscura_core_v3.aleo/set_merkle_root.future;
 
 finalize set_merkle_root:
     input r0 as field.public;
@@ -724,7 +710,7 @@ function finalize_auction:
     cast r1 into r4 as field;
     hash.bhp256 r4 into r5 as field;
     async finalize_auction r0 r3 r5 r1 into r6;
-    output r6 as obscura_core_v4.aleo/finalize_auction.future;
+    output r6 as obscura_core_v3.aleo/finalize_auction.future;
 
 finalize finalize_auction:
     input r0 as field.public;
@@ -818,7 +804,7 @@ function settle_english:
     cast r1 into r4 as field;
     hash.bhp256 r4 into r5 as field;
     async settle_english r0 r3 r5 r1 into r6;
-    output r6 as obscura_core_v4.aleo/settle_english.future;
+    output r6 as obscura_core_v3.aleo/settle_english.future;
 
 finalize settle_english:
     input r0 as field.public;
@@ -860,7 +846,7 @@ function admin_emergency:
     cast self.caller into r2 as field;
     hash.bhp256 r2 into r3 as field;
     async admin_emergency r0 r1 r3 into r4;
-    output r4 as obscura_core_v4.aleo/admin_emergency.future;
+    output r4 as obscura_core_v3.aleo/admin_emergency.future;
 
 finalize admin_emergency:
     input r0 as u8.public;
@@ -912,7 +898,7 @@ function create_candle_auction:
     sub r5 r6 into r20;
     async create_candle_auction r15 r20 r0 r19 r1 r3 r5 r17 into r21;
     output r15 as field.private;
-    output r21 as obscura_core_v4.aleo/create_candle_auction.future;
+    output r21 as obscura_core_v3.aleo/create_candle_auction.future;
 
 finalize create_candle_auction:
     input r0 as field.public;
@@ -957,7 +943,7 @@ function place_candle_bid:
     hash.bhp256 r2 into r13 as field;
     async place_candle_bid r0 r3 r12 r13 into r14;
     output r10 as SealedBid.record;
-    output r14 as obscura_core_v4.aleo/place_candle_bid.future;
+    output r14 as obscura_core_v3.aleo/place_candle_bid.future;
 
 finalize place_candle_bid:
     input r0 as field.public;
@@ -994,7 +980,7 @@ function settle_candle:
     cast r1 into r4 as field;
     hash.bhp256 r4 into r5 as field;
     async settle_candle r0 r3 r5 r1 into r6;
-    output r6 as obscura_core_v4.aleo/settle_candle.future;
+    output r6 as obscura_core_v3.aleo/settle_candle.future;
 
 finalize settle_candle:
     input r0 as field.public;
@@ -1056,7 +1042,7 @@ function create_reverse_auction:
     hash.bhp256 r16 into r17 as field;
     async create_reverse_auction r13 r5 r0 r17 r1 r3 r15 into r18;
     output r13 as field.private;
-    output r18 as obscura_core_v4.aleo/create_reverse_auction.future;
+    output r18 as obscura_core_v3.aleo/create_reverse_auction.future;
 
 finalize create_reverse_auction:
     input r0 as field.public;
@@ -1098,7 +1084,7 @@ function place_reverse_bid:
     hash.bhp256 r2 into r13 as field;
     async place_reverse_bid r0 r3 r12 r13 into r14;
     output r10 as SealedBid.record;
-    output r14 as obscura_core_v4.aleo/place_reverse_bid.future;
+    output r14 as obscura_core_v3.aleo/place_reverse_bid.future;
 
 finalize place_reverse_bid:
     input r0 as field.public;
@@ -1135,7 +1121,7 @@ function settle_reverse:
     cast r1 into r4 as field;
     hash.bhp256 r4 into r5 as field;
     async settle_reverse r0 r3 r5 r1 into r6;
-    output r6 as obscura_core_v4.aleo/settle_reverse.future;
+    output r6 as obscura_core_v3.aleo/settle_reverse.future;
 
 finalize settle_reverse:
     input r0 as field.public;
@@ -1196,7 +1182,7 @@ function create_blind_dutch:
     hash.bhp256 r18 into r19 as field;
     async create_blind_dutch r15 r6 r0 r19 r1 r4 r17 r2 r3 into r20;
     output r15 as field.private;
-    output r20 as obscura_core_v4.aleo/create_blind_dutch.future;
+    output r20 as obscura_core_v3.aleo/create_blind_dutch.future;
 
 finalize create_blind_dutch:
     input r0 as field.public;
@@ -1242,7 +1228,7 @@ function place_blind_dutch_bid:
     hash.bhp256 r2 into r13 as field;
     async place_blind_dutch_bid r0 r3 r12 r13 into r14;
     output r10 as SealedBid.record;
-    output r14 as obscura_core_v4.aleo/place_blind_dutch_bid.future;
+    output r14 as obscura_core_v3.aleo/place_blind_dutch_bid.future;
 
 finalize place_blind_dutch_bid:
     input r0 as field.public;
@@ -1294,7 +1280,7 @@ function create_timed_escalation:
     hash.bhp256 r16 into r17 as field;
     async create_timed_escalation r13 r5 r0 r17 r1 r3 r15 r2 into r18;
     output r13 as field.private;
-    output r18 as obscura_core_v4.aleo/create_timed_escalation.future;
+    output r18 as obscura_core_v3.aleo/create_timed_escalation.future;
 
 finalize create_timed_escalation:
     input r0 as field.public;
@@ -1337,7 +1323,7 @@ function bid_timed_escalation:
     hash.bhp256 r11 into r12 as field;
     async bid_timed_escalation r0 r3 r1 r12 into r13;
     output r10 as SealedBid.record;
-    output r13 as obscura_core_v4.aleo/bid_timed_escalation.future;
+    output r13 as obscura_core_v3.aleo/bid_timed_escalation.future;
 
 finalize bid_timed_escalation:
     input r0 as field.public;
@@ -1417,7 +1403,7 @@ function settle_bundle_allocation:
     cast r10 into r13 as field;
     hash.bhp256 r13 into r14 as field;
     async settle_bundle_allocation r0 r12 r14 r2 r5 r8 r1 r4 r6 r7 r9 r3 r10 into r15;
-    output r15 as obscura_core_v4.aleo/settle_bundle_allocation.future;
+    output r15 as obscura_core_v3.aleo/settle_bundle_allocation.future;
 
 finalize settle_bundle_allocation:
     input r0 as field.public;
@@ -1511,7 +1497,7 @@ function claim_participation:
     async claim_participation r0.auction_id into r3;
     output r1 as SealedBid.record;
     output r2 as ParticipationProof.record;
-    output r3 as obscura_core_v4.aleo/claim_participation.future;
+    output r3 as obscura_core_v3.aleo/claim_participation.future;
 
 finalize claim_participation:
     input r0 as field.public;
@@ -1524,7 +1510,7 @@ function set_result_timelock:
     cast self.caller r0 into r2 as PseudoIdentity;
     hash.bhp256 r2 into r3 as field;
     async set_result_timelock r0 r3 r1 into r4;
-    output r4 as obscura_core_v4.aleo/set_result_timelock.future;
+    output r4 as obscura_core_v3.aleo/set_result_timelock.future;
 
 finalize set_result_timelock:
     input r0 as field.public;
@@ -1543,7 +1529,7 @@ finalize set_result_timelock:
 function reveal_result:
     input r0 as field.private;
     async reveal_result r0 into r1;
-    output r1 as obscura_core_v4.aleo/reveal_result.future;
+    output r1 as obscura_core_v3.aleo/reveal_result.future;
 
 finalize reveal_result:
     input r0 as field.public;
@@ -1558,69 +1544,6 @@ finalize reveal_result:
     assert.eq r7 true;
     get.or_use highest_bids[r0] 0u128 into r8;
     set r8 into revealed_results[r0];
-
-function create_referral:
-    input r0 as field.private;
-    input r1 as u64.private;
-    input r2 as field.private;
-    cast self.caller r2 into r3 as PseudoIdentity;
-    hash.bhp256 r3 into r4 as field;
-    cast self.caller r4 r0 r1 into r5 as ReferralCode.record;
-    output r5 as ReferralCode.record;
-
-function place_bid_with_referral:
-    input r0 as field.private;
-    input r1 as u128.private;
-    input r2 as field.private;
-    input r3 as u8.private;
-    input r4 as ReferralCode.record;
-    is.eq r4.auction_id 0field into r5;
-    is.eq r4.auction_id r0 into r6;
-    or r5 r6 into r7;
-    assert.eq r7 true;
-    gt r4.uses_remaining 0u64 into r8;
-    assert.eq r8 true;
-    cast self.caller r0 r1 r2 into r9 as BidCommitment;
-    hash.bhp256 r9 into r10 as field;
-    hash.bhp256 r2 into r11 as field;
-    cast self.caller r0 r1 r2 r3 into r12 as SealedBid.record;
-    sub r4.uses_remaining 1u64 into r13;
-    cast r4.owner r4.referral_id r4.auction_id r13 into r14 as ReferralCode.record;
-    async place_bid_with_referral r0 r3 r1 r11 r10 r4.referral_id into r15;
-    output r12 as SealedBid.record;
-    output r14 as ReferralCode.record;
-    output r15 as obscura_core_v4.aleo/place_bid_with_referral.future;
-
-finalize place_bid_with_referral:
-    input r0 as field.public;
-    input r1 as u8.public;
-    input r2 as u128.public;
-    input r3 as field.public;
-    input r4 as field.public;
-    input r5 as field.public;
-    get auctions[r0] into r6;
-    assert.eq r6.status 1u8;
-    is.eq r6.auction_mode 1u8 into r7;
-    is.eq r6.auction_mode 2u8 into r8;
-    or r7 r8 into r9;
-    assert.eq r9 true;
-    assert.eq r6.token_type r1;
-    cast block.height into r10 as u64;
-    lte r10 r6.deadline into r11;
-    assert.eq r11 true;
-    gte r2 1000u128 into r12;
-    assert.eq r12 true;
-    contains bid_nullifiers[r3] into r13;
-    not r13 into r14;
-    assert.eq r14 true;
-    set true into bid_nullifiers[r3];
-    set true into bid_commitments[r4];
-    add r6.bid_count 1u64 into r15;
-    cast r6.item_hash r6.seller_hash r6.category r6.token_type r6.auction_mode r6.status r6.deadline r6.reveal_deadline r15 r6.reserve_price_hash r6.created_at r6.dispute_deadline into r16 as AuctionData;
-    set r16 into auctions[r0];
-    get.or_use referral_uses[r5] 0u64 into r17;
-    add r17 1u64 into r18;
-    set r18 into referral_uses[r5];
 
 constructor:
     assert.eq edition 0u16;

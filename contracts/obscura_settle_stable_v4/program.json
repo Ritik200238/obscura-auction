@@ -1,0 +1,27 @@
+{
+  "program": "obscura_settle_stable_v4.aleo",
+  "version": "0.1.0",
+  "description": "Obscura Stablecoin Settlement v4 — Privacy-hardened: revealed_bids stores commitment hashes, not plaintext",
+  "license": "MIT",
+  "leo": "4.0.0",
+  "dependencies": [
+    {
+      "name": "obscura_core_v3.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    },
+    {
+      "name": "test_usdcx_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    },
+    {
+      "name": "test_usad_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    }
+  ]
+}

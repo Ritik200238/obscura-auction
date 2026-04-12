@@ -1,5 +1,5 @@
 {
-  "program": "obscura_core_v3.aleo",
+  "program": "obscura_core_v4.aleo",
   "structs": [
     {
       "path": [
@@ -534,6 +534,43 @@
           "mode": "None"
         }
       ]
+    },
+    {
+      "path": [
+        "ReferralCode"
+      ],
+      "fields": [
+        {
+          "name": "owner",
+          "ty": {
+            "Primitive": "Address"
+          },
+          "mode": "None"
+        },
+        {
+          "name": "referral_id",
+          "ty": {
+            "Primitive": "Field"
+          },
+          "mode": "None"
+        },
+        {
+          "name": "auction_id",
+          "ty": {
+            "Primitive": "Field"
+          },
+          "mode": "None"
+        },
+        {
+          "name": "uses_remaining",
+          "ty": {
+            "Primitive": {
+              "UInt": "U64"
+            }
+          },
+          "mode": "None"
+        }
+      ]
     }
   ],
   "mappings": [
@@ -547,7 +584,7 @@
           "path": [
             "AuctionData"
           ],
-          "program": "obscura_core_v3.aleo"
+          "program": "obscura_core_v4.aleo"
         }
       }
     },
@@ -614,7 +651,7 @@
           "path": [
             "PlatformConfig"
           ],
-          "program": "obscura_core_v3.aleo"
+          "program": "obscura_core_v4.aleo"
         }
       }
     },
@@ -637,7 +674,7 @@
           "path": [
             "DutchConfig"
           ],
-          "program": "obscura_core_v3.aleo"
+          "program": "obscura_core_v4.aleo"
         }
       }
     },
@@ -651,7 +688,7 @@
           "path": [
             "DisputeData"
           ],
-          "program": "obscura_core_v3.aleo"
+          "program": "obscura_core_v4.aleo"
         }
       }
     },
@@ -707,7 +744,7 @@
           "path": [
             "BundleConfig"
           ],
-          "program": "obscura_core_v3.aleo"
+          "program": "obscura_core_v4.aleo"
         }
       }
     },
@@ -721,7 +758,7 @@
           "path": [
             "MultiUnitConfig"
           ],
-          "program": "obscura_core_v3.aleo"
+          "program": "obscura_core_v4.aleo"
         }
       }
     },
@@ -757,7 +794,7 @@
           "path": [
             "CandleConfig"
           ],
-          "program": "obscura_core_v3.aleo"
+          "program": "obscura_core_v4.aleo"
         }
       }
     },
@@ -823,6 +860,28 @@
       },
       "value": {
         "Primitive": "Boolean"
+      }
+    },
+    {
+      "name": "referral_uses",
+      "key": {
+        "Primitive": "Field"
+      },
+      "value": {
+        "Primitive": {
+          "UInt": "U64"
+        }
+      }
+    },
+    {
+      "name": "referral_commissions",
+      "key": {
+        "Primitive": "Field"
+      },
+      "value": {
+        "Primitive": {
+          "UInt": "U128"
+        }
       }
     }
   ],
@@ -1364,7 +1423,7 @@
               "path": [
                 "SealedBid"
               ],
-              "program": "obscura_core_v3.aleo"
+              "program": "obscura_core_v4.aleo"
             }
           },
           "mode": "None"
@@ -1427,7 +1486,7 @@
               "path": [
                 "BundleBid"
               ],
-              "program": "obscura_core_v3.aleo"
+              "program": "obscura_core_v4.aleo"
             }
           },
           "mode": "None"
@@ -1501,7 +1560,7 @@
               "path": [
                 "SubsetBid"
               ],
-              "program": "obscura_core_v3.aleo"
+              "program": "obscura_core_v4.aleo"
             }
           },
           "mode": "None"
@@ -1575,7 +1634,7 @@
               "path": [
                 "MultiUnitBid"
               ],
-              "program": "obscura_core_v3.aleo"
+              "program": "obscura_core_v4.aleo"
             }
           },
           "mode": "None"
@@ -1857,7 +1916,7 @@
               "path": [
                 "SealedBid"
               ],
-              "program": "obscura_core_v3.aleo"
+              "program": "obscura_core_v4.aleo"
             }
           },
           "mode": "None"
@@ -2034,7 +2093,7 @@
               "path": [
                 "SealedBid"
               ],
-              "program": "obscura_core_v3.aleo"
+              "program": "obscura_core_v4.aleo"
             }
           },
           "mode": "None"
@@ -2222,7 +2281,7 @@
               "path": [
                 "SealedBid"
               ],
-              "program": "obscura_core_v3.aleo"
+              "program": "obscura_core_v4.aleo"
             }
           },
           "mode": "None"
@@ -2367,7 +2426,7 @@
               "path": [
                 "SealedBid"
               ],
-              "program": "obscura_core_v3.aleo"
+              "program": "obscura_core_v4.aleo"
             }
           },
           "mode": "None"
@@ -2514,7 +2573,7 @@
               "path": [
                 "SealedBid"
               ],
-              "program": "obscura_core_v3.aleo"
+              "program": "obscura_core_v4.aleo"
             }
           },
           "mode": "Private"
@@ -2527,7 +2586,7 @@
               "path": [
                 "SealedBid"
               ],
-              "program": "obscura_core_v3.aleo"
+              "program": "obscura_core_v4.aleo"
             }
           },
           "mode": "None"
@@ -2538,7 +2597,7 @@
               "path": [
                 "ParticipationProof"
               ],
-              "program": "obscura_core_v3.aleo"
+              "program": "obscura_core_v4.aleo"
             }
           },
           "mode": "None"
@@ -2596,6 +2655,140 @@
         }
       ],
       "outputs": [
+        {
+          "ty": "Final",
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "create_referral",
+      "is_final": false,
+      "inputs": [
+        {
+          "name": "auction_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "uses",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U64"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "nonce",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "ReferralCode"
+              ],
+              "program": "obscura_core_v4.aleo"
+            }
+          },
+          "mode": "None"
+        }
+      ]
+    },
+    {
+      "name": "place_bid_with_referral",
+      "is_final": true,
+      "inputs": [
+        {
+          "name": "auction_id",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "bid_amount",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "bid_nonce",
+          "ty": {
+            "Plaintext": {
+              "Primitive": "Field"
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "token_type",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U8"
+              }
+            }
+          },
+          "mode": "Private"
+        },
+        {
+          "name": "referral",
+          "ty": {
+            "Record": {
+              "path": [
+                "ReferralCode"
+              ],
+              "program": "obscura_core_v4.aleo"
+            }
+          },
+          "mode": "Private"
+        }
+      ],
+      "outputs": [
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "SealedBid"
+              ],
+              "program": "obscura_core_v4.aleo"
+            }
+          },
+          "mode": "None"
+        },
+        {
+          "ty": {
+            "Record": {
+              "path": [
+                "ReferralCode"
+              ],
+              "program": "obscura_core_v4.aleo"
+            }
+          },
+          "mode": "None"
+        },
         {
           "ty": "Final",
           "mode": "None"

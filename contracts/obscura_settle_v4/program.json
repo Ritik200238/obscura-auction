@@ -1,0 +1,21 @@
+{
+  "program": "obscura_settle_v4.aleo",
+  "version": "0.1.0",
+  "description": "Obscura Settlement Layer v4 — Privacy-hardened: revealed_bids stores commitment hashes, not plaintext amounts",
+  "license": "MIT",
+  "leo": "4.0.0",
+  "dependencies": [
+    {
+      "name": "obscura_core_v3.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    },
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    }
+  ]
+}
