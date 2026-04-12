@@ -17,6 +17,7 @@ import {
   Check,
   Coins,
   FileCheck,
+  Sparkles,
 } from 'lucide-react'
 
 /* ─────────────────────────────────────────────
@@ -1159,6 +1160,56 @@ export default function Landing() {
           <motion.p variants={fadeInUp} className="text-center text-xs text-gray-600 mt-4 italic">
             The only auction protocol on Aleo with 10 formats (Sealed, Vickrey, Dutch, English, Bundle, Multi-Unit, Candle, Reverse, Blind Dutch, Timed Escalation), 3 tokens, and ZK dispute resolution.
           </motion.p>
+        </AnimatedSection>
+      </section>
+
+      {/* ═══════════════════════════════════════
+          COMBINATORIAL FEATURE CALLOUT — novelty headline
+          ═══════════════════════════════════════ */}
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14 sm:pb-20">
+        <AnimatedSection>
+          <motion.div variants={fadeInUp} className="relative rounded-2xl overflow-hidden border border-accent-500/30">
+            <div className="absolute inset-0 bg-gradient-to-br from-accent-500/10 via-brand-cyan/5 to-transparent" />
+            <div className="relative p-8 sm:p-10">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-center">
+                <div className="md:col-span-3">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-500/10 border border-accent-500/30 text-accent-400 text-xs font-medium mb-4">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    First on Aleo
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 font-display">
+                    Combinatorial Subset Bidding
+                  </h2>
+                  <p className="text-gray-400 leading-relaxed mb-5 text-sm sm:text-base">
+                    Bidders pick ANY combination of items in a 4-item bundle. The protocol solves for the
+                    revenue-maximizing allocation where no two winners overlap. Subset choices stay private
+                    until reveal.
+                  </p>
+                  <Link to="/combinatorial" className="btn-primary inline-flex items-center gap-2">
+                    See How It Works
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+                <div className="md:col-span-2">
+                  <div className="grid grid-cols-2 gap-2 font-mono text-xs">
+                    {[
+                      { mask: '0001', label: 'A', revenue: '200' },
+                      { mask: '0010', label: 'B', revenue: '250' },
+                      { mask: '1100', label: 'C+D', revenue: '380' },
+                      { mask: '1111', label: 'ALL', revenue: '700' },
+                    ].map((b, i) => (
+                      <div key={i} className={`p-3 rounded-lg border ${i === 2 ? 'border-accent-500/50 bg-accent-500/10' : 'border-surface-700/50 bg-surface-900/50'}`}>
+                        <div className={`text-[10px] mb-1 ${i === 2 ? 'text-accent-400' : 'text-gray-500'}`}>{b.mask}</div>
+                        <div className={`text-sm ${i === 2 ? 'text-white font-semibold' : 'text-gray-400'}`}>{b.label}</div>
+                        <div className={`text-xs mt-1 ${i === 2 ? 'text-accent-300' : 'text-gray-500'}`}>{b.revenue} ALEO</div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-600 text-center mt-3">Sample allocation · disjoint winners</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </AnimatedSection>
       </section>
 

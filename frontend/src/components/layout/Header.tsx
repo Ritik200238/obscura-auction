@@ -4,7 +4,7 @@ import { WalletMultiButton } from '@provablehq/aleo-wallet-adaptor-react-ui'
 import {
   Search, Plus, Activity, BookOpen, Menu, X, BarChart3,
   Lightbulb, Radar, ChevronDown, MoreHorizontal,
-  ShoppingBag, Landmark, FileText
+  ShoppingBag, Landmark, FileText, Package
 } from 'lucide-react'
 import ObscuraLogo from '@/components/shared/ObscuraLogo'
 import { useEffect, useState, useRef, useCallback } from 'react'
@@ -23,6 +23,7 @@ const primaryNav = [
 ]
 
 const moreNav = [
+  { to: '/combinatorial', label: 'Combinatorial', icon: Package },
   { to: '/fixed-sales', label: 'Buy Now', icon: ShoppingBag },
   { to: '/token-sale', label: 'Token Sales', icon: Landmark },
   { to: '/rfq', label: 'Procurement', icon: FileText },
