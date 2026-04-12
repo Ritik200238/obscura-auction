@@ -863,6 +863,107 @@ export default function Landing() {
       </section>
 
       {/* ═══════════════════════════════════════
+          DEVELOPER ECOSYSTEM — SDK + CLI + MCP
+          ═══════════════════════════════════════ */}
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14 sm:pb-20">
+        <AnimatedSection>
+          <motion.div variants={fadeInUp} className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-500/10 border border-accent-500/30 text-accent-400 text-xs font-medium mb-3">
+              <Sparkles className="w-3 h-3" />
+              First on Aleo
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3 font-display">
+              AI-Agents Can Bid on Obscura
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto text-sm sm:text-base">
+              Full 3-package developer ecosystem on npm. Claude Desktop, ChatGPT, and any MCP-compatible AI can
+              read auctions, compute Dutch prices, and prepare bid payloads — natively.
+            </p>
+          </motion.div>
+
+          <motion.div variants={fadeInUp} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              {
+                name: 'obscura-aleo-sdk',
+                tag: 'SDK',
+                version: 'v0.6.0',
+                desc: 'TypeScript client. Read state, prepare signed bid payloads, format amounts.',
+                install: 'npm install obscura-aleo-sdk',
+                url: 'https://www.npmjs.com/package/obscura-aleo-sdk',
+                color: 'from-accent-500/10 border-accent-500/30',
+                highlight: false,
+              },
+              {
+                name: 'obscura-aleo-mcp',
+                tag: 'MCP · AI Agent',
+                version: 'v0.1.0',
+                desc: 'Model Context Protocol server. Lets Claude Desktop create auctions via chat. FIRST on Aleo.',
+                install: 'npm install -g obscura-aleo-mcp',
+                url: 'https://www.npmjs.com/package/obscura-aleo-mcp',
+                color: 'from-brand-cyan/20 border-brand-cyan/50',
+                highlight: true,
+              },
+              {
+                name: 'obscura-aleo-cli',
+                tag: 'CLI',
+                version: 'v0.1.0',
+                desc: 'Command-line for auction ops. obscura auction, obscura dutch-price, obscura prepare-bid.',
+                install: 'npm install -g obscura-aleo-cli',
+                url: 'https://www.npmjs.com/package/obscura-aleo-cli',
+                color: 'from-green-500/10 border-green-500/30',
+                highlight: false,
+              },
+            ].map((pkg) => (
+              <a
+                key={pkg.name}
+                href={pkg.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`block p-5 rounded-xl border bg-gradient-to-br ${pkg.color} hover:border-white/30 transition relative ${pkg.highlight ? 'ring-2 ring-brand-cyan/30' : ''}`}
+              >
+                {pkg.highlight && (
+                  <div className="absolute -top-2 right-4 px-2 py-0.5 rounded-full bg-brand-cyan text-surface-950 text-[9px] font-bold uppercase tracking-wider">
+                    Novel
+                  </div>
+                )}
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`text-[10px] font-semibold uppercase tracking-wider ${pkg.highlight ? 'text-brand-cyan' : 'text-accent-400/70'}`}>
+                    {pkg.tag}
+                  </span>
+                  <span className="text-[10px] text-gray-600 font-mono">{pkg.version}</span>
+                </div>
+                <div className="text-white font-mono text-sm mb-2">{pkg.name}</div>
+                <p className="text-xs text-gray-400 leading-relaxed mb-3">{pkg.desc}</p>
+                <div className="font-mono text-[10px] text-gray-500 bg-surface-950/60 rounded px-2 py-1.5 border border-surface-800">
+                  $ {pkg.install}
+                </div>
+              </a>
+            ))}
+          </motion.div>
+
+          <motion.div variants={fadeInUp} className="mt-8 p-5 rounded-xl bg-surface-900/60 border border-surface-800">
+            <div className="flex items-start gap-3">
+              <Sparkles className="w-4 h-4 text-brand-cyan mt-0.5" />
+              <div className="text-sm text-gray-300 leading-relaxed">
+                <p className="mb-2">
+                  <span className="text-white font-semibold">Try MCP with Claude Desktop:</span> install{' '}
+                  <code className="text-brand-cyan">obscura-aleo-mcp</code> globally, add it to your{' '}
+                  <code className="text-gray-400">claude_desktop_config.json</code>, then ask Claude:
+                </p>
+                <div className="bg-surface-950/60 rounded-lg p-3 border border-surface-800 font-mono text-xs text-gray-300">
+                  "What's the current Dutch price on Obscura auction 7123field?"<br />
+                  "Prepare a Vickrey bid of 5 ALEO on auction 9999..."
+                </div>
+                <p className="text-gray-500 text-xs mt-2">
+                  Claude calls the MCP tools, returns structured results. First auction protocol on Aleo with native AI-agent integration.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        </AnimatedSection>
+      </section>
+
+      {/* ═══════════════════════════════════════
           HOW IT WORKS — 3 Glassmorphism Cards
           ═══════════════════════════════════════ */}
       <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">

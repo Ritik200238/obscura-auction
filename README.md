@@ -4,6 +4,24 @@
 
 **[Live Demo](https://obscura-auction-95hm.vercel.app)** · **[Core Contract](https://testnet.explorer.provable.com/program/obscura_core_v4.aleo)** · **[Settlement](https://testnet.explorer.provable.com/program/obscura_settle_v6.aleo)** · **[Marketplace](https://testnet.explorer.provable.com/program/obscura_market_v2.aleo)** · Shield Wallet Required
 
+## Developer Ecosystem (npm)
+
+Install once, integrate anywhere. Obscura is the **first Aleo auction protocol with a full 3-package developer ecosystem**:
+
+```bash
+npm install obscura-aleo-sdk       # TypeScript client — read auctions, prepare bids
+npm install -g obscura-aleo-cli    # CLI — manage auctions from terminal
+npm install -g obscura-aleo-mcp    # MCP server — first AI-agent auction integration on Aleo
+```
+
+| Package | npm | Purpose |
+|---------|-----|---------|
+| [`obscura-aleo-sdk`](https://www.npmjs.com/package/obscura-aleo-sdk) | v0.6.0 | Full TypeScript client; read state, prepare signed payloads |
+| [`obscura-aleo-cli`](https://www.npmjs.com/package/obscura-aleo-cli) | v0.1.0 | `obscura auction <id>`, `obscura dutch-price`, `obscura prepare-bid` |
+| [`obscura-aleo-mcp`](https://www.npmjs.com/package/obscura-aleo-mcp) | v0.1.0 | Model Context Protocol server — lets Claude Desktop / ChatGPT create & bid on auctions |
+
+**Try it**: Install `obscura-aleo-mcp` → add to your Claude Desktop config → chat-bid on Aleo auctions.
+
 ---
 
 ## Why This Exists
