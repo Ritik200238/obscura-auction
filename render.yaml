@@ -28,14 +28,15 @@ services:
       - key: MARKET_PROGRAM_ID
         value: obscura_market_v2.aleo
 
-  # Auction Monitor Bot (background worker)
-  - type: worker
+  # Auction Monitor Bot (web service — free plan workaround, exposes /health)
+  - type: web
     name: obscura-auction-bot
     runtime: node
     region: oregon
     plan: free
     buildCommand: cd bot && npm install && npm run build
     startCommand: cd bot && node dist/index.js
+    healthCheckPath: /health
     envVars:
       - key: NETWORK
         value: testnet
