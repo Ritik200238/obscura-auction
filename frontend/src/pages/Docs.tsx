@@ -398,8 +398,11 @@ export default function Docs() {
           Interact with Obscura directly on Aleo Testnet. The core auction contract and marketplace contract are deployed and ready to use.
         </p>
         <div className="bg-surface-800/60 rounded-xl p-4 border border-surface-700 font-mono text-sm">
-          <p className="text-gray-500 mb-2"># Auction contract (deployed on testnet)</p>
-          <p className="text-accent-400 mb-4">obscura_core_v3.aleo — 29 transitions, 5 records, 25 mappings · +settle_v4 · +settle_stable_v4 · +market_v2</p>
+          <p className="text-gray-500 mb-2"># 4 programs deployed on testnet</p>
+          <p className="text-accent-400 mb-1">obscura_core_v3.aleo — 29 functions (auction lifecycle, 10 formats, Merkle gating)</p>
+          <p className="text-accent-400 mb-1">obscura_settle_v6.aleo — 10 functions (ALEO escrow, commit-based settlements)</p>
+          <p className="text-accent-400 mb-1">obscura_settle_stable_v4.aleo — 13 functions (USDCx + USAD settlements)</p>
+          <p className="text-accent-400 mb-4">obscura_market_v2.aleo — 15 functions (fixed sales, RFQ, token sales)</p>
           <p className="text-gray-500 mb-2"># Build from source</p>
           <div className="text-gray-300 space-y-1">
             <p>cd contracts/obscura_core</p>
