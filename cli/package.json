@@ -1,0 +1,48 @@
+{
+  "name": "obscura-aleo-cli",
+  "version": "0.1.0",
+  "description": "Command-line interface for Obscura — private sealed-bid auction protocol on Aleo. Read auctions, compute Dutch prices, prepare bid payloads from your terminal.",
+  "main": "dist/index.js",
+  "bin": {
+    "obscura": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "aleo",
+    "auction",
+    "privacy",
+    "zero-knowledge",
+    "cli",
+    "obscura"
+  ],
+  "author": "Obscura",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ritik200238/obscura-auction.git"
+  },
+  "homepage": "https://obscura-auction-95hm.vercel.app",
+  "dependencies": {
+    "obscura-aleo-sdk": "^0.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.0",
+    "typescript": "~5.9.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
