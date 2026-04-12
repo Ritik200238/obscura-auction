@@ -1,5 +1,5 @@
 {
-  "name": "@obscura/sdk",
+  "name": "obscura-aleo-sdk",
   "version": "0.4.0",
   "description": "TypeScript SDK for Obscura — privacy-first sealed-bid auction protocol on Aleo. 10 auction formats (Sealed, Vickrey, Dutch, English, Bundle, Multi-Unit, Candle, Reverse, Blind Dutch, Timed Escalation). v4 hardened with hash-commitment mappings.",
   "main": "dist/index.js",
@@ -45,7 +45,4 @@
   "engines": {
     "node": ">=18"
   },
-  "publishConfig": {
-    "access": "public"
-  }
 }

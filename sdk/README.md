@@ -1,17 +1,17 @@
-# @obscura/sdk
+# obscura-aleo-sdk
 
 TypeScript SDK for the Obscura multi-format privacy auction protocol on Aleo.
 
 ## Install
 
 ```bash
-npm install @obscura/sdk
+npm install obscura-aleo-sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import { ObscuraClient, AUCTION_MODE, TOKEN_TYPE } from '@obscura/sdk';
+import { ObscuraClient, AUCTION_MODE, TOKEN_TYPE } from 'obscura-aleo-sdk';
 
 const client = new ObscuraClient({ network: 'testnet' });
 
@@ -81,7 +81,7 @@ import {
   fromMicrocredits,      // 1500000n → 1.5
   computeDutchPrice,     // Client-side price computation
   truncateId,            // "1234...field" → "1234...ield"
-} from '@obscura/sdk';
+} from 'obscura-aleo-sdk';
 ```
 
 ## Supported Auction Modes
