@@ -19,6 +19,7 @@ const Explorer = React.lazy(() => import('./pages/Explorer'))
 const FixedSales = React.lazy(() => import('./pages/FixedSales'))
 const TokenSale = React.lazy(() => import('./pages/TokenSale'))
 const Procurement = React.lazy(() => import('./pages/Procurement'))
+const Combinatorial = React.lazy(() => import('./pages/Combinatorial'))
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -97,6 +98,7 @@ function AnimatedRoutes() {
           <Route path="/fixed-sales" element={<FixedSales />} />
           <Route path="/token-sale" element={<TokenSale />} />
           <Route path="/rfq" element={<Procurement />} />
+          <Route path="/combinatorial" element={<Combinatorial />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </motion.div>

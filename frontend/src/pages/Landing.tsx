@@ -756,14 +756,20 @@ export default function Landing() {
             ))}
           </div>
 
-          <motion.p
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.8, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed font-medium"
+            className="max-w-3xl mx-auto mb-4"
           >
-            Private auctions on Aleo. Seven market types. Three tokens. Zero data leaks.
-          </motion.p>
+            <p className="text-xl sm:text-2xl text-white font-semibold mb-3 leading-snug">
+              Launch tokens. Sell NFTs. Run procurement.
+              <span className="block text-accent-400">All private by default.</span>
+            </p>
+            <p className="text-base sm:text-lg text-gray-400 leading-relaxed font-medium">
+              Private capital formation infrastructure on Aleo. 10 auction formats. 3 tokens. Zero data leaks.
+            </p>
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -1151,7 +1157,7 @@ export default function Landing() {
             </table>
           </motion.div>
           <motion.p variants={fadeInUp} className="text-center text-xs text-gray-600 mt-4 italic">
-            The first Vickrey (second-price sealed-bid) auction protocol on Aleo — with 4 formats, 3 tokens, and dispute resolution.
+            The only auction protocol on Aleo with 10 formats (Sealed, Vickrey, Dutch, English, Bundle, Multi-Unit, Candle, Reverse, Blind Dutch, Timed Escalation), 3 tokens, and ZK dispute resolution.
           </motion.p>
         </AnimatedSection>
       </section>
@@ -1174,11 +1180,12 @@ export default function Landing() {
               <h3 className="text-white font-semibold text-sm">Smart Contract</h3>
             </div>
             <div className="space-y-2.5 text-xs text-gray-400">
-              <div className="flex justify-between"><span>Transitions</span><span className="text-white font-mono">28</span></div>
+              <div className="flex justify-between"><span>Core Transitions</span><span className="text-white font-mono">29</span></div>
               <div className="flex justify-between"><span>Private Records</span><span className="text-white font-mono">5</span></div>
-              <div className="flex justify-between"><span>Mappings</span><span className="text-white font-mono">16</span></div>
-              <div className="flex justify-between"><span>Auction Formats</span><span className="text-white font-mono">4 modes</span></div>
-              <div className="flex justify-between"><span>Dispute Resolution</span><span className="text-white font-mono">Bond + Admin</span></div>
+              <div className="flex justify-between"><span>On-chain Mappings</span><span className="text-white font-mono">25</span></div>
+              <div className="flex justify-between"><span>Auction Formats</span><span className="text-white font-mono">10 modes</span></div>
+              <div className="flex justify-between"><span>Settlement Programs</span><span className="text-white font-mono">v4 hardened</span></div>
+              <div className="flex justify-between"><span>Dispute Resolution</span><span className="text-white font-mono">Bond + ZK proof</span></div>
             </div>
           </motion.div>
 

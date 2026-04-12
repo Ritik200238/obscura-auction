@@ -114,14 +114,25 @@ Each program has its own mappings, records, and finalize blocks. The frontend co
 
 ## On-Chain Deployment
 
-| Program | Explorer Link |
-|---------|--------------|
-| `obscura_core_v3.aleo` | [View on Explorer](https://testnet.explorer.provable.com/program/obscura_core_v3.aleo) |
-| `obscura_settle_v4.aleo` | [View on Explorer](https://testnet.explorer.provable.com/program/obscura_settle_v4.aleo) |
-| `obscura_settle_stable_v4.aleo` | [View on Explorer](https://testnet.explorer.provable.com/program/obscura_settle_stable_v4.aleo) |
-| `obscura_market_v2.aleo` | [View on Explorer](https://testnet.explorer.provable.com/program/obscura_market_v2.aleo) |
+All 4 programs deployed on Aleo Testnet with `@noupgrade` constructors. Verified 2026-04-12.
 
-All programs deployed on Aleo Testnet with `@noupgrade` constructors.
+| Program | Deploy TX | Size | Explorer |
+|---------|-----------|------|----------|
+| `obscura_core_v3.aleo` | (Wave 3) | — | [View](https://testnet.explorer.provable.com/program/obscura_core_v3.aleo) |
+| `obscura_settle_v4.aleo` ✨ | `at1s8smny0vmfecegp8gh0qefdw3mcqgwccvl4vtqxxpy5dp8k3j5gs9yher0` | 17.76 KB | [View](https://testnet.explorer.provable.com/program/obscura_settle_v4.aleo) |
+| `obscura_settle_stable_v4.aleo` ✨ | `at1uln0ruxy2k3v47lkrl0nawxpetphjujgws6cxt0m9uw4x4ar3srqmcapu9` | 24.96 KB | [View](https://testnet.explorer.provable.com/program/obscura_settle_stable_v4.aleo) |
+| `obscura_market_v2.aleo` | (previous wave) | — | [View](https://testnet.explorer.provable.com/program/obscura_market_v2.aleo) |
+
+✨ = Wave 5 privacy upgrade (`revealed_bids` mapping now stores `bool` flag only — amounts committed cryptographically via bid_hash key, never plaintext).
+
+## Running Infrastructure (24/7)
+
+| Service | URL | Purpose |
+|---------|-----|---------|
+| Frontend | [obscura-auction-95hm.vercel.app](https://obscura-auction-95hm.vercel.app) | React app, Shield Wallet |
+| Backend API | [obscura-auction-api.onrender.com/health](https://obscura-auction-api.onrender.com/health) | Indexer + REST (Render) |
+| Auction Monitor Bot | [obscura-auction-bot.onrender.com/health](https://obscura-auction-bot.onrender.com/health) | Live on-chain polling (Render) |
+| SDK on npm | [obscura-aleo-sdk](https://www.npmjs.com/package/obscura-aleo-sdk) | `npm install obscura-aleo-sdk` |
 
 ---
 
