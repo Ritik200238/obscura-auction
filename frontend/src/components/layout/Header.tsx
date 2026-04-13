@@ -96,35 +96,37 @@ export default function Header() {
             </span>
           </Link>
 
-          {/* Nav Links - Desktop */}
-          <nav className="hidden lg:flex items-center gap-0.5">
-            {primaryNav.map(({ to, label, icon: Icon }) => {
-              const isActive = location.pathname === to
-              return (
-                <Link
-                  key={to}
-                  to={to}
-                  className={`relative flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium transition-colors duration-200 ${
-                    isActive
-                      ? 'text-white'
-                      : 'text-gray-500 hover:text-gray-300'
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {label}
-                  {isActive && (
-                    <motion.span
-                      layoutId="nav-underline"
-                      className="absolute bottom-0 left-2 right-2 h-[2px] bg-accent-400 rounded-full"
-                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                    />
-                  )}
-                </Link>
-              )
-            })}
-            {/* More dropdown */}
-            <MoreDropdown location={location} />
-          </nav>
+          {/* Nav Links - Desktop — hidden on landing. App pages use sidebar. */}
+          {location.pathname !== '/' && (
+            <nav className="hidden lg:flex items-center gap-0.5">
+              {primaryNav.map(({ to, label, icon: Icon }) => {
+                const isActive = location.pathname === to
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    className={`relative flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium transition-colors duration-200 ${
+                      isActive
+                        ? 'text-white'
+                        : 'text-gray-500 hover:text-gray-300'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {label}
+                    {isActive && (
+                      <motion.span
+                        layoutId="nav-underline"
+                        className="absolute bottom-0 left-2 right-2 h-[2px] bg-accent-400 rounded-full"
+                        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                      />
+                    )}
+                  </Link>
+                )
+              })}
+              {/* More dropdown */}
+              <MoreDropdown location={location} />
+            </nav>
+          )}
 
           {/* Start Auction CTA + Wallet Button + Mobile Menu Toggle */}
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
