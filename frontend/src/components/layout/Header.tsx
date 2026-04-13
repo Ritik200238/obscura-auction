@@ -4,7 +4,7 @@ import { WalletMultiButton } from '@provablehq/aleo-wallet-adaptor-react-ui'
 import {
   Search, Plus, Activity, BookOpen, Menu, X, BarChart3,
   Lightbulb, Radar, ChevronDown, MoreHorizontal,
-  ShoppingBag, Landmark, FileText, Package
+  ShoppingBag, Landmark, FileText, Package, Gavel
 } from 'lucide-react'
 import ObscuraLogo from '@/components/shared/ObscuraLogo'
 import { useEffect, useState, useRef, useCallback } from 'react'
@@ -15,7 +15,6 @@ import { fetchMapping } from '@/lib/aleo'
 
 const primaryNav = [
   { to: '/browse', label: 'Browse', icon: Search },
-  { to: '/create', label: 'Create', icon: Plus },
   { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
   { to: '/my-activity', label: 'Activity', icon: Activity },
   { to: '/docs', label: 'Docs', icon: BookOpen },
@@ -127,8 +126,15 @@ export default function Header() {
             <MoreDropdown location={location} />
           </nav>
 
-          {/* Wallet Button + Mobile Menu Toggle */}
+          {/* Start Auction CTA + Wallet Button + Mobile Menu Toggle */}
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <Link
+              to="/create"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent-500 hover:bg-accent-400 text-surface-950 text-[13px] font-semibold transition-all shadow-[0_0_20px_rgba(124,58,237,0.4)] hover:shadow-[0_0_30px_rgba(124,58,237,0.6)]"
+            >
+              <Gavel className="w-3.5 h-3.5" />
+              Start Auction
+            </Link>
             <div className={`shrink-0 max-w-[160px] sm:max-w-none overflow-hidden rounded-xl ${
               connected
                 ? 'ring-1 ring-accent-500/30'

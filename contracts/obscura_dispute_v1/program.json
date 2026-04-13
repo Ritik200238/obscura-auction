@@ -1,0 +1,15 @@
+{
+  "program": "obscura_dispute_v1.aleo",
+  "version": "0.1.0",
+  "description": "Obscura Dispute v1 — multi-voter economic quorum for auction dispute resolution. Replaces admin-only resolution with bonded jurors + slashing. Matches Veiled Markets dispute economics.",
+  "license": "MIT",
+  "leo": "4.0.0",
+  "dependencies": [
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    }
+  ]
+}

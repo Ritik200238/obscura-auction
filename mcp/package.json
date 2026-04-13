@@ -1,7 +1,7 @@
 {
   "name": "obscura-aleo-mcp",
-  "version": "0.1.0",
-  "description": "Model Context Protocol server for Obscura — lets AI agents (Claude Desktop, ChatGPT, etc.) create, bid on, and settle private auctions on Aleo. First auction protocol with native AI-agent integration.",
+  "version": "0.2.0",
+  "description": "Model Context Protocol server for Obscura — lets AI agents (Claude Desktop, ChatGPT, etc.) create, bid on, settle, and now dispute private auctions on Aleo. First auction protocol with native AI-agent integration + multi-voter dispute quorum.",
   "main": "dist/index.js",
   "bin": {
     "obscura-mcp": "dist/index.js"
