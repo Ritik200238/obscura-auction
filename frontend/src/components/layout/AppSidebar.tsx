@@ -29,18 +29,6 @@ const sections = [
       { to: '/browse', label: 'Browse Auctions', icon: Search },
     ],
   },
-  {
-    label: 'Resolve',
-    items: [
-      { to: '/learn', label: 'Vickrey Explainer', icon: BookOpen },
-    ],
-  },
-  {
-    label: 'Docs',
-    items: [
-      { to: '/docs', label: 'Documentation', icon: BookOpen },
-    ],
-  },
 ]
 
 export default function AppSidebar() {

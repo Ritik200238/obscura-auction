@@ -13,12 +13,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useWalletStore } from '@/stores/walletStore'
 import { fetchMapping } from '@/lib/aleo'
 
-// Minimal top nav — everything operational lives in the left sidebar (app pages).
-// Top keeps just content/learning links like Alpaca's hero-nav pattern.
-const primaryNav = [
-  { to: '/docs', label: 'Docs', icon: BookOpen },
-  { to: '/learn', label: 'Learn', icon: Lightbulb },
-]
+// Top nav is empty — all app actions live in the left sidebar.
+// Landing keeps just logo + Start Auction CTA + wallet.
+const primaryNav: { to: string; label: string; icon: typeof Search }[] = []
 
 const moreNav = [
   { to: '/combinatorial', label: 'Combinatorial', icon: Package },
