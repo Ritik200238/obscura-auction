@@ -13,12 +13,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useWalletStore } from '@/stores/walletStore'
 import { fetchMapping } from '@/lib/aleo'
 
+// Minimal top nav — everything operational lives in the left sidebar (app pages).
+// Top keeps just content/learning links like Alpaca's hero-nav pattern.
 const primaryNav = [
-  { to: '/browse', label: 'Browse', icon: Search },
-  { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
-  { to: '/my-activity', label: 'Activity', icon: Activity },
   { to: '/docs', label: 'Docs', icon: BookOpen },
-  { to: '/explorer', label: 'Explorer', icon: Radar },
+  { to: '/learn', label: 'Learn', icon: Lightbulb },
 ]
 
 const moreNav = [
@@ -123,8 +122,6 @@ export default function Header() {
                   </Link>
                 )
               })}
-              {/* More dropdown */}
-              <MoreDropdown location={location} />
             </nav>
           )}
 
